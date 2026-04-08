@@ -1162,7 +1162,8 @@ tr:hover td{background:var(--bg3)}
 </div><!-- /layout -->
 </div><!-- /app-screen -->
 
-<script>
+<script>// v3
+
 // ═══ CONFIG + SHARED AUTH (from Gestão de Reuniões) ═══
 const CLIENT_ID='b3a66901-ec96-424b-9bcb-370b39a2a210';
 const TENANT_ID='09ae14e9-8398-4ca0-a5cd-994620a0ab3a';
@@ -4412,14 +4413,9 @@ function submitAumentoNaoOrc(){
 }
 
 // ═══════════════ INIT ═══════════════
-gfRender();
-
+// gfRender() moved to gfInit() - called when user switches to GF tab
 // Auto-add primeira origem quando alterações carrega
-const _obs=new MutationObserver(()=>{
-  const c=document.getElementById('alt-origens');
-  if(c&&c.children.length===0)addAltOrigem();
-});
-_obs.observe(document.getElementById('app'),{childList:true,subtree:true});
+// MutationObserver removed - handled by gfInit
 
 
 init();
