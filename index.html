@@ -2411,42 +2411,42 @@ function fd(d){if(!d)return'—';try{const[y,m,day]=d.split('-');return`${day}/$
 init();
 
 // ═══ PLANEAMENTO MODULE ═══
-// State vars (PL-specific)
-let projetos=[],acoes=[],tarefas=[],kpdefs=[],kpregs=[],planoTrim=[];
-let semView='pessoal',viewWeek,viewYear;
-let editTrimId=null,editKdefId=null,editKregId=null,editTarId=null;
-let hierOpen={};
-
 
 function plShowPage(p){
   document.querySelectorAll('#module-pl .page').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('#sidebar-pl .nav-item').forEach(e=>e.classList.remove('active'));
-  el('pl-page-'+p)?.classList.add('active');
-  el('pl-nav-'+p)?.classList.add('active');
-  if(p==='gantt')renderGantt();
+  document.getElementById('pl-page-'+p)?.classList.add('active');
+  document.getElementById('pl-nav-'+p)?.classList.add('active');
+  if(p==='gantt') renderGantt();
 }
+/* ===== STATE ===== */
+
+let plProjetos=[],plAcoes=[],plTarefas=[],plKpdefs=[],plKpregs=[],plPlanoTrim=[];
+let plSemView='pessoal',plViewWeek,plViewYear;
+let plEditTrimId=null,plEditKdefId=null,plEditKregId=null,plEditTarId=null;
+let plHierOpen={};
+
 /* ===== LOAD ===== */
 async function plLoadAll(){
   showNotif('A carregar dados...','info');
   try{
     
-
     await Promise.all([loadProjetos(),loadAcoes(),loadTarefas(),loadKPIDefs(),loadKPIRegs(),loadPlanoTrim()]);
     renderDash();renderHier();renderTrim();renderSem();renderKdefs();renderKregs();populateDrops();
-    showNotif(`Dados carregados! ${tarefas.length} tarefas · ${projetos.length} projetos · ${acoes.length} ações`,'success');
+    showNotif(`Dados carregados! ${plTarefas.length} plTarefas · ${plProjetos.length} plProjetos · ${plAcoes.length} ações`,'success');
   }catch(e){showNotif('Erro ao carregar: '+e.message,'error');console.error(e);}
 }
 async function loadProjetos(){
-  // Factorial_Projetos = projetos top-level (vindos do Factorial)
+  // Factorial_Projetos = plProjetos top-level (vindos do Factorial)
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*&$orderby=Title asc&$top=1000`);
-  projetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:r.Departamento||'',estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',desc:r.Descricao||'',tipoFJ:r.Tipo_FJ||(r.Title?.includes('(INOV)')?'INOV':'Recorrente')}));
+  plProjetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:r.Departamento||'',estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',desc:r.Descricao||'',tipoFJ:r.Tipo_FJ||(r.Title?.includes('(INOV)')?'INOV':'Recorrente')}));
 }
 async function loadAcoes(){
   // Acoes = lista manual criada na plataforma, filho de Factorial_Projetos
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*&$orderby=Title asc&$top=1000`);
-    acoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId||null,dep:r.Departamento||'',tipoFJ:r.TipoAcao||'Recorrente',responsavel:'',notas:r.Notas||''}));
-  }catch(e){console.warn('Acoes list error:',e.message);acoes=[];}
+    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId||null,dep:r.Departamento||'',tipoFJ:r.TipoAcao||'Recorrente',responsavel:'',notas:r.Notas||''}));
+  }catch(e){console.warn('Acoes list error:',e.message);plAcoes=[];}
 }
 async function loadTarefas(){
   let all=[];
@@ -2470,9 +2470,9 @@ async function loadTarefas(){
       attachments:[]
     }));
     all=[...all,...ft];
-    showNotif(`✓ ${ft.length} tarefas carregadas`,'success');
+    showNotif(`✓ ${ft.length} plTarefas carregadas`,'success');
   }catch(e){
-    showNotif('Erro a carregar tarefas: '+e.message,'error');
+    showNotif('Erro a carregar plTarefas: '+e.message,'error');
     console.error('ERRO Factorial_Tarefas:',e.message);
   }
   all=all.map(t=>{
@@ -2481,39 +2481,39 @@ async function loadTarefas(){
     }
     return t;
   });
-  tarefas=all;
+  plTarefas=all;
 }
 async function loadKPIDefs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items?$select=*&$orderby=Title asc&$top=500`);
-  kpdefs=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,tipo:r.TipoKPI||'Manual',dir:r.Direcao||'meta',uni:r.Unidade||'',meta:r.Meta||0,freq:r.Frequencia||'Mensal',resp:r.Responsavel||'',ativo:r.Ativo!==false,desc:r.Descricao||''}));
+  plKpdefs=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,tipo:r.TipoKPI||'Manual',dir:r.Direcao||'meta',uni:r.Unidade||'',meta:r.Meta||0,freq:r.Frequencia||'Mensal',resp:r.Responsavel||'',ativo:r.Ativo!==false,desc:r.Descricao||''}));
 }
 async function loadKPIRegs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Registos')/items?$select=*,InseridoPor/Title&$expand=InseridoPor&$orderby=Created desc&$top=500`);
-  kpregs=d.d.results.map(r=>({id:r.Id,periodo:r.Title||'',kpiId:r.KPIId||null,valor:r.Valor||0,trim:r.Trimestre||'',sem:r.Semana||null,ano:r.Ano||null,dataReg:r.DataRegisto?r.DataRegisto.split('T')[0]:'',inseridoPor:r.InseridoPor?.Title||'',notas:r.Notas||''}));
+  plKpregs=d.d.results.map(r=>({id:r.Id,periodo:r.Title||'',kpiId:r.KPIId||null,valor:r.Valor||0,trim:r.Trimestre||'',sem:r.Semana||null,ano:r.Ano||null,dataReg:r.DataRegisto?r.DataRegisto.split('T')[0]:'',inseridoPor:r.InseridoPor?.Title||'',notas:r.Notas||''}));
 }
 async function loadPlanoTrim(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items?$select=*&$orderby=Ano desc,Trimestre asc&$top=500`);
-  planoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,trim:r.Trimestre||'',ano:r.Ano||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
+  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,trim:r.Trimestre||'',ano:r.Ano||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
 }
 
 /* ===== DROPDOWNS ===== */
 function populateDrops(){
   // Projetos = Factorial_Projetos
-  const po=projetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  const po=plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   ['ft-proj','fk-proj','fa-proj'].forEach(id=>{const e=el(id);if(e)e.innerHTML='<option value="">Selecionar...</option>'+po;});
-  const ffkd=el('ff-kd-proj');if(ffkd)ffkd.innerHTML='<option value="">Todos os projetos</option>'+po;
-  const ffap=el('ff-ac-proj');if(ffap)ffap.innerHTML='<option value="">Todos os projetos</option>'+po;
+  const ffkd=el('ff-kd-proj');if(ffkd)ffkd.innerHTML='<option value="">Todos os plProjetos</option>'+po;
+  const ffap=el('ff-ac-proj');if(ffap)ffap.innerHTML='<option value="">Todos os plProjetos</option>'+po;
   // Ações = lista Acoes (manual)
-  const ao=acoes.map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
+  const ao=plAcoes.map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
   const ftA=el('ftar-acao');if(ftA)ftA.innerHTML='<option value="">Nenhuma</option>'+ao;
   // KPI dropdown
-  const ko=kpdefs.filter(k=>k.ativo).map(k=>`<option value="${k.id}">${k.nome}</option>`).join('');
+  const ko=plKpdefs.filter(k=>k.ativo).map(k=>`<option value="${k.id}">${k.nome}</option>`).join('');
   const frKpi=el('fr-kpi');if(frKpi)frKpi.innerHTML='<option value="">Selecionar KPI...</option>'+ko;
   const ffKr=el('ff-kr-kpi');if(ffKr)ffKr.innerHTML='<option value="">Todos os KPIs</option>'+ko;
 }
 function loadAcoesForProj(projId,targetId,currId=null){
   const e=el(targetId);if(!e)return;
-  const list=projId?acoes.filter(a=>String(a.projetoId)===String(projId)):acoes;
+  const list=projId?plAcoes.filter(a=>String(a.projetoId)===String(projId)):plAcoes;
   e.innerHTML='<option value="">Nenhuma</option>'+list.map(a=>`<option value="${a.id}"${String(a.id)===String(currId)?'selected':''}>${a.nome}</option>`).join('');
 }
 
@@ -2521,20 +2521,20 @@ function loadAcoesForProj(projId,targetId,currId=null){
 function renderDash(){
   const w=isoWeek(new Date()),y=new Date().getFullYear();
   // Projetos ativos = Factorial_Projetos com estado active
-  el('s-proj').textContent=projetos.filter(p=>p.estado==='active'||p.estado==='Ativo').length;
-  // Ações INOV = ações criadas na plataforma com TipoAcao=INOV ou projetos do Factorial com (INOV)
-  el('s-inov').textContent=acoes.filter(a=>a.tipoFJ==='INOV').length+projetos.filter(p=>p.tipoFJ==='INOV'||p.nome.includes('(INOV)')).length;
-  el('s-tsem').textContent=tarefas.filter(t=>t.semana==w&&t.anoFJ==y).length;
-  el('s-kpi').textContent=kpdefs.filter(k=>k.ativo).length;
+  el('s-proj').textContent=plProjetos.filter(p=>p.estado==='active'||p.estado==='Ativo').length;
+  // Ações INOV = ações criadas na plataforma com TipoAcao=INOV ou plProjetos do Factorial com (INOV)
+  el('s-inov').textContent=plAcoes.filter(a=>a.tipoFJ==='INOV').length+plProjetos.filter(p=>p.tipoFJ==='INOV'||p.nome.includes('(INOV)')).length;
+  el('s-tsem').textContent=plTarefas.filter(t=>t.semana==w&&t.anoFJ==y).length;
+  el('s-kpi').textContent=plKpdefs.filter(k=>k.ativo).length;
   // RAG
-  const ragAcoes=acoes.slice(0,8);
+  const ragAcoes=plAcoes.slice(0,8);
   el('dash-rag').innerHTML=ragAcoes.length?`<table><colgroup><col style="width:10%"><col style="width:55%"><col style="width:35%"></colgroup><tbody>${ragAcoes.map(a=>{const r=calcRag(a.id);return`<tr><td><span class="rag rag-${r}"></span></td><td style="font-size:12px;font-weight:500">${a.nome}</td><td>${depB(a.dep)}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem ações carregadas.</div>';
   // KPIs
-  const km=kpdefs.filter(k=>k.ativo&&k.tipo==='Manual').slice(0,6);
-  el('dash-kpis').innerHTML=km.length?`<table><colgroup><col style="width:55%"><col style="width:25%"><col style="width:20%"></colgroup><tbody>${km.map(k=>{const lr=kpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct===null?'var(--tx3)':kpiColor(k,pct);return`<tr><td style="font-size:12px;font-weight:500">${k.nome}</td><td style="font-size:11px">${lr?lr.valor+' '+k.uni:'—'}</td><td style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem KPIs manuais.</div>';
+  const km=plKpdefs.filter(k=>k.ativo&&k.tipo==='Manual').slice(0,6);
+  el('dash-kpis').innerHTML=km.length?`<table><colgroup><col style="width:55%"><col style="width:25%"><col style="width:20%"></colgroup><tbody>${km.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct===null?'var(--tx3)':kpiColor(k,pct);return`<tr><td style="font-size:12px;font-weight:500">${k.nome}</td><td style="font-size:11px">${lr?lr.valor+' '+k.uni:'—'}</td><td style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem KPIs manuais.</div>';
   // Tasks
-  const wt=tarefas.filter(t=>t.semana==w&&t.anoFJ==y).slice(0,8);
-  el('dash-tarefas').innerHTML=wt.length?`<table><colgroup><col style="width:45%"><col style="width:25%"><col style="width:15%"><col style="width:15%"></colgroup><tbody>${wt.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}"><td style="font-size:12px;font-weight:500">${t.titulo}</td><td style="font-size:11px">${t.responsavel||'—'}</td><td>${estB(t.prioridade)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem tarefas para esta semana.</div>';
+  const wt=plTarefas.filter(t=>t.semana==w&&t.anoFJ==y).slice(0,8);
+  el('dash-plTarefas').innerHTML=wt.length?`<table><colgroup><col style="width:45%"><col style="width:25%"><col style="width:15%"><col style="width:15%"></colgroup><tbody>${wt.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}"><td style="font-size:12px;font-weight:500">${t.titulo}</td><td style="font-size:11px">${t.responsavel||'—'}</td><td>${estB(t.prioridade)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem plTarefas para esta semana.</div>';
 }
 function kpiColor(k,pct){
   if(k.dir==='limite'){return pct<=100?'var(--g5)':pct<=120?'var(--amb2)':'var(--red)';}
@@ -2550,13 +2550,13 @@ function kpiEstado(k,pct){
 function renderHier(){
   const dep=gv('ff-h-dep'),tipo=gv('ff-h-tipo');
   const c=el('hier-container');
-  const projs=projetos.filter(p=>!dep||p.dep===dep);
-  if(!projs.length){c.innerHTML='<div class="empty">Sem projetos carregados do Factorial.</div>';return;}
+  const projs=plProjetos.filter(p=>!dep||p.dep===dep);
+  if(!projs.length){c.innerHTML='<div class="empty">Sem plProjetos carregados do Factorial.</div>';return;}
   c.innerHTML=projs.map(p=>{
-    const pAcoes=acoes.filter(a=>String(a.projetoId)===String(p.id)&&(!tipo||a.tipoFJ===tipo));
+    const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id)&&(!tipo||a.tipoFJ===tipo));
     // Tarefas não afetas a nenhuma ação mas com projetoId deste projeto, OU sem ação e sem projeto (mostrar em todos)
-    const tarSemAcao=tarefas.filter(t=>!t.acaoId&&(String(t.projetoId)===String(p.id)));
-    const tarTotal=tarefas.filter(t=>String(t.projetoId)===String(p.id)||pAcoes.some(a=>String(t.acaoId)===String(a.id)));
+    const tarSemAcao=plTarefas.filter(t=>!t.acaoId&&(String(t.projetoId)===String(p.id)));
+    const tarTotal=plTarefas.filter(t=>String(t.projetoId)===String(p.id)||pAcoes.some(a=>String(t.acaoId)===String(a.id)));
     const concTotal=tarTotal.filter(t=>t.estado==='Concluída').length;
     const pct=tarTotal.length?Math.round((concTotal/tarTotal.length)*100):null;
     const rag=pAcoes.length?(['r','a','v'].reduce((best,r)=>pAcoes.some(a=>calcRag(a.id)===r)?r:best,'c')):'c';
@@ -2567,13 +2567,13 @@ function renderHier(){
         <span style="font-size:14px;font-weight:700;color:var(--g1);flex:1">${p.nome}</span>
         ${bdg(tipoFJ==='INOV'?'b-inov':'b-rec',tipoFJ)}
         ${depB(p.dep)}
-        <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} tarefas${pct!==null?' · '+pct+'% conc.':''}</span>
+        <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} plTarefas${pct!==null?' · '+pct+'% conc.':''}</span>
         <button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>
         <svg id="hier-arrow-${p.id}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="transition:transform .2s"><path d="M4 6l4 4 4-4"/></svg>
       </div>
-      <div class="hier-acao-wrap" id="hier-acoes-${p.id}">
+      <div class="hier-acao-wrap" id="hier-plAcoes-${p.id}">
         ${pAcoes.map(a=>{
-          const ts=tarefas.filter(t=>String(t.acaoId)===String(a.id));
+          const ts=plTarefas.filter(t=>String(t.acaoId)===String(a.id));
           const conc=ts.filter(t=>t.estado==='Concluída').length;
           const r=calcRag(a.id);
           return`<div class="hier-acao-row" onclick="toggleHierAcao(${a.id})">
@@ -2581,7 +2581,7 @@ function renderHier(){
             <span class="hier-acao-name">${a.nome}</span>
             ${bdg(a.tipoFJ==='INOV'?'b-inov':'b-rec',a.tipoFJ||'Rec')}
             ${a.dep?depB(a.dep):''}
-            <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} tarefas</span>
+            <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} plTarefas</span>
             <button class="btn btn-sm" onclick="event.stopPropagation();openAcaoForm(${p.id},${a.id})">Editar</button>
             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delAcao(${a.id})">✕</button>
             <button class="btn btn-sm btn-or" onclick="event.stopPropagation();openTarFormForAcao(${a.id})">+ Tarefa</button>
@@ -2611,12 +2611,12 @@ function renderHier(){
               </tbody>
             </table>
           </div>`:''}
-        ${!pAcoes.length&&!tarSemAcao.length?`<div style="padding:12px 24px;font-size:13px;color:var(--tx3)">Sem ações nem tarefas. <button class="btn btn-sm btn-primary" onclick="openAcaoForm(${p.id})">+ Criar ação</button></div>`:''}
+        ${!pAcoes.length&&!tarSemAcao.length?`<div style="padding:12px 24px;font-size:13px;color:var(--tx3)">Sem ações nem plTarefas. <button class="btn btn-sm btn-primary" onclick="openAcaoForm(${p.id})">+ Criar ação</button></div>`:''}
       </div>
     </div>`;
   }).join('');
   // Tarefas completamente sem projeto e sem ação
-  const tarSemTudo=tarefas.filter(t=>!t.acaoId&&!t.projetoId);
+  const tarSemTudo=plTarefas.filter(t=>!t.acaoId&&!t.projetoId);
   if(tarSemTudo.length){
     const div=document.createElement('div');
     div.style.cssText='margin-top:12px;background:var(--bg2);border:0.5px solid var(--bd);border-radius:var(--rl);overflow:hidden';
@@ -2639,7 +2639,7 @@ function renderHier(){
   }
 }
 function toggleHier(projId){
-  const w=el(`hier-acoes-${projId}`);const arr=el(`hier-arrow-${projId}`);
+  const w=el(`hier-plAcoes-${projId}`);const arr=el(`hier-arrow-${projId}`);
   const open=w.classList.toggle('open');
   arr.style.transform=open?'rotate(180deg)':'';
 }
@@ -2647,8 +2647,8 @@ function toggleHierAcao(acaoId){
   const panel=el(`hier-t-${acaoId}`);
   const open=panel.classList.toggle('open');
   if(open){
-    const ts=tarefas.filter(t=>String(t.acaoId)===String(acaoId));
-    const kps=kpdefs.filter(k=>String(k.acaoId)===String(acaoId));
+    const ts=plTarefas.filter(t=>String(t.acaoId)===String(acaoId));
+    const kps=plKpdefs.filter(k=>String(k.acaoId)===String(acaoId));
     const content=el(`hier-t-content-${acaoId}`);
     content.innerHTML=`
       ${ts.length?`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Tarefas (${ts.length})</div>
@@ -2662,9 +2662,9 @@ function toggleHierAcao(acaoId){
           <td style="padding:6px 4px">${estB(t.prioridade)}</td>
           <td style="padding:6px 4px">${estB(t.estado)}</td>
         </tr>`).join('')}
-      </table>`:'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Sem tarefas nesta ação.</div>'}
+      </table>`:'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Sem plTarefas nesta ação.</div>'}
       ${kps.length?`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">KPIs (${kps.length})</div>
-      ${kps.map(k=>{const lr=kpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct!==null?kpiColor(k,pct):'var(--tx3)';return`<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:12px"><span style="flex:1;font-weight:500">${k.nome}</span><span>${lr?lr.valor+' '+k.uni:'—'}</span><span style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</span></div>`;}).join('')}`:''}
+      ${kps.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct!==null?kpiColor(k,pct):'var(--tx3)';return`<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:12px"><span style="flex:1;font-weight:500">${k.nome}</span><span>${lr?lr.valor+' '+k.uni:'—'}</span><span style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</span></div>`;}).join('')}`:''}
     `;
   }
 }
@@ -2676,9 +2676,9 @@ let editAcaoId=null;
 function openAcaoForm(projId,acaoId){
   editAcaoId=acaoId||null;
   el('frm-acao-ov').classList.add('open');
-  el('fa-proj').innerHTML='<option value="">Selecionar...</option>'+projetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  el('fa-proj').innerHTML='<option value="">Selecionar...</option>'+plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   if(acaoId){
-    const a=acoes.find(x=>x.id===acaoId);if(!a)return;
+    const a=plAcoes.find(x=>x.id===acaoId);if(!a)return;
     el('frm-acao-title').textContent='Editar ação';
     sv2('fa-nome',a.nome);sv2('fa-proj',a.projetoId||'');sv2('fa-tipo',a.tipoFJ||'Recorrente');
     sv2('fa-dep',a.dep||'');sv2('fa-estado',a.estado||'Ativo');
@@ -2719,7 +2719,7 @@ const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov',
 const GANTT_COLORS=['#1A5E3B','#2E7D52','#0F6E56','#534AB7','#D85A30','#0C447C','#639922','#BA7517'];
 function renderGantt(){
   const dep=gv('ff-g-dep'),ano=parseInt(gv('ff-g-ano')||new Date().getFullYear()),modo=gv('ff-g-modo')||'mensal';
-  const projs=projetos.filter(p=>!dep||p.dep===dep);
+  const projs=plProjetos.filter(p=>!dep||p.dep===dep);
   const lblW=220;
   let cols,colW,labels,unitMs,rangeStart,rangeEnd;
   const today=new Date();today.setHours(0,0,0,0);
@@ -2757,7 +2757,7 @@ function renderGantt(){
   projs.forEach((p,pi)=>{
     const color=GANTT_COLORS[pi%GANTT_COLORS.length];
     // Calcular span do projeto a partir das ações
-    const pAcoes=acoes.filter(a=>String(a.projetoId)===String(p.id));
+    const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id));
     let ps=pAcoes.reduce((min,a)=>a.dataInicio&&new Date(a.dataInicio)<min?new Date(a.dataInicio):min,new Date(9999,0,1));
     let pe=pAcoes.reduce((max,a)=>a.dataFim&&new Date(a.dataFim)>max?new Date(a.dataFim):max,new Date(0));
     if(ps.getFullYear()===9999)ps=null;if(pe.getFullYear()===1970)pe=null;
@@ -2802,12 +2802,12 @@ function renderGantt(){
 
 /* ===== PLANO TRIMESTRAL ===== */
 function genTrimTit(){
-  const pid=gv('ft-proj');const p=projetos.find(x=>String(x.id)===pid);
+  const pid=gv('ft-proj');const p=plProjetos.find(x=>String(x.id)===pid);
   sv2('ft-titulo',p?`${gv('ft-trim')} ${gv('ft-ano')} — ${p.nome}`:'');
 }
 function renderTrim(){
   const q=gv('ff-t-q'),ano=gv('ff-t-ano'),dep=gv('ff-t-dep'),aprov=gv('ff-t-aprov');
-  const list=planoTrim.filter(t=>{
+  const list=plPlanoTrim.filter(t=>{
     if(q&&t.trim!==q)return false;if(ano&&String(t.ano)!==ano)return false;
     if(dep&&t.dep!==dep)return false;if(aprov&&t.aprovacao!==aprov)return false;return true;
   });
@@ -2835,15 +2835,15 @@ async function aprovTrim(id,novoEstado){
   try{
     const body={__metadata:{type:'SP.Data.FJ_x005f_PlanoTrimestralListItem'},EstadoAprov:novoEstado};
     await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${id})`,body,'MERGE','*');
-    const t=planoTrim.find(x=>x.id===id);if(t)t.aprovacao=novoEstado;
+    const t=plPlanoTrim.find(x=>x.id===id);if(t)t.aprovacao=novoEstado;
     renderTrim();showNotif('Estado atualizado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 function openTrimForm(id){
-  editTrimId=id||null;el('frm-trim-ov').classList.add('open');
-  el('ft-proj').innerHTML='<option value="">Selecionar...</option>'+projetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  plEditTrimId=id||null;el('frm-trim-ov').classList.add('open');
+  el('ft-proj').innerHTML='<option value="">Selecionar...</option>'+plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   if(id){
-    const t=planoTrim.find(x=>x.id===id);if(!t)return;
+    const t=plPlanoTrim.find(x=>x.id===id);if(!t)return;
     el('frm-trim-title').textContent='Editar compromisso';
     sv2('ft-proj',t.projetoId||'');loadAcoesForProj(t.projetoId,'ft-acao',t.acaoId);
     sv2('ft-trim',t.trim);sv2('ft-ano',t.ano||'');sv2('ft-dep',t.dep||'');
@@ -2856,17 +2856,17 @@ function openTrimForm(id){
   }
 }
 function editTrim(id){openTrimForm(id);}
-function closeTrimForm(){el('frm-trim-ov').classList.remove('open');editTrimId=null;}
+function closeTrimForm(){el('frm-trim-ov').classList.remove('open');plEditTrimId=null;}
 async function saveTrim(){
   const pid=gv('ft-proj');if(!pid){alert('Seleciona um projeto.');return;}
   const btn=el('save-trim-btn');btn.textContent='A guardar...';btn.disabled=true;
   try{
-    const trim=gv('ft-trim'),ano=parseInt(gv('ft-ano')),pnome=projetos.find(p=>String(p.id)===pid)?.nome||'';
+    const trim=gv('ft-trim'),ano=parseInt(gv('ft-ano')),pnome=plProjetos.find(p=>String(p.id)===pid)?.nome||'';
     const titulo=gv('ft-titulo')||`${trim} ${ano} — ${pnome}`;
     const body={__metadata:{type:'SP.Data.FJ_x005f_PlanoTrimestralListItem'},Title:titulo,Trimestre:trim,Departamento:gv('ft-dep'),Estado:gv('ft-est'),Notas:gv('ft-notas'),ProjetoId:parseInt(pid),EstadoAprov:'Rascunho'};
     if(ano)body.Ano=ano;const aid=gv('ft-acao');if(aid)body.AcaoId=parseInt(aid);
     const tp=parseInt(gv('ft-tarprev'));if(tp)body.TarefasPrevistas=tp;
-    if(editTrimId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${editTrimId})`,body,'MERGE','*');
+    if(plEditTrimId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${plEditTrimId})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items`,body,'POST');
     closeTrimForm();await loadPlanoTrim();renderTrim();showNotif('Guardado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
@@ -2880,7 +2880,7 @@ async function delTrim(id){
 
 /* ===== PLANO SEMANAL ===== */
 function setView(v){
-  semView=v;
+  plSemView=v;
   ['pes','eq','col'].forEach(k=>el('vt-'+k)?.classList.toggle('active',k===v[0]+v[1]+(v==='colaborador'?'l':'')));
   el('vt-pes').classList.toggle('active',v==='pessoal');
   el('vt-eq').classList.toggle('active',v==='equipa');
@@ -2889,19 +2889,19 @@ function setView(v){
   el('col-picker').style.display=v==='colaborador'?'block':'none';
   renderSem();
 }
-function chgWeek(d){viewWeek+=d;if(viewWeek<1){viewWeek=52;viewYear--;}else if(viewWeek>52){viewWeek=1;viewYear++;}renderSem();}
+function chgWeek(d){plViewWeek+=d;if(plViewWeek<1){plViewWeek=52;plViewYear--;}else if(plViewWeek>52){plViewWeek=1;plViewYear++;}renderSem();}
 function renderSem(){
-  el('week-label').textContent=weekLabel(viewWeek,viewYear);
-  const wr=weekRange(viewWeek,viewYear);
+  el('week-label').textContent=weekLabel(plViewWeek,plViewYear);
+  const wr=weekRange(plViewWeek,plViewYear);
   const q=(gv('q-sem')||'').toLowerCase(),est=gv('ff-s-est'),dep=gv('ff-s-dep'),orig=gv('ff-s-orig');
   const myName=(user?.name||'').toLowerCase();
   const colEmail=gv('col-email');
-  const list=tarefas.filter(t=>{
-    const byW=t.semana==viewWeek&&t.anoFJ==viewYear;
+  const list=plTarefas.filter(t=>{
+    const byW=t.semana==plViewWeek&&t.anoFJ==plViewYear;
     const byD=t.dataLimite&&new Date(t.dataLimite+'T12:00:00')>=wr.start&&new Date(t.dataLimite+'T12:00:00')<=wr.end;
     if(!byW&&!byD)return false;
-    if(semView==='pessoal'&&myName&&t.responsavel&&!t.responsavel.toLowerCase().split(' ').some(w=>w.length>2&&myName.includes(w)))return false;
-    if(semView==='colaborador'&&colEmail&&t.responsavelEmail!==colEmail)return false;
+    if(plSemView==='pessoal'&&myName&&t.responsavel&&!t.responsavel.toLowerCase().split(' ').some(w=>w.length>2&&myName.includes(w)))return false;
+    if(plSemView==='colaborador'&&colEmail&&t.responsavelEmail!==colEmail)return false;
     if(dep&&t.dep!==dep)return false;
     if(est==='todo'&&t.estado!=='todo'&&t.estado!=='Por fazer')return false;
     if(est&&est!=='todo'&&t.estado!==est)return false;
@@ -2933,11 +2933,11 @@ function renderSem(){
         <button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">Editar</button>
       </div></td>
     </tr>`;
-  }).join('')||`<tr><td colspan="8"><div class="empty">Sem tarefas para esta semana.</div></td></tr>`;
+  }).join('')||`<tr><td colspan="8"><div class="empty">Sem plTarefas para esta semana.</div></td></tr>`;
   el('tcount-sem').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
 }
 async function toggleTar(compId,checked){
-  const t=tarefas.find(x=>x.id===compId);if(!t)return;
+  const t=plTarefas.find(x=>x.id===compId);if(!t)return;
   const novoEst=checked?'Concluída':'Em curso';
   try{
     const body={__metadata:{type:`SP.Data.${t.lista==='FJ_Tarefas'?'FJ_x005f_TarefasListItem':'Factorial_x005f_TarefasListItem'}`},Estado:novoEst};
@@ -2948,7 +2948,7 @@ async function toggleTar(compId,checked){
 /* Tarefa form */
 function checkOrigem(v){el('tar-warn').style.display=v==='Factorial'?'block':'none';}
 function openTarForm(){
-  editTarId=null;el('frm-tar-ov').classList.add('open');
+  plEditTarId=null;el('frm-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-acao','');
@@ -2957,8 +2957,8 @@ function openTarForm(){
   el('ftar-existing-attach').innerHTML='';
 }
 function openTarFormEdit(compId){
-  const t=tarefas.find(x=>x.id===compId);if(!t)return;
-  editTarId=compId;el('frm-tar-ov').classList.add('open');
+  const t=plTarefas.find(x=>x.id===compId);if(!t)return;
+  plEditTarId=compId;el('frm-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Editar tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');sv2('ftar-acao',t.acaoId||'');
@@ -2966,15 +2966,15 @@ function openTarFormEdit(compId){
   sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
-function closeTarForm(){el('frm-tar-ov').classList.remove('open');editTarId=null;}
+function closeTarForm(){el('frm-tar-ov').classList.remove('open');plEditTarId=null;}
 async function saveTarefa(){
-  if(gv('ftar-origem')==='Factorial'){showNotif('As tarefas do Factorial devem ser criadas no Factorial.','warn');return;}
+  if(gv('ftar-origem')==='Factorial'){showNotif('As plTarefas do Factorial devem ser criadas no Factorial.','warn');return;}
   const desc=gv('ftar-desc').trim();if(!desc){alert('Descrição obrigatória.');return;}
   const btn=el('save-tar-btn');btn.textContent='A guardar...';btn.disabled=true;
   try{
     const data=gv('ftar-data');
-    const semana=data?isoWeek(new Date(data+'T12:00:00')):viewWeek;
-    const anoFJ=data?new Date(data+'T12:00:00').getFullYear():viewYear;
+    const semana=data?isoWeek(new Date(data+'T12:00:00')):plViewWeek;
+    const anoFJ=data?new Date(data+'T12:00:00').getFullYear():plViewYear;
     const body={__metadata:{type:'SP.Data.FJ_x005f_TarefasListItem'},
       Title:desc,
       Origem:gv('ftar-origem'),
@@ -2987,8 +2987,8 @@ async function saveTarefa(){
     if(data)body.DataLimite=data+'T00:00:00Z';
     const aid=gv('ftar-acao');if(aid)body.AcaoId=parseInt(aid);
     let itemId=null;
-    if(editTarId){
-      const t=tarefas.find(x=>x.id===editTarId);
+    if(plEditTarId){
+      const t=plTarefas.find(x=>x.id===plEditTarId);
       if(t){await spWrite(`${SP}/_api/web/lists/getbytitle('${t.lista}')/items(${t.spId})`,body,'MERGE','*');itemId=t.spId;}
     }else{
       const r=await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
@@ -3006,7 +3006,7 @@ function setKTab(t){
 }
 function renderKdefs(){
   const proj=gv('ff-kd-proj'),tipo=gv('ff-kd-tipo');
-  const list=kpdefs.filter(k=>{if(proj&&String(k.projetoId)!==proj)return false;if(tipo&&k.tipo!==tipo)return false;return true;});
+  const list=plKpdefs.filter(k=>{if(proj&&String(k.projetoId)!==proj)return false;if(tipo&&k.tipo!==tipo)return false;return true;});
   el('tbody-kdef').innerHTML=list.map(k=>`<tr>
     <td style="font-weight:500" title="${k.nome}">${k.nome}</td>
     <td style="font-size:12px" title="${an(k.acaoId)}">${an(k.acaoId)}</td>
@@ -3020,11 +3020,11 @@ function renderKdefs(){
   </tr>`).join('')||`<tr><td colspan="9"><div class="empty">Sem KPIs.</div></td></tr>`;
 }
 function openKdefForm(id){
-  editKdefId=id||null;el('frm-kdef-ov').classList.add('open');
-  el('fk-proj').innerHTML='<option value="">Nenhum</option>'+projetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  plEditKdefId=id||null;el('frm-kdef-ov').classList.add('open');
+  el('fk-proj').innerHTML='<option value="">Nenhum</option>'+plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   el('fk-proj').onchange=function(){loadAcoesForProj(this.value,'fk-acao');};
   if(id){
-    const k=kpdefs.find(x=>x.id===id);if(!k)return;
+    const k=plKpdefs.find(x=>x.id===id);if(!k)return;
     el('frm-kdef-title').textContent='Editar KPI';
     sv2('fk-nome',k.nome);sv2('fk-proj',k.projetoId||'');loadAcoesForProj(k.projetoId,'fk-acao',k.acaoId);
     sv2('fk-tipo',k.tipo);sv2('fk-dir',k.dir||'meta');sv2('fk-uni',k.uni||'');
@@ -3038,7 +3038,7 @@ function openKdefForm(id){
   }
 }
 function editKdef(id){openKdefForm(id);}
-function closeKdefForm(){el('frm-kdef-ov').classList.remove('open');editKdefId=null;}
+function closeKdefForm(){el('frm-kdef-ov').classList.remove('open');plEditKdefId=null;}
 async function saveKdef(){
   const nome=gv('fk-nome').trim();if(!nome){alert('Nome obrigatório.');return;}
   const btn=el('save-kdef-btn');btn.textContent='A guardar...';btn.disabled=true;
@@ -3047,7 +3047,7 @@ async function saveKdef(){
     const m=parseFloat(gv('fk-meta'));if(!isNaN(m))body.Meta=m;
     const pid=gv('fk-proj');if(pid)body.ProjetoId=parseInt(pid);
     const aid=gv('fk-acao');if(aid)body.AcaoId=parseInt(aid);
-    if(editKdefId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items(${editKdefId})`,body,'MERGE','*');
+    if(plEditKdefId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items(${plEditKdefId})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items`,body,'POST');
     closeKdefForm();await loadKPIDefs();renderKdefs();populateDrops();showNotif('KPI guardado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
@@ -3060,9 +3060,9 @@ async function delKdef(id){
 }
 function renderKregs(){
   const kpiId=gv('ff-kr-kpi'),ano=gv('ff-kr-ano');
-  const list=kpregs.filter(r=>{if(kpiId&&String(r.kpiId)!==kpiId)return false;if(ano&&String(r.ano)!==ano)return false;return true;});
+  const list=plKpregs.filter(r=>{if(kpiId&&String(r.kpiId)!==kpiId)return false;if(ano&&String(r.ano)!==ano)return false;return true;});
   el('tbody-kreg').innerHTML=list.map(r=>{
-    const k=kpdefs.find(x=>String(x.id)===String(r.kpiId));
+    const k=plKpdefs.find(x=>String(x.id)===String(r.kpiId));
     const meta=k?.meta||null;const pct=meta&&r.valor!==null?Math.round((r.valor/meta)*100):null;
     const c=pct!==null?kpiColor(k,pct):'var(--tx)';
     const est=pct!==null?kpiEstado(k,pct):'—';
@@ -3080,8 +3080,8 @@ function renderKregs(){
 }
 function openKregForm(){
   el('frm-kreg-ov').classList.add('open');
-  el('fr-kpi').innerHTML='<option value="">Selecionar KPI...</option>'+kpdefs.filter(k=>k.ativo).map(k=>`<option value="${k.id}">${k.nome}</option>`).join('');
-  sv2('fr-valor',0);sv2('fr-sem',viewWeek);sv2('fr-data',today());sv2('fr-notas','');
+  el('fr-kpi').innerHTML='<option value="">Selecionar KPI...</option>'+plKpdefs.filter(k=>k.ativo).map(k=>`<option value="${k.id}">${k.nome}</option>`).join('');
+  sv2('fr-valor',0);sv2('fr-sem',plViewWeek);sv2('fr-data',today());sv2('fr-notas','');
 }
 function closeKregForm(){el('frm-kreg-ov').classList.remove('open');}
 async function saveKreg(){
@@ -3104,7 +3104,7 @@ async function saveKreg(){
 function gerarRelS(){
   const ano=parseInt(gv('rl-s-ano')),sem=parseInt(gv('rl-s-sem')),dep=gv('rl-s-dep');
   const wr=weekRange(sem,ano);
-  const list=tarefas.filter(t=>{
+  const list=plTarefas.filter(t=>{
     const byW=t.semana==sem&&t.anoFJ==ano;
     const byD=t.dataLimite&&new Date(t.dataLimite+'T12:00:00')>=wr.start&&new Date(t.dataLimite+'T12:00:00')<=wr.end;
     if(!byW&&!byD)return false;if(dep&&t.dep!==dep)return false;return true;
@@ -3115,7 +3115,7 @@ function gerarRelS(){
   el('rl-s-content').innerHTML=`
     <div style="color:var(--tx2);font-size:13px;margin-bottom:1rem">${weekLabel(sem,ano)}${dep?' · '+dep:''}</div>
     <div class="stats" style="margin-bottom:1.5rem">
-      <div class="stat"><span class="stat-n">${list.length}</span><span class="stat-l">Total tarefas</span></div>
+      <div class="stat"><span class="stat-n">${list.length}</span><span class="stat-l">Total plTarefas</span></div>
       <div class="stat"><span class="stat-n" style="color:var(--g5)">${conc.length}</span><span class="stat-l">Concluídas</span></div>
       <div class="stat"><span class="stat-n" style="color:var(--red)">${nc.length}</span><span class="stat-l">Por concluir</span></div>
       <div class="stat"><span class="stat-n" style="color:${pc}">${pct}%</span><span class="stat-l">Cumprimento</span></div>
@@ -3125,20 +3125,20 @@ function gerarRelS(){
       <colgroup><col style="width:38%"><col style="width:18%"><col style="width:18%"><col style="width:14%"><col style="width:12%"></colgroup>
       <thead><tr><th>Tarefa</th><th>Responsável</th><th>Ação</th><th>Data prevista</th><th>Estado</th></tr></thead>
       <tbody>${nc.map(t=>`<tr><td style="font-weight:500">${t.titulo}</td><td>${t.responsavel||'—'}</td><td style="font-size:12px">${an(t.acaoId)}</td><td>${fd(t.dataLimite)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody>
-    </table></div>`:`<div style="background:var(--g4);border-radius:var(--r);padding:12px 16px;margin-bottom:1.5rem;font-size:13px;color:var(--g6);font-weight:500">✓ Todas as tarefas concluídas!</div>`}
+    </table></div>`:`<div style="background:var(--g4);border-radius:var(--r);padding:12px 16px;margin-bottom:1.5rem;font-size:13px;color:var(--g6);font-weight:500">✓ Todas as plTarefas concluídas!</div>`}
     <div style="font-size:13px;font-weight:600;margin-bottom:.5rem">KPIs semanais</div>
     <div class="table-wrap"><table>
       <colgroup><col style="width:40%"><col style="width:20%"><col style="width:20%"><col style="width:20%"></colgroup>
       <thead><tr><th>KPI</th><th>Valor</th><th>Objetivo</th><th>Estado</th></tr></thead>
-      <tbody>${kpdefs.filter(k=>k.ativo&&k.freq==='Semanal').map(k=>{const r=kpregs.find(x=>x.kpiId==k.id&&x.sem==sem&&x.ano==ano);const pct2=r&&k.meta?Math.round((r.valor/k.meta)*100):null;return`<tr><td>${k.nome}</td><td>${r?r.valor+' '+k.uni:'—'}</td><td>${k.meta} ${k.uni}</td><td style="color:${pct2?kpiColor(k,pct2):'var(--tx3)'}">${pct2!==null?kpiEstado(k,pct2):'—'}</td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty" style="padding:.75rem">Sem KPIs semanais.</div></td></tr>'}</tbody>
+      <tbody>${plKpdefs.filter(k=>k.ativo&&k.freq==='Semanal').map(k=>{const r=plKpregs.find(x=>x.kpiId==k.id&&x.sem==sem&&x.ano==ano);const pct2=r&&k.meta?Math.round((r.valor/k.meta)*100):null;return`<tr><td>${k.nome}</td><td>${r?r.valor+' '+k.uni:'—'}</td><td>${k.meta} ${k.uni}</td><td style="color:${pct2?kpiColor(k,pct2):'var(--tx3)'}">${pct2!==null?kpiEstado(k,pct2):'—'}</td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty" style="padding:.75rem">Sem KPIs semanais.</div></td></tr>'}</tbody>
     </table></div>`;
 }
 function gerarRelT(){
   const ano=parseInt(gv('rl-t-ano')),trim=gv('rl-t-q'),dep=gv('rl-t-dep');
-  const planos=planoTrim.filter(p=>p.trim===trim&&p.ano==ano&&(!dep||p.dep===dep));
+  const planos=plPlanoTrim.filter(p=>p.trim===trim&&p.ano==ano&&(!dep||p.dep===dep));
   const tarPrev=planos.reduce((a,p)=>a+(p.tarPrev||0),0);
   const qMonths={'Q1':[0,1,2],'Q2':[3,4,5],'Q3':[6,7,8],'Q4':[9,10,11]};
-  const tarConc=tarefas.filter(t=>{
+  const tarConc=plTarefas.filter(t=>{
     if(t.estado!=='Concluída')return false;const dt=t.dataLimite?new Date(t.dataLimite):null;if(!dt)return false;
     const m=dt.getMonth();const q2=m<3?'Q1':m<6?'Q2':m<9?'Q3':'Q4';
     return q2===trim&&dt.getFullYear()===ano&&(!dep||t.dep===dep);
@@ -3163,8 +3163,8 @@ function gerarRelT(){
     <div class="table-wrap"><table>
       <colgroup><col style="width:30%"><col style="width:15%"><col style="width:15%"><col style="width:10%"><col style="width:30%"></colgroup>
       <thead><tr><th>KPI</th><th>Último valor</th><th>Objetivo</th><th>Estado</th><th>Progresso</th></tr></thead>
-      <tbody>${kpdefs.filter(k=>k.ativo).map(k=>{
-        const r=kpregs.filter(x=>x.kpiId==k.id&&x.trim===trim&&x.ano==ano).sort((a,b)=>b.id-a.id)[0];
+      <tbody>${plKpdefs.filter(k=>k.ativo).map(k=>{
+        const r=plKpregs.filter(x=>x.kpiId==k.id&&x.trim===trim&&x.ano==ano).sort((a,b)=>b.id-a.id)[0];
         const pct2=r&&k.meta?Math.round((r.valor/k.meta)*100):null;
         const c=pct2!==null?kpiColor(k,pct2):'var(--tx3)';
         const barW=k.dir==='limite'?(pct2!==null?Math.min(100,200-pct2):0):(pct2!==null?Math.min(pct2,100):0);
@@ -3180,21 +3180,21 @@ function gerarRelT(){
 }
 
 /* ===== PEOPLE SEARCH ===== */
-async function searchPeople(q,sugId,inputId,emailId){
+async function plSearchPeople(q,sugId,inputId,emailId){
   if(q.length<2){el(sugId)?.classList.remove('open');return;}
   try{
     await getGrTok();
     const r=await fetch(`https://graph.microsoft.com/v1.0/users?$filter=startswith(displayName,'${encodeURIComponent(q)}') or startswith(mail,'${encodeURIComponent(q)}')&$select=displayName,mail&$top=8`,{headers:{Authorization:`Bearer ${graphToken}`}});
     const d=await r.json();const s=el(sugId);if(!s)return;
     if(!d.value?.length){s.classList.remove('open');return;}
-    s.innerHTML=d.value.map(p=>`<div class="ppl-item" onclick="selPerson('${inputId}','${sugId}','${p.displayName.replace(/'/g,"\\'")}','${emailId||''}','${(p.mail||'').replace(/'/g,"\\'")}')">
+    s.innerHTML=d.value.map(p=>`<div class="ppl-item" onclick="plSelPerson('${inputId}','${sugId}','${p.displayName.replace(/'/g,"\\'")}','${emailId||''}','${(p.mail||'').replace(/'/g,"\\'")}')">
       <div class="ppl-av">${p.displayName.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
       <div><div style="font-weight:500">${p.displayName}</div><div style="font-size:11px;color:var(--tx3)">${p.mail||''}</div></div>
     </div>`).join('');
     s.classList.add('open');
   }catch(e){console.warn(e);}
 }
-function selPerson(inputId,sugId,name,emailId,email){
+function plSelPerson(inputId,sugId,name,emailId,email){
   sv2(inputId,name);if(emailId)sv2(emailId,email);
   el(sugId)?.classList.remove('open');
   if(emailId==='col-email')renderSem();
@@ -3213,15 +3213,14 @@ document.addEventListener('click',e=>{
 /* ===== BOOT ===== */
 init();
 
-// ── PL INIT (called when switching to Planeamento tab) ──
 function plInit(){
   const now=new Date();
-  viewWeek=isoWeek(now);viewYear=now.getFullYear();
-  const semSel=el('rl-s-sem');
-  if(semSel)semSel.innerHTML=Array.from({length:53},(_,i)=>`<option value="${i+1}"${i+1===viewWeek?' selected':''}>Semana ${i+1}</option>`).join('');
-  if(sharedProjetos.length) projetos=[...sharedProjetos];
+  plViewWeek=isoWeek(now);plViewYear=now.getFullYear();
+  // Use shared projetos
+  if(sharedProjetos.length) plProjetos=sharedProjetos;
   plLoadAll();
 }
+
 
 // ═══ FINANCEIRO MODULE ═══
 let PROJECTS = {}; // year -> array of projects
