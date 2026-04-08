@@ -567,37 +567,6 @@ tr:hover td{background:var(--bg3)}
         Relatórios
       </div>
     </div>
-      <div class="nav-item active" id="nav-dashboard" onclick="plShowPage('dashboard')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-        Dashboard
-      </div>
-      <div class="nav-item" id="nav-hierarquia" onclick="plShowPage('hierarquia')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="4" rx="1"/><rect x="9" y="1" width="6" height="4" rx="1"/><rect x="5" y="11" width="6" height="4" rx="1"/><line x1="4" y1="5" x2="4" y2="13"/><line x1="12" y1="5" x2="8" y2="13"/><line x1="4" y1="9" x2="8" y2="11"/></svg>
-        Projetos &amp; Ações
-      </div>
-      <div class="nav-item" id="nav-gantt" onclick="plShowPage('gantt')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="1" y1="4" x2="10" y2="4"/><line x1="4" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="9" y2="12"/></svg>
-        Gantt
-      </div>
-      <div class="nav-item" id="nav-trimestral" onclick="plShowPage('trimestral')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="2" x2="5" y2="6"/><line x1="11" y1="2" x2="11" y2="6"/></svg>
-        Plano Trimestral
-      </div>
-      <div class="nav-item" id="nav-semanal" onclick="plShowPage('semanal')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
-        Plano Semanal
-      </div>
-      <div class="sidebar-lbl">Métricas</div>
-      <div class="nav-item" id="nav-kpis" onclick="plShowPage('kpis')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 9,9 15,3"/></svg>
-        KPIs
-      </div>
-      <div class="sidebar-lbl">Reporting</div>
-      <div class="nav-item" id="nav-relatorios" onclick="plShowPage('relatorios')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
-        Relatórios
-      </div>
-    </div>
     <div class="sidebar" id="sidebar-gf" style="display:none;background:#1C3557">
       <div class="sidebar-label" style="color:rgba(255,255,255,.4)">Financeiro</div>
       <div class="nav-item" id="gf-nav-home" onclick="gfNavigate('home')" style="color:rgba(255,255,255,.75)">
@@ -855,7 +824,34 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Data limite</label><input type="date" id="ft-data"></div>
               <div class="fg"><label>Estado</label><select id="ft-estado"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select></div>
               <div class="fg"><label>Prioridade</label><select id="ft-prior"><option>Média</option><option>Alta</option><option>Baixa</option></select></div>
-            <div id="module-pl" style="display:none">
+
+            </div>
+            <div class="panel-footer">
+              <button class="btn" onclick="closeTarForm()">Cancelar</button>
+              <button class="btn btn-primary" id="save-tar-btn" onclick="saveTarefa()">Guardar</button>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qt" placeholder="Pesquisar..." oninput="renderTarefasTable()"></div>
+          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op. Norte</option><option>Op. Sul</option><option>Financeiro</option><option>Impacto</option><option>CA</option></select>
+          <select class="flt" id="fft-est" onchange="renderTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
+          <select class="flt" id="fft-prior" onchange="renderTarefasTable()"><option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
+          <button class="btn" onclick="loadTarefas()">&#8635;</button>
+          <button class="btn btn-primary" onclick="openTarForm()">+ Nova tarefa</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <colgroup><col style="width:25%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
+            <thead><tr><th>Tarefa</th><th>Responsável</th><th>Data</th><th>Estado</th><th>Prioridade</th><th>Departamento</th><th>Projeto</th><th>Ações</th></tr></thead>
+            <tbody id="tbody-tar"></tbody>
+          </table>
+        </div>
+        <div id="tcount-tar" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+      </div>
+</div>
+
+<div id="module-pl" style="display:none">
 
       <div id="notif" class="notif"></div>
 
@@ -1116,87 +1112,7 @@ tr:hover td{background:var(--bg3)}
           <div class="toolbar">
             <select class="flt" id="ff-kr-kpi" onchange="renderKregs()"><option value="">Todos os KPIs</option></select>
             <select class="flt" id="ff-kr-ano" onchange="renderKregs()"><option value="">Todos os anos</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
-            <button class="btn btn-primary" onclick="openKregForm()">+ Novo registo</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <colgroup><col style="width:24%"><col style="width:12%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:12%"><col style="width:12%"></colgroup>
-              <thead><tr><th>KPI</th><th>Período</th><th>Valor</th><th>Objetivo</th><th>Estado</th><th>%</th><th>Data</th><th>Inserido por</th></tr></thead>
-              <tbody id="tbody-kreg"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
 
-      <!-- RELATÓRIOS -->
-      <div id="pl-page-relatorios" class="page">
-        <div class="page-title">Relatórios</div>
-        <div class="rep-section">
-          <div class="rep-title">Relatório Semanal</div>
-          <div class="toolbar">
-            <select class="flt" id="rl-s-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
-            <select class="flt" id="rl-s-sem"></select>
-            <select class="flt" id="rl-s-dep"><option value="">Toda a organização</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
-            <button class="btn btn-primary" onclick="gerarRelS()">Gerar</button>
-            <button class="btn" onclick="window.print()">Imprimir</button>
-          </div>
-          <div id="rl-s-content"><div class="empty">Seleciona o período e clica em Gerar.</div></div>
-        </div>
-        <div class="rep-section">
-          <div class="rep-title">Relatório Trimestral</div>
-          <div class="toolbar">
-            <select class="flt" id="rl-t-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
-            <select class="flt" id="rl-t-q"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
-            <select class="flt" id="rl-t-dep"><option value="">Toda a organização</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
-            <button class="btn btn-primary" onclick="gerarRelT()">Gerar</button>
-            <button class="btn" onclick="window.print()">Imprimir</button>
-          </div>
-          <div id="rl-t-content"><div class="empty">Seleciona o trimestre e clica em Gerar.</div></div>
-        </div>
-      </div>
-
-    
-</div>
-            <button class="btn btn-primary" onclick="openKregForm()">+ Novo registo</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <colgroup><col style="width:24%"><col style="width:12%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:12%"><col style="width:12%"></colgroup>
-              <thead><tr><th>KPI</th><th>Período</th><th>Valor</th><th>Objetivo</th><th>Estado</th><th>%</th><th>Data</th><th>Inserido por</th></tr></thead>
-              <tbody id="tbody-kreg"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- RELATÓRIOS -->
-      <div id="page-relatorios" class="page">
-        <div class="page-title">Relatórios</div>
-        <div class="rep-section">
-          <div class="rep-title">Relatório Semanal</div>
-          <div class="toolbar">
-            <select class="flt" id="rl-s-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
-            <select class="flt" id="rl-s-sem"></select>
-            <select class="flt" id="rl-s-dep"><option value="">Toda a organização</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
-            <button class="btn btn-primary" onclick="gerarRelS()">Gerar</button>
-            <button class="btn" onclick="window.print()">Imprimir</button>
-          </div>
-          <div id="rl-s-content"><div class="empty">Seleciona o período e clica em Gerar.</div></div>
-        </div>
-        <div class="rep-section">
-          <div class="rep-title">Relatório Trimestral</div>
-          <div class="toolbar">
-            <select class="flt" id="rl-t-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
-            <select class="flt" id="rl-t-q"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
-            <select class="flt" id="rl-t-dep"><option value="">Toda a organização</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
-            <button class="btn btn-primary" onclick="gerarRelT()">Gerar</button>
-            <button class="btn" onclick="window.print()">Imprimir</button>
-          </div>
-          <div id="rl-t-content"><div class="empty">Seleciona o trimestre e clica em Gerar.</div></div>
-        </div>
-      </div>
-
-    
 </div>
 <div id="module-gf" style="display:none"><div id="app"></div></div>
 </div><!-- /main -->
