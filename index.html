@@ -2314,6 +2314,14 @@ function pendingAprovCount(){
   }).length;
 }
 
+
+function bdg(c,t){return `<span class="bdg ${c}">${t||'—'}</span>`;}
+function depB(d){if(!d)return'';return bdg('b-l',d);}
+function estB(e){
+  const colors={'Concluída':'b-g','Em Curso':'b-b','Atrasada':'b-r','todo':'b-gray','Média':'b-y','Alta':'b-o','Crítica':'b-r','Baixa':'b-gray'};
+  return bdg(colors[e]||'b-gray',e);
+}
+
 function tog(k){T[k]=!T[k];const b=el('t-'+k),l=el('l-'+k);if(b)b.className='toggle'+(T[k]?' on':'');if(l)l.textContent=T[k]?'Sim':'Não';}
 function setTog(k,v){T[k]=v;const b=el('t-'+k),l=el('l-'+k);if(b)b.className='toggle'+(v?' on':'');if(l)l.textContent=v?'Sim':'Não';}
 function el(id){return document.getElementById(id);}
@@ -3196,6 +3204,10 @@ const ROLE_LBL = {
   'worker': 'Colaborador',
   'admin': 'Administrador'
 };
+
+
+let PROJECTS = {};
+let RUBRICAS = {};
 
 let GF = {
   user:null,screen:'login',
