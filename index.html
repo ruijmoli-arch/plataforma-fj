@@ -1251,7 +1251,7 @@ const msalI=new msal.PublicClientApplication(msalCfg);
 
 let user=null,spToken=null,graphToken=null;
 let userGroups=[];
-let items=[],extItems=[],tarefas=[];
+let items=[],extItems=[],rnTarefas=[];
 let editId=null,editExtId=null,editTarId=null;
 let T={conf:false,atras:false};
 let carrItems=[],carrIdx=0,carrDec={},fsOpen=false,currReuniao='';
@@ -1682,7 +1682,7 @@ function removeInlineTarefa(idx){
   renderInlineTarefas();
 }
 function renderInlineTarefas(){
-  const list=document.getElementById('fe-tarefas-list');
+  const list=document.getElementById('fe-rnTarefas-list');
   if(!feInlineTarefas.length){list.innerHTML='';return;}
   list.innerHTML=feInlineTarefas.map((t,i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:4px">
@@ -1710,7 +1710,7 @@ async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
 async function loadTarefas(){
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*&$orderby=DataLimite asc&$top=500`);
-    tarefas=d.d.results.map(r=>({
+    rnTarefas=d.d.results.map(r=>({
       id:r.Id,etag:r.__metadata?.etag||'*',
       titulo:r.Title||'',descricao:r.Descricao||'',
       responsavel:r.Responsavel?.Title||'',
@@ -1724,17 +1724,17 @@ async function loadTarefas(){
   }catch(e){console.warn('Tarefas error',e);}
 }
 function renderTarefasStats(){
-  el('t-total').textContent=tarefas.length;
-  el('t-pfazer').textContent=tarefas.filter(t=>t.estado==='Por fazer').length;
-  el('t-emcurso').textContent=tarefas.filter(t=>t.estado==='Em curso').length;
+  el('t-total').textContent=rnTarefas.length;
+  el('t-pfazer').textContent=rnTarefas.filter(t=>t.estado==='Por fazer').length;
+  el('t-emcurso').textContent=rnTarefas.filter(t=>t.estado==='Em curso').length;
   const hoje=today();
-  el('t-atrasadas').textContent=tarefas.filter(t=>t.data&&t.data<hoje&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
+  el('t-atrasadas').textContent=rnTarefas.filter(t=>t.data&&t.data<hoje&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
 }
 function renderTarefasTable(){
   const q=(el('qt')||{value:''}).value.toLowerCase();
   const fe=gv('fft-est'),fd_=gv('fft-dep'),fp=gv('fft-prior');
   const hoje=today();
-  let list=tarefas.filter(i=>{
+  let list=rnTarefas.filter(i=>{
     if(q&&!i.titulo.toLowerCase().includes(q))return false;
     if(fe&&i.estado!==fe)return false;
     if(fd_&&i.departamento!==fd_)return false;
@@ -1764,10 +1764,10 @@ function renderTarefasTable(){
   el('tcount-tar').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
 }
 function openTarForm(id){
-  editTarId=id||null;
+  rnEditTarId=id||null;
   el('frm-tar-ov').classList.add('open');
   if(id){
-    const t=tarefas.find(x=>x.id===id);if(!t)return;
+    const t=rnTarefas.find(x=>x.id===id);if(!t)return;
     el('frm-tar-title').textContent='Editar tarefa';
     sv2('ft-titulo',t.titulo);sv2('ft-desc',t.descricao||'');sv2('ft-resp',t.responsavel||'');
     sv2('ft-data',t.data);sv2('ft-estado',t.estado);sv2('ft-prior',t.prioridade);
@@ -1780,7 +1780,7 @@ function openTarForm(id){
   }
 }
 function editTar(id){openTarForm(id);}
-function closeTarForm(){el('frm-tar-ov').classList.remove('open');editTarId=null;}
+function closeTarForm(){el('frm-tar-ov').classList.remove('open');rnEditTarId=null;}
 async function saveTarefa(){
   const titulo=el('ft-titulo').value.trim();
   if(!titulo){alert('Por favor indique o título.');return;}
@@ -1792,8 +1792,8 @@ async function saveTarefa(){
       Projeto:gv('ft-proj'),Origem:gv('ft-origem'),ReuniaoOrigem:gv('ft-reuniao-orig')
     };
     if(gv('ft-data'))body.DataLimite=gv('ft-data')+'T00:00:00Z';
-    if(editTarId){
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items(${editTarId})`,body,'MERGE','*');
+    if(rnEditTarId){
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items(${rnEditTarId})`,body,'MERGE','*');
     }else{
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
     }
@@ -2350,7 +2350,7 @@ init();
 
 let projetos=[],acoes=[],tarefas=[],kpdefs=[],kpregs=[],planoTrim=[];
 let semView='pessoal',viewWeek,viewYear;
-let editTrimId=null,editKdefId=null,editKregId=null,editTarId=null;
+let editTrimId=null,editKdefId=null,editKregId=null,plEditTarId=null;
 let hierOpen={};
 
 /* ===== LOAD ===== */
@@ -2875,7 +2875,7 @@ async function toggleTar(compId,checked){
 /* Tarefa form */
 function checkOrigem(v){el('tar-warn').style.display=v==='Factorial'?'block':'none';}
 function openTarForm(){
-  editTarId=null;el('frm-tar-ov').classList.add('open');
+  plEditTarId=null;el('frm-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-acao','');
@@ -2885,7 +2885,7 @@ function openTarForm(){
 }
 function openTarFormEdit(compId){
   const t=tarefas.find(x=>x.id===compId);if(!t)return;
-  editTarId=compId;el('frm-tar-ov').classList.add('open');
+  plEditTarId=compId;el('frm-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Editar tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');sv2('ftar-acao',t.acaoId||'');
@@ -2893,7 +2893,7 @@ function openTarFormEdit(compId){
   sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
-function closeTarForm(){el('frm-tar-ov').classList.remove('open');editTarId=null;}
+function closeTarForm(){el('frm-tar-ov').classList.remove('open');plEditTarId=null;}
 async function saveTarefa(){
   if(gv('ftar-origem')==='Factorial'){showNotif('As tarefas do Factorial devem ser criadas no Factorial.','warn');return;}
   const desc=gv('ftar-desc').trim();if(!desc){alert('Descrição obrigatória.');return;}
@@ -2914,8 +2914,8 @@ async function saveTarefa(){
     if(data)body.DataLimite=data+'T00:00:00Z';
     const aid=gv('ftar-acao');if(aid)body.AcaoId=parseInt(aid);
     let itemId=null;
-    if(editTarId){
-      const t=tarefas.find(x=>x.id===editTarId);
+    if(plEditTarId){
+      const t=tarefas.find(x=>x.id===plEditTarId);
       if(t){await spWrite(`${SP}/_api/web/lists/getbytitle('${t.lista}')/items(${t.spId})`,body,'MERGE','*');itemId=t.spId;}
     }else{
       const r=await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
