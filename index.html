@@ -2450,7 +2450,7 @@ function renderDash(){
   el('dash-kpis').innerHTML=km.length?`<table><colgroup><col style="width:55%"><col style="width:25%"><col style="width:20%"></colgroup><tbody>${km.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct===null?'var(--tx3)':kpiColor(k,pct);return`<tr><td style="font-size:12px;font-weight:500">${k.nome}</td><td style="font-size:11px">${lr?lr.valor+' '+k.uni:'—'}</td><td style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem KPIs manuais.</div>';
   // Tasks
   const wt=plTarefas.filter(t=>t.semana==w&&t.anoFJ==y).slice(0,8);
-  el('dash-plTarefas').innerHTML=wt.length?`<table><colgroup><col style="width:45%"><col style="width:25%"><col style="width:15%"><col style="width:15%"></colgroup><tbody>${wt.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}"><td style="font-size:12px;font-weight:500">${t.titulo}</td><td style="font-size:11px">${t.responsavel||'—'}</td><td>${estB(t.prioridade)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem plTarefas para esta semana.</div>';
+  el('dash-tarefas').innerHTML=wt.length?`<table><colgroup><col style="width:45%"><col style="width:25%"><col style="width:15%"><col style="width:15%"></colgroup><tbody>${wt.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}"><td style="font-size:12px;font-weight:500">${t.titulo}</td><td style="font-size:11px">${t.responsavel||'—'}</td><td>${estB(t.prioridade)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem plTarefas para esta semana.</div>';
 }
 function kpiColor(k,pct){
   if(k.dir==='limite'){return pct<=100?'var(--g5)':pct<=120?'var(--amb2)':'var(--red)';}
@@ -3145,6 +3145,48 @@ let SOLICITACOES = [];
 let ALTERACOES = [];
 
 // ═══ FINANCEIRO MODULE ═══
+
+
+// ── Utils Financeiro (from gestao-financeira.html) ──
+const fmt = v => v==null?'—':new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' €';
+const pct = (v,t) => t>0?Math.min(Math.round(v/t*100),100):0;
+const ESTADO_BADGE = {
+  solicitada:'<span class="bdg bdg-amber">Solicitada</span>',
+  aprovada_dir:'<span class="bdg bdg-navy">Aguarda DF</span>',
+  aprovada:'<span class="bdg bdg-green">Aprovada</span>',
+  processada:'<span class="bdg bdg-green">Processada</span>',
+  rejeitada:'<span class="bdg bdg-red">Rejeitada</span>',
+  encerrada:'<span class="bdg bdg-gray">Encerrada</span>',
+  pendente:'<span class="bdg bdg-amber">Pendente</span>',
+  aprovada_df:'<span class="bdg bdg-green">Aprovada DF</span>',
+};
+const NIVEL_LBL = {df:'Diretora Financeira',df_pe:'DF + Presidente Executivo',df_pe_pca:'DF + PE + Presidente CA'};
+
+function userProjects(){
+  const projs=PROJECTS[GF.year]||[];
+  return projs;
+}
+
+function projMetrics(pid){
+  const rubs=RUBRICAS[pid]||[];
+  return{
+    desp_orc:rubs.reduce((a,r)=>a+(r.desp_orc||0),0),
+    desp_sol:rubs.reduce((a,r)=>a+(r.desp_sol||0),0),
+    desp_proc:rubs.reduce((a,r)=>a+(r.desp_proc||0),0),
+    rec_orc:rubs.reduce((a,r)=>a+(r.rec_orc||0),0),
+    rec_sol:rubs.reduce((a,r)=>a+(r.rec_sol||0),0),
+    rec_proc:rubs.reduce((a,r)=>a+(r.rec_proc||0),0),
+  };
+}
+
+function canCloseRub(r){return((r.desp_proc||0)-(r.rec_proc||0))<=((r.desp_orc||0)-(r.rec_orc||0));}
+
+function rubErrors(r){
+  const errs=[];
+  if((r.desp_proc||0)>(r.desp_sol||0))errs.push(`Despesa processada (${fmt(r.desp_proc||0)}) é superior à solicitada (${fmt(r.desp_sol||0)})`);
+  if((r.rec_proc||0)>(r.rec_sol||0))errs.push(`Receita processada (${fmt(r.rec_proc||0)}) é superior à submetida (${fmt(r.rec_sol||0)})`);
+  return errs;
+}
 
 const ROLE_LBL = {
   'pca': 'Presidente',
