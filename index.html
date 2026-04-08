@@ -3156,8 +3156,8 @@ let ALTERACOES = [];
 
 
 // ── Utils Financeiro (from gestao-financeira.html) ──
-const fmt = v => v==null?'—':new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' €';
-const pct = (v,t) => t>0?Math.min(Math.round(v/t*100),100):0;
+function fmt(v){return v==null?'—':new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' €';}
+function pct(v,t){return t>0?Math.min(Math.round(v/t*100),100):0;}
 const ESTADO_BADGE = {
   solicitada:'<span class="bdg bdg-amber">Solicitada</span>',
   aprovada_dir:'<span class="bdg bdg-navy">Aguarda DF</span>',
