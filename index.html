@@ -2405,11 +2405,11 @@ async function loadKPIDefs(){
 }
 async function loadKPIRegs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Registos')/items?$select=*,InseridoPor/Title&$expand=InseridoPor&$orderby=Created desc&$top=500`);
-  plKpregs=d.d.results.map(r=>({id:r.Id,periodo:r.Title||'',kpiId:r.KPIId||null,valor:r.Valor||0,trim:r.Trimestre||'',sem:r.Semana||null,ano:r.Ano||null,dataReg:r.DataRegisto?r.DataRegisto.split('T')[0]:'',inseridoPor:r.InseridoPor?.Title||'',notas:r.Notas||''}));
+  plKpregs=d.d.results.map(r=>({id:r.Id,periodo:r.Title||'',kpiId:r.KPIId||null,valor:r.Valor||0,trim:r.Trimestre||'',sem:r.Semana||null,ano:r.AnoFJ||null,dataReg:r.DataRegisto?r.DataRegisto.split('T')[0]:'',inseridoPor:r.InseridoPor?.Title||'',notas:r.Notas||''}));
 }
 async function loadPlanoTrim(){
-  const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items?$select=*&$orderby=Ano desc,Trimestre asc&$top=500`);
-  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,trim:r.Trimestre||'',ano:r.Ano||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
+  const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items?$select=*&$orderby=AnoFJ desc,Trimestre asc&$top=500`);
+  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,trim:r.Trimestre||'',ano:r.AnoFJ||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
 }
 
 /* ===== DROPDOWNS ===== */
@@ -2780,7 +2780,7 @@ async function saveTrim(){
     const trim=gv('ft-trim'),ano=parseInt(gv('ft-ano')),pnome=plProjetos.find(p=>String(p.id)===pid)?.nome||'';
     const titulo=gv('ft-titulo')||`${trim} ${ano} — ${pnome}`;
     const body={__metadata:{type:'SP.Data.FJ_x005f_PlanoTrimestralListItem'},Title:titulo,Trimestre:trim,Departamento:gv('ft-dep'),Estado:gv('ft-est'),Notas:gv('ft-notas'),ProjetoId:parseInt(pid),EstadoAprov:'Rascunho'};
-    if(ano)body.Ano=ano;const aid=gv('ft-acao');if(aid)body.AcaoId=parseInt(aid);
+    if(ano)body.AnoFJ=ano;const aid=gv('ft-acao');if(aid)body.AcaoId=parseInt(aid);
     const tp=parseInt(gv('ft-tarprev'));if(tp)body.TarefasPrevistas=tp;
     if(plEditTrimId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${plEditTrimId})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items`,body,'POST');
@@ -3008,7 +3008,7 @@ async function saveKreg(){
     const periodo=sem?`${ano}-W${String(sem).padStart(2,'0')}`:`${ano}-${trim}`;
     const body={__metadata:{type:'SP.Data.FJ_x005f_KPI_x005f_RegistosListItem'},Title:periodo,KPIId:parseInt(kpiId),Trimestre:trim,Notas:gv('fr-notas')};
     const v=parseFloat(gv('fr-valor'));if(!isNaN(v))body.Valor=v;
-    if(ano)body.Ano=ano;if(sem)body.Semana=sem;
+    if(ano)body.AnoFJ=ano;if(sem)body.Semana=sem;
     if(gv('fr-data'))body.DataRegisto=gv('fr-data')+'T00:00:00Z';
     await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Registos')/items`,body,'POST');
     closeKregForm();await loadKPIRegs();renderKregs();renderDash();showNotif('Registo guardado!','success');
@@ -3195,7 +3195,7 @@ async function gfLoadAll(){
         fornecedor:r.Fornecedor||'',email_forn:r.EmailFornecedor||'',cod:r.Codigo||''};
     });
     // Load alteracoes
-    const da=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items?$select=*&$orderby=Created desc&$top=200`);
+    const da=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items?$select=*,Solicitante/Title&$expand=Solicitante&$orderby=Created desc&$top=200`);
     GF_ALTERACOES_DATA=da.d.results.map(r=>{
       return{id:r.Id,titulo:r.Title||'',justificacao:r.Justificacao||'',
         valorTotal:r.ValorTotal||0,estado:r.Estado||'pendente',
