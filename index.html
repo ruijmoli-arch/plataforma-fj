@@ -536,6 +536,37 @@ tr:hover td{background:var(--bg3)}
     </div>
 <div class="sidebar" id="sidebar-pl" style="display:none">
       <div class="sidebar-lbl">Planeamento</div>
+      <div class="nav-item active" id="pl-nav-dashboard" onclick="plShowPage('dashboard')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" id="pl-nav-hierarquia" onclick="plShowPage('hierarquia')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="4" rx="1"/><rect x="9" y="1" width="6" height="4" rx="1"/><rect x="5" y="11" width="6" height="4" rx="1"/><line x1="4" y1="5" x2="4" y2="13"/><line x1="12" y1="5" x2="8" y2="13"/><line x1="4" y1="9" x2="8" y2="11"/></svg>
+        Projetos &amp; Ações
+      </div>
+      <div class="nav-item" id="pl-nav-gantt" onclick="plShowPage('gantt')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="1" y1="4" x2="10" y2="4"/><line x1="4" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="9" y2="12"/></svg>
+        Gantt
+      </div>
+      <div class="nav-item" id="pl-nav-trimestral" onclick="plShowPage('trimestral')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="2" x2="5" y2="6"/><line x1="11" y1="2" x2="11" y2="6"/></svg>
+        Plano Trimestral
+      </div>
+      <div class="nav-item" id="pl-nav-semanal" onclick="plShowPage('semanal')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
+        Plano Semanal
+      </div>
+      <div class="sidebar-lbl">Métricas</div>
+      <div class="nav-item" id="pl-nav-kpis" onclick="plShowPage('kpis')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 9,9 15,3"/></svg>
+        KPIs
+      </div>
+      <div class="sidebar-lbl">Reporting</div>
+      <div class="nav-item" id="pl-nav-relatorios" onclick="plShowPage('relatorios')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
+        Relatórios
+      </div>
+    </div>
       <div class="nav-item active" id="nav-dashboard" onclick="plShowPage('dashboard')">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
         Dashboard
@@ -824,43 +855,12 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Data limite</label><input type="date" id="ft-data"></div>
               <div class="fg"><label>Estado</label><select id="ft-estado"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select></div>
               <div class="fg"><label>Prioridade</label><select id="ft-prior"><option>Média</option><option>Alta</option><option>Baixa</option></select></div>
-              <div class="fg"><label>Departamento</label><select id="ft-dep"><option>Gestão</option><option>Op. Norte</option><option>Op. Sul</option><option>Financeiro</option><option>Impacto</option><option>CA</option></select></div>
-              <div class="fg"><label>Projeto</label><input type="text" id="ft-proj" placeholder="Nome do projeto (futuro: lista)"></div>
-              <div class="fg"><label>Origem</label><select id="ft-origem"><option>Reunião Externa</option><option>Reunião Interna</option><option>Outro</option></select></div>
-              <div class="fg"><label>Reunião de origem</label><input type="text" id="ft-reuniao-orig" placeholder="Nome ou referência da reunião"></div>
-            </div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeTarForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-tar-btn" onclick="saveTarefa()">Guardar</button>
-            </div>
-          </div>
-        </div>
-        <div class="toolbar">
-          <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qt" placeholder="Pesquisar tarefa..." oninput="renderTarefasTable()"></div>
-          <select class="flt" id="fft-est" onchange="renderTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
-          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op. Norte</option><option>Op. Sul</option><option>Financeiro</option><option>Impacto</option><option>CA</option></select>
-          <select class="flt" id="fft-prior" onchange="renderTarefasTable()"><option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
-          <button class="btn" onclick="loadTarefas()">&#8635;</button>
-          <button class="btn btn-primary" onclick="openTarForm()">+ Nova tarefa</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <colgroup><col style="width:22%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:13%"><col style="width:10%"></colgroup>
-            <thead><tr><th>Tarefa</th><th>Responsável</th><th>Data limite</th><th>Estado</th><th>Prioridade</th><th>Departamento</th><th>Projeto</th><th>Ações</th></tr></thead>
-            <tbody id="tbody-tar"></tbody>
-          </table>
-        </div>
-        <div id="tcount-tar" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
-      </div>
-
-    
-</div>
-<div id="module-pl" style="display:none">
+            <div id="module-pl" style="display:none">
 
       <div id="notif" class="notif"></div>
 
       <!-- DASHBOARD -->
-      <div id="page-dashboard" class="page active">
+      <div id="pl-page-dashboard" class="page active">
         <div class="page-title">Dashboard</div>
         <div class="stats">
           <div class="stat"><span class="stat-n" id="s-proj">—</span><span class="stat-l">Projetos ativos</span></div>
@@ -883,7 +883,7 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- HIERARQUIA -->
-      <div id="page-hierarquia" class="page">
+      <div id="pl-page-hierarquia" class="page">
         <div class="page-title">Projetos &amp; Ações</div>
         <!-- Formulário de nova ação -->
         <div id="frm-acao-ov" class="overlay">
@@ -921,7 +921,7 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- GANTT -->
-      <div id="page-gantt" class="page">
+      <div id="pl-page-gantt" class="page">
         <div class="page-title">Gantt</div>
         <div class="toolbar">
           <select class="flt" id="ff-g-dep" onchange="renderGantt()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
@@ -932,7 +932,7 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- PLANO TRIMESTRAL -->
-      <div id="page-trimestral" class="page">
+      <div id="pl-page-trimestral" class="page">
         <div class="page-title">Plano Trimestral</div>
         <!-- Form -->
         <div id="frm-trim-ov" class="overlay">
@@ -972,7 +972,7 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- PLANO SEMANAL -->
-      <div id="page-semanal" class="page">
+      <div id="pl-page-semanal" class="page">
         <div class="page-title">Plano Semanal</div>
         <!-- Tarefa form -->
         <div id="frm-tar-ov" class="overlay">
@@ -1044,7 +1044,7 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- KPIs -->
-      <div id="page-kpis" class="page">
+      <div id="pl-page-kpis" class="page">
         <div class="page-title">KPIs</div>
         <div class="tabs">
           <div class="tab active" id="tab-def" onclick="setKTab('def')">Definições</div>
@@ -1116,6 +1116,47 @@ tr:hover td{background:var(--bg3)}
           <div class="toolbar">
             <select class="flt" id="ff-kr-kpi" onchange="renderKregs()"><option value="">Todos os KPIs</option></select>
             <select class="flt" id="ff-kr-ano" onchange="renderKregs()"><option value="">Todos os anos</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
+            <button class="btn btn-primary" onclick="openKregForm()">+ Novo registo</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <colgroup><col style="width:24%"><col style="width:12%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:12%"><col style="width:12%"></colgroup>
+              <thead><tr><th>KPI</th><th>Período</th><th>Valor</th><th>Objetivo</th><th>Estado</th><th>%</th><th>Data</th><th>Inserido por</th></tr></thead>
+              <tbody id="tbody-kreg"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div id="pl-page-relatorios" class="page">
+        <div class="page-title">Relatórios</div>
+        <div class="rep-section">
+          <div class="rep-title">Relatório Semanal</div>
+          <div class="toolbar">
+            <select class="flt" id="rl-s-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
+            <select class="flt" id="rl-s-sem"></select>
+            <select class="flt" id="rl-s-dep"><option value="">Toda a organização</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+            <button class="btn btn-primary" onclick="gerarRelS()">Gerar</button>
+            <button class="btn" onclick="window.print()">Imprimir</button>
+          </div>
+          <div id="rl-s-content"><div class="empty">Seleciona o período e clica em Gerar.</div></div>
+        </div>
+        <div class="rep-section">
+          <div class="rep-title">Relatório Trimestral</div>
+          <div class="toolbar">
+            <select class="flt" id="rl-t-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
+            <select class="flt" id="rl-t-q"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
+            <select class="flt" id="rl-t-dep"><option value="">Toda a organização</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+            <button class="btn btn-primary" onclick="gerarRelT()">Gerar</button>
+            <button class="btn" onclick="window.print()">Imprimir</button>
+          </div>
+          <div id="rl-t-content"><div class="empty">Seleciona o trimestre e clica em Gerar.</div></div>
+        </div>
+      </div>
+
+    
+</div>
             <button class="btn btn-primary" onclick="openKregForm()">+ Novo registo</button>
           </div>
           <div class="table-wrap">
@@ -2370,38 +2411,44 @@ function fd(d){if(!d)return'—';try{const[y,m,day]=d.split('-');return`${day}/$
 init();
 
 // ═══ PLANEAMENTO MODULE ═══
-
-// ═══ PLANEAMENTO MODULE ═══
-/* ===== STATE ===== */
-
+// State vars (PL-specific)
 let projetos=[],acoes=[],tarefas=[],kpdefs=[],kpregs=[],planoTrim=[];
 let semView='pessoal',viewWeek,viewYear;
-let editTrimId=null,editKdefId=null,editKregId=null,plEditTarId=null;
+let editTrimId=null,editKdefId=null,editKregId=null,editTarId=null;
 let hierOpen={};
 
+
+function plShowPage(p){
+  document.querySelectorAll('#module-pl .page').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('#sidebar-pl .nav-item').forEach(e=>e.classList.remove('active'));
+  el('pl-page-'+p)?.classList.add('active');
+  el('pl-nav-'+p)?.classList.add('active');
+  if(p==='gantt')renderGantt();
+}
 /* ===== LOAD ===== */
 async function plLoadAll(){
   showNotif('A carregar dados...','info');
   try{
     
-    await Promise.all([plLoadProjetos(),plLoadAcoes(),plLoadTarefas(),plLoadKPIDefs(),plLoadKPIRegs(),plLoadPlanoTrim()]);
-    renderDash();renderHier();renderTrim();renderSem();renderKdefs();renderKregs();plPopulateDrops();
+
+    await Promise.all([loadProjetos(),loadAcoes(),loadTarefas(),loadKPIDefs(),loadKPIRegs(),loadPlanoTrim()]);
+    renderDash();renderHier();renderTrim();renderSem();renderKdefs();renderKregs();populateDrops();
     showNotif(`Dados carregados! ${tarefas.length} tarefas · ${projetos.length} projetos · ${acoes.length} ações`,'success');
   }catch(e){showNotif('Erro ao carregar: '+e.message,'error');console.error(e);}
 }
-async function plLoadProjetos(){
+async function loadProjetos(){
   // Factorial_Projetos = projetos top-level (vindos do Factorial)
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*&$orderby=Title asc&$top=1000`);
   projetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:r.Departamento||'',estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',desc:r.Descricao||'',tipoFJ:r.Tipo_FJ||(r.Title?.includes('(INOV)')?'INOV':'Recorrente')}));
 }
-async function plLoadAcoes(){
+async function loadAcoes(){
   // Acoes = lista manual criada na plataforma, filho de Factorial_Projetos
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*&$orderby=Title asc&$top=1000`);
     acoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId||null,dep:r.Departamento||'',tipoFJ:r.TipoAcao||'Recorrente',responsavel:'',notas:r.Notas||''}));
   }catch(e){console.warn('Acoes list error:',e.message);acoes=[];}
 }
-async function plLoadTarefas(){
+async function loadTarefas(){
   let all=[];
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*&$orderby=Id desc&$top=2000`);
@@ -2436,21 +2483,21 @@ async function plLoadTarefas(){
   });
   tarefas=all;
 }
-async function plLoadKPIDefs(){
+async function loadKPIDefs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items?$select=*&$orderby=Title asc&$top=500`);
   kpdefs=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,tipo:r.TipoKPI||'Manual',dir:r.Direcao||'meta',uni:r.Unidade||'',meta:r.Meta||0,freq:r.Frequencia||'Mensal',resp:r.Responsavel||'',ativo:r.Ativo!==false,desc:r.Descricao||''}));
 }
-async function plLoadKPIRegs(){
+async function loadKPIRegs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Registos')/items?$select=*,InseridoPor/Title&$expand=InseridoPor&$orderby=Created desc&$top=500`);
   kpregs=d.d.results.map(r=>({id:r.Id,periodo:r.Title||'',kpiId:r.KPIId||null,valor:r.Valor||0,trim:r.Trimestre||'',sem:r.Semana||null,ano:r.Ano||null,dataReg:r.DataRegisto?r.DataRegisto.split('T')[0]:'',inseridoPor:r.InseridoPor?.Title||'',notas:r.Notas||''}));
 }
-async function plLoadPlanoTrim(){
+async function loadPlanoTrim(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items?$select=*&$orderby=Ano desc,Trimestre asc&$top=500`);
   planoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,trim:r.Trimestre||'',ano:r.Ano||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
 }
 
 /* ===== DROPDOWNS ===== */
-function plPopulateDrops(){
+function populateDrops(){
   // Projetos = Factorial_Projetos
   const po=projetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   ['ft-proj','fk-proj','fa-proj'].forEach(id=>{const e=el(id);if(e)e.innerHTML='<option value="">Selecionar...</option>'+po;});
@@ -2657,13 +2704,13 @@ async function saveAcao(){
     if(email){const uid=await getSpUID(email);if(uid)body.ResponsavelId=uid;}
     if(editAcaoId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items(${editAcaoId})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items`,body,'POST');
-    closeAcaoForm();await plLoadAcoes();renderHier();plPopulateDrops();showNotif('Ação guardada!','success');
+    closeAcaoForm();await loadAcoes();renderHier();populateDrops();showNotif('Ação guardada!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
 async function delAcao(id){
   if(!confirm('Eliminar esta ação?'))return;
-  try{await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items(${id})`,null,'DELETE');await plLoadAcoes();renderHier();plPopulateDrops();showNotif('Eliminado.','success');}
+  try{await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items(${id})`,null,'DELETE');await loadAcoes();renderHier();populateDrops();showNotif('Eliminado.','success');}
   catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
@@ -2821,13 +2868,13 @@ async function saveTrim(){
     const tp=parseInt(gv('ft-tarprev'));if(tp)body.TarefasPrevistas=tp;
     if(editTrimId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${editTrimId})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items`,body,'POST');
-    closeTrimForm();await plLoadPlanoTrim();renderTrim();showNotif('Guardado!','success');
+    closeTrimForm();await loadPlanoTrim();renderTrim();showNotif('Guardado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
 async function delTrim(id){
   if(!confirm('Eliminar?'))return;
-  try{await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${id})`,null,'DELETE');await plLoadPlanoTrim();renderTrim();showNotif('Eliminado.','success');}
+  try{await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items(${id})`,null,'DELETE');await loadPlanoTrim();renderTrim();showNotif('Eliminado.','success');}
   catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
@@ -2901,7 +2948,7 @@ async function toggleTar(compId,checked){
 /* Tarefa form */
 function checkOrigem(v){el('tar-warn').style.display=v==='Factorial'?'block':'none';}
 function openTarForm(){
-  plEditTarId=null;el('frm-tar-ov').classList.add('open');
+  editTarId=null;el('frm-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-acao','');
@@ -2911,7 +2958,7 @@ function openTarForm(){
 }
 function openTarFormEdit(compId){
   const t=tarefas.find(x=>x.id===compId);if(!t)return;
-  plEditTarId=compId;el('frm-tar-ov').classList.add('open');
+  editTarId=compId;el('frm-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Editar tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');sv2('ftar-acao',t.acaoId||'');
@@ -2919,7 +2966,7 @@ function openTarFormEdit(compId){
   sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
-function closeTarForm(){el('frm-tar-ov').classList.remove('open');plEditTarId=null;}
+function closeTarForm(){el('frm-tar-ov').classList.remove('open');editTarId=null;}
 async function saveTarefa(){
   if(gv('ftar-origem')==='Factorial'){showNotif('As tarefas do Factorial devem ser criadas no Factorial.','warn');return;}
   const desc=gv('ftar-desc').trim();if(!desc){alert('Descrição obrigatória.');return;}
@@ -2940,14 +2987,14 @@ async function saveTarefa(){
     if(data)body.DataLimite=data+'T00:00:00Z';
     const aid=gv('ftar-acao');if(aid)body.AcaoId=parseInt(aid);
     let itemId=null;
-    if(plEditTarId){
-      const t=tarefas.find(x=>x.id===plEditTarId);
+    if(editTarId){
+      const t=tarefas.find(x=>x.id===editTarId);
       if(t){await spWrite(`${SP}/_api/web/lists/getbytitle('${t.lista}')/items(${t.spId})`,body,'MERGE','*');itemId=t.spId;}
     }else{
       const r=await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
       try{const d=await r.json();itemId=d.d?.Id;}catch(e){}
     }
-    closeTarForm();await plLoadTarefas();renderSem();renderHier();renderDash();showNotif('Tarefa guardada!','success');
+    closeTarForm();await loadTarefas();renderSem();renderHier();renderDash();showNotif('Tarefa guardada!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');console.error(e);}
   btn.textContent='Guardar';btn.disabled=false;
 }
@@ -3002,13 +3049,13 @@ async function saveKdef(){
     const aid=gv('fk-acao');if(aid)body.AcaoId=parseInt(aid);
     if(editKdefId)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items(${editKdefId})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items`,body,'POST');
-    closeKdefForm();await plLoadKPIDefs();renderKdefs();plPopulateDrops();showNotif('KPI guardado!','success');
+    closeKdefForm();await loadKPIDefs();renderKdefs();populateDrops();showNotif('KPI guardado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
 async function delKdef(id){
   if(!confirm('Eliminar?'))return;
-  try{await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items(${id})`,null,'DELETE');await plLoadKPIDefs();renderKdefs();showNotif('Eliminado.','success');}
+  try{await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items(${id})`,null,'DELETE');await loadKPIDefs();renderKdefs();showNotif('Eliminado.','success');}
   catch(e){showNotif('Erro: '+e.message,'error');}
 }
 function renderKregs(){
@@ -3048,7 +3095,7 @@ async function saveKreg(){
     if(ano)body.Ano=ano;if(sem)body.Semana=sem;
     if(gv('fr-data'))body.DataRegisto=gv('fr-data')+'T00:00:00Z';
     await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Registos')/items`,body,'POST');
-    closeKregForm();await plLoadKPIRegs();renderKregs();renderDash();showNotif('Registo guardado!','success');
+    closeKregForm();await loadKPIRegs();renderKregs();renderDash();showNotif('Registo guardado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
@@ -3166,14 +3213,15 @@ document.addEventListener('click',e=>{
 /* ===== BOOT ===== */
 init();
 
+// ── PL INIT (called when switching to Planeamento tab) ──
 function plInit(){
-  const now=new Date();viewWeek=isoWeek(now);viewYear=now.getFullYear();
-  el('rl-s-sem').innerHTML=Array.from({length:53},(_,i)=>`<option value="${i+1}"${i+1===viewWeek?' selected':''}>Semana ${i+1}</option>`).join('');
-  // Use shared projetos if available
-  if(sharedProjetos.length) projetos=sharedProjetos;
+  const now=new Date();
+  viewWeek=isoWeek(now);viewYear=now.getFullYear();
+  const semSel=el('rl-s-sem');
+  if(semSel)semSel.innerHTML=Array.from({length:53},(_,i)=>`<option value="${i+1}"${i+1===viewWeek?' selected':''}>Semana ${i+1}</option>`).join('');
+  if(sharedProjetos.length) projetos=[...sharedProjetos];
   plLoadAll();
 }
-
 
 // ═══ FINANCEIRO MODULE ═══
 let PROJECTS = {}; // year -> array of projects
