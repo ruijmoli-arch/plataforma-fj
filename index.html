@@ -2331,6 +2331,31 @@ function showNotif(msg,type='info'){
   const n=el('notif');n.textContent=msg;
   n.className='notif show'+(type==='success'?' success':type==='error'?' error':'');
 }
+
+// ── DATE/WEEK UTILITIES (shared) ──
+function isoWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()+4-(d.getDay()||7));const y=new Date(d.getFullYear(),0,1);return Math.ceil((((d-y)/86400000)+1)/7);}
+function weekLabel(w,y){const jan4=new Date(y,0,4);const day=jan4.getDay()||7;const mon=new Date(jan4);mon.setDate(jan4.getDate()-day+1+(w-1)*7);const sun=new Date(mon);sun.setDate(mon.getDate()+6);const fmt=d=>d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});return`Semana ${w} · ${fmt(mon)} — ${sun.toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'})}`;}
+function weekRange(w,y){const jan4=new Date(y,0,4);const day=jan4.getDay()||7;const mon=new Date(jan4);mon.setDate(jan4.getDate()-day+1+(w-1)*7);const sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59);return{start:mon,end:sun};}
+
+// ── plShowPage alias ──
+function plShowPage(p){
+  document.querySelectorAll('#module-pl .page').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('#sidebar-pl .nav-item').forEach(e=>e.classList.remove('active'));
+  document.getElementById('pl-page-'+p)?.classList.add('active');
+  document.getElementById('pl-nav-'+p)?.classList.add('active');
+  if(p==='gantt')renderGantt?.();
+}
+
+// ── pendingAprovCount (GF) ──
+function pendingAprovCount(){
+  return (SOLICITACOES||[]).filter(s=>{
+    if(_financeRole==='area_director') return s.estado==='solicitada';
+    if(_financeRole==='df') return s.estado==='solicitada'||s.estado==='aprovada_dir';
+    if(_financeRole==='pe'||_financeRole==='pca') return s.estado==='aprovada';
+    return false;
+  }).length;
+}
+
 function tog(k){T[k]=!T[k];const b=el('t-'+k),l=el('l-'+k);if(b)b.className='toggle'+(T[k]?' on':'');if(l)l.textContent=T[k]?'Sim':'Não';}
 function setTog(k,v){T[k]=v;const b=el('t-'+k),l=el('l-'+k);if(b)b.className='toggle'+(v?' on':'');if(l)l.textContent=v?'Sim':'Não';}
 function el(id){return document.getElementById(id);}
