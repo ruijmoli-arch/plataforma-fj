@@ -2684,21 +2684,25 @@ function loadAcoesForProj(projId,targetId,currId=null){
 /* ===== DASHBOARD ===== */
 function renderDash(){
   const w=isoWeek(new Date()),y=new Date().getFullYear();
+  // Safety checks for elements that may not exist
+  const elProj=el('s-proj'),elInov=el('s-inov'),elTsem=el('s-tsem'),elKpi=el('s-kpi');
+  const elRag=el('dash-rag'),elKpis=el('dash-kpis'),elTar=el('dash-tarefas');
+  if(!elProj||!elInov||!elTsem||!elKpi)return;
   // Projetos ativos = Factorial_Projetos com estado active
-  el('s-proj').textContent=plProjetos.filter(p=>p.estado==='active'||p.estado==='Ativo').length;
+  elProj.textContent=plProjetos.filter(p=>p.estado==='active'||p.estado==='Ativo').length;
   // Ações INOV = ações criadas na plataforma com TipoAcao=INOV ou plProjetos do Factorial com (INOV)
-  el('s-inov').textContent=plAcoes.filter(a=>a.tipoFJ==='INOV').length+plProjetos.filter(p=>p.tipoFJ==='INOV'||p.nome.includes('(INOV)')).length;
-  el('s-tsem').textContent=plTarefas.filter(t=>t.semana==w&&t.anoFJ==y).length;
-  el('s-kpi').textContent=plKpdefs.filter(k=>k.ativo).length;
+  elInov.textContent=plAcoes.filter(a=>a.tipoFJ==='INOV').length+plProjetos.filter(p=>p.tipoFJ==='INOV'||p.nome.includes('(INOV)')).length;
+  elTsem.textContent=plTarefas.filter(t=>t.semana==w&&t.anoFJ==y).length;
+  elKpi.textContent=plKpdefs.filter(k=>k.ativo).length;
   // RAG
   const ragAcoes=plAcoes.slice(0,8);
-  el('dash-rag').innerHTML=ragAcoes.length?`<table><colgroup><col style="width:10%"><col style="width:55%"><col style="width:35%"></colgroup><tbody>${ragAcoes.map(a=>{const r=calcRag(a.id);return`<tr><td><span class="rag rag-${r}"></span></td><td style="font-size:12px;font-weight:500">${a.nome}</td><td>${depB(a.dep)}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem ações carregadas.</div>';
+  if(elRag)elRag.innerHTML=ragAcoes.length?`<table><colgroup><col style="width:10%"><col style="width:55%"><col style="width:35%"></colgroup><tbody>${ragAcoes.map(a=>{const r=calcRag(a.id);return`<tr><td><span class="rag rag-${r}"></span></td><td style="font-size:12px;font-weight:500">${a.nome}</td><td>${depB(a.dep)}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem ações carregadas.</div>';
   // KPIs
   const km=plKpdefs.filter(k=>k.ativo&&k.tipo==='Manual').slice(0,6);
-  el('dash-kpis').innerHTML=km.length?`<table><colgroup><col style="width:55%"><col style="width:25%"><col style="width:20%"></colgroup><tbody>${km.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct===null?'var(--tx3)':kpiColor(k,pct);return`<tr><td style="font-size:12px;font-weight:500">${k.nome}</td><td style="font-size:11px">${lr?lr.valor+' '+k.uni:'—'}</td><td style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem KPIs manuais.</div>';
+  if(elKpis)elKpis.innerHTML=km.length?`<table><colgroup><col style="width:55%"><col style="width:25%"><col style="width:20%"></colgroup><tbody>${km.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct===null?'var(--tx3)':kpiColor(k,pct);return`<tr><td style="font-size:12px;font-weight:500">${k.nome}</td><td style="font-size:11px">${lr?lr.valor+' '+k.uni:'—'}</td><td style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem KPIs manuais.</div>';
   // Tasks
   const wt=plTarefas.filter(t=>t.semana==w&&t.anoFJ==y).slice(0,8);
-  el('dash-tarefas').innerHTML=wt.length?`<table><colgroup><col style="width:45%"><col style="width:25%"><col style="width:15%"><col style="width:15%"></colgroup><tbody>${wt.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}"><td style="font-size:12px;font-weight:500">${t.titulo}</td><td style="font-size:11px">${t.responsavel||'—'}</td><td>${estB(t.prioridade)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem plTarefas para esta semana.</div>';
+  if(elTar)elTar.innerHTML=wt.length?`<table><colgroup><col style="width:45%"><col style="width:25%"><col style="width:15%"><col style="width:15%"></colgroup><tbody>${wt.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}"><td style="font-size:12px;font-weight:500">${t.titulo}</td><td style="font-size:11px">${t.responsavel||'—'}</td><td>${estB(t.prioridade)}</td><td>${estB(t.estado)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty" style="padding:1rem">Sem plTarefas para esta semana.</div>';
 }
 function kpiColor(k,pct){
   if(k.dir==='limite'){return pct<=100?'var(--g5)':pct<=120?'var(--amb2)':'var(--red)';}
@@ -2970,12 +2974,14 @@ function genTrimTit(){
   sv2('ft-titulo',p?`${gv('ft-trim')} ${gv('ft-ano')} — ${p.nome}`:'');
 }
 function renderTrim(){
+  const tbody=el('tbody-trim');
+  if(!tbody)return;
   const q=gv('ff-t-q'),ano=gv('ff-t-ano'),dep=gv('ff-t-dep'),aprov=gv('ff-t-aprov');
   const list=plPlanoTrim.filter(t=>{
     if(q&&t.trim!==q)return false;if(ano&&String(t.ano)!==ano)return false;
     if(dep&&t.dep!==dep)return false;if(aprov&&t.aprovacao!==aprov)return false;return true;
   });
-  el('tbody-trim').innerHTML=list.map(t=>{
+  tbody.innerHTML=list.map(t=>{
     const aprovCls={'Rascunho':'b-rascunho','Submetido':'b-submetido','Aprovado Dir.':'b-aprov-dir','Aprovado Gestão':'b-aprov-gest'}[t.aprovacao]||'b-pfazer';
     const canAprovDir=t.aprovacao==='Submetido'&&isDirOf(t.dep);
     const canAprovGest=t.aprovacao==='Aprovado Dir.'&&isGestao();
@@ -3055,7 +3061,9 @@ function setView(v){
 }
 function chgWeek(d){plViewWeek+=d;if(plViewWeek<1){plViewWeek=52;plViewYear--;}else if(plViewWeek>52){plViewWeek=1;plViewYear++;}renderSem();}
 function renderSem(){
-  el('week-label').textContent=weekLabel(plViewWeek,plViewYear);
+  const elWl=el('week-label'),elStats=el('stats-sem'),tbody=el('tbody-sem');
+  if(!elWl||!elStats||!tbody)return;
+  elWl.textContent=weekLabel(plViewWeek,plViewYear);
   const wr=weekRange(plViewWeek,plViewYear);
   const q=(gv('q-sem')||'').toLowerCase(),est=gv('ff-s-est'),dep=gv('ff-s-dep'),orig=gv('ff-s-orig');
   const myName=(user?.name||'').toLowerCase();
@@ -3069,19 +3077,19 @@ function renderSem(){
     if(dep&&t.dep!==dep)return false;
     if(est==='todo'&&t.estado!=='todo'&&t.estado!=='Por fazer')return false;
     if(est&&est!=='todo'&&t.estado!==est)return false;
-    if(orig&&t.origem!==orig)return false;
+    if(orig&&t.notas&&!t.notas.toLowerCase().includes(orig.toLowerCase()))return false;
     if(q&&!t.titulo.toLowerCase().includes(q))return false;
     return true;
   });
   const total=list.length,conc=list.filter(t=>t.estado==='Concluída').length,emcurso=list.filter(t=>t.estado==='Em curso').length;
   const atras=list.filter(t=>t.estado!=='Concluída'&&t.dataLimite&&new Date(t.dataLimite)<new Date()).length;
-  el('stats-sem').innerHTML=`
+  elStats.innerHTML=`
     <div class="stat"><span class="stat-n">${total}</span><span class="stat-l">Total</span></div>
     <div class="stat"><span class="stat-n" style="color:var(--g5)">${conc}</span><span class="stat-l">Concluídas</span></div>
     <div class="stat"><span class="stat-n" style="color:var(--bld)">${emcurso}</span><span class="stat-l">Em curso</span></div>
     <div class="stat"><span class="stat-n" style="color:var(--red)">${atras}</span><span class="stat-l">Atrasadas</span></div>`;
   const origCls=o=>o==='Ad-hoc'?'b-adhoc':o==='Reunião'?'b-reuniao':'b-plano';
-  el('tbody-sem').innerHTML=list.map(t=>{
+  tbody.innerHTML=list.map(t=>{
     const conc2=t.estado==='Concluída';
     const acaoNome=an(t.acaoId);
     const hasAtt=t.attachments?.length>0;
@@ -3098,7 +3106,9 @@ function renderSem(){
       </div></td>
     </tr>`;
   }).join('')||`<tr><td colspan="8"><div class="empty">Sem plTarefas para esta semana.</div></td></tr>`;
-  el('tcount-sem').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
+  tbody.innerHTML=tbody.innerHTML||'';
+  const elCount=el('tcount-sem');
+  if(elCount)elCount.textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
 }
 async function toggleTar(compId,checked){
   const t=plTarefas.find(x=>x.id===compId);if(!t)return;
@@ -3165,13 +3175,18 @@ async function saveTarefa(){
 
 /* ===== KPIs ===== */
 function setKTab(t){
-  el('tab-def').classList.toggle('active',t==='def');el('tab-reg').classList.toggle('active',t==='reg');
-  el('kp-def').classList.toggle('active',t==='def');el('kp-reg').classList.toggle('active',t==='reg');
+  const elDef=el('tab-def'),elReg=el('tab-reg'),elKpDef=el('kp-def'),elKpReg=el('kp-reg');
+  if(elDef)elDef.classList.toggle('active',t==='def');
+  if(elReg)elReg.classList.toggle('active',t==='reg');
+  if(elKpDef)elKpDef.classList.toggle('active',t==='def');
+  if(elKpReg)elKpReg.classList.toggle('active',t==='reg');
 }
 function renderKdefs(){
+  const tbody=el('tbody-kdef');
+  if(!tbody)return;
   const proj=gv('ff-kd-proj'),tipo=gv('ff-kd-tipo');
   const list=plKpdefs.filter(k=>{if(proj&&String(k.projetoId)!==proj)return false;if(tipo&&k.tipo!==tipo)return false;return true;});
-  el('tbody-kdef').innerHTML=list.map(k=>`<tr>
+  tbody.innerHTML=list.map(k=>`<tr>
     <td style="font-weight:500" title="${k.nome}">${k.nome}</td>
     <td style="font-size:12px" title="${an(k.acaoId)}">${an(k.acaoId)}</td>
     <td>${estB(k.tipo)}</td>
@@ -3223,9 +3238,11 @@ async function delKdef(id){
   catch(e){showNotif('Erro: '+e.message,'error');}
 }
 function renderKregs(){
+  const tbody=el('tbody-kreg');
+  if(!tbody)return; // Safety check
   const kpiId=gv('ff-kr-kpi'),ano=gv('ff-kr-ano');
   const list=plKpregs.filter(r=>{if(kpiId&&String(r.kpiId)!==kpiId)return false;if(ano&&String(r.ano)!==ano)return false;return true;});
-  el('tbody-kreg').innerHTML=list.map(r=>{
+  tbody.innerHTML=list.map(r=>{
     const k=plKpdefs.find(x=>String(x.id)===String(r.kpiId));
     const meta=k?.meta||null;const pct=meta&&r.valor!==null?Math.round((r.valor/meta)*100):null;
     const c=pct!==null?kpiColor(k,pct):'var(--tx)';
