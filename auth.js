@@ -229,8 +229,10 @@ function showApp(){
   
   // Mostrar menu de administração se for admin (CA ou Gestão)
   if(isAdmin()){
-    document.getElementById('admin-section-label').style.display='block';
-    document.getElementById('nav-admin').style.display='flex';
+    const adminLabel=document.getElementById('admin-section-label');
+    if(adminLabel)adminLabel.style.display='block';
+    const navAdmin=document.getElementById('nav-admin');
+    if(navAdmin)navAdmin.classList.remove('hidden');
     // Carregar utilizadores da organização
     loadOrgUsers();
   }
