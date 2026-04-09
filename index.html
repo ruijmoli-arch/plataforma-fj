@@ -598,7 +598,7 @@ tr:hover td{background:var(--bg3)}
 <div class="notif" id="notif"></div>
 <div id="module-rn">
 
-      <div class="notif" id="notif"></div>
+      <!-- notif removed -->
 
       <!-- ASSUNTOS -->
       <div class="page active" id="page-assuntos">
@@ -853,7 +853,7 @@ tr:hover td{background:var(--bg3)}
 
 <div id="module-pl" style="display:none">
 
-      <div id="notif" class="notif"></div>
+      <!-- notif removed -->
 
       <!-- DASHBOARD -->
       <div id="pl-page-dashboard" class="page active">
@@ -2315,11 +2315,11 @@ function pendingAprovCount(){
 }
 
 
-function bdg(c,t){return `<span class="bdg ${c}">${t||'—'}</span>`;}
-function depB(d){if(!d)return'';return bdg('b-l',d);}
+function badgeHTML(c,t){return `<span class="bdg ${c}">${t||'—'}</span>`;}
+function depB(d){if(!d)return'';return badgeHTML('b-l',d);}
 function estB(e){
   const colors={'Concluída':'b-g','Em Curso':'b-b','Atrasada':'b-r','todo':'b-gray','Média':'b-y','Alta':'b-o','Crítica':'b-r','Baixa':'b-gray'};
-  return bdg(colors[e]||'b-gray',e);
+  return badgeHTML(colors[e]||'b-gray',e);
 }
 
 function tog(k){T[k]=!T[k];const b=el('t-'+k),l=el('l-'+k);if(b)b.className='toggle'+(T[k]?' on':'');if(l)l.textContent=T[k]?'Sim':'Não';}
@@ -2329,10 +2329,12 @@ function gv(id){const e=el(id);return e?e.value:'';}
 function gv2t(id){const e=el(id);return e?e.value:'';}
 function sv(id,v){const e=el(id);if(e&&e.tagName==='DIV')e.textContent=v;}
 function sv2(id,v){const e=el(id);if(e)e.value=v;}
+function fmt(v){return v==null?'—':new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' €';}
+function pct(v,t){return t>0?Math.min(Math.round(v/t*100),100):0;}
 function today(){return new Date().toISOString().slice(0,10);}
 function fd(d){if(!d)return'—';try{const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;}catch(e){return d;}}
 
-init();
+// init() call removed to avoid duplication
 
 // ═══ PLANEAMENTO MODULE ═══
 
@@ -2489,7 +2491,7 @@ function renderHier(){
       <div class="hier-proj-hdr" onclick="toggleHier(${p.id})">
         <span class="rag rag-${rag}"></span>
         <span style="font-size:14px;font-weight:700;color:var(--g1);flex:1">${p.nome}</span>
-        ${bdg(tipoFJ==='INOV'?'b-inov':'b-rec',tipoFJ)}
+        ${badgeHTML(tipoFJ==='INOV'?'b-inov':'b-rec',tipoFJ)}
         ${depB(p.dep)}
         <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} plTarefas${pct!==null?' · '+pct+'% conc.':''}</span>
         <button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>
@@ -2503,7 +2505,7 @@ function renderHier(){
           return`<div class="hier-acao-row" onclick="toggleHierAcao(${a.id})">
             <span class="rag rag-${r}"></span>
             <span class="hier-acao-name">${a.nome}</span>
-            ${bdg(a.tipoFJ==='INOV'?'b-inov':'b-rec',a.tipoFJ||'Rec')}
+            ${badgeHTML(a.tipoFJ==='INOV'?'b-inov':'b-rec',a.tipoFJ||'Rec')}
             ${a.dep?depB(a.dep):''}
             <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} plTarefas</span>
             <button class="btn btn-sm" onclick="event.stopPropagation();openAcaoForm(${p.id},${a.id})">Editar</button>
@@ -2743,10 +2745,10 @@ function renderTrim(){
     return`<tr>
       <td style="font-weight:500" title="${pn(t.projetoId)}">${pn(t.projetoId)}</td>
       <td title="${an(t.acaoId)}">${an(t.acaoId)}</td>
-      <td>${bdg('b-emcurso',t.trim)}</td><td>${t.ano||'—'}</td>
+      <td>${badgeHTML('b-emcurso',t.trim)}</td><td>${t.ano||'—'}</td>
       <td>${depB(t.dep)}</td><td>${estB(t.estado)}</td>
       <td style="text-align:center;font-weight:700">${t.tarPrev||0}</td>
-      <td>${bdg(aprovCls,t.aprovacao||'Rascunho')}
+      <td>${badgeHTML(aprovCls,t.aprovacao||'Rascunho')}
         ${canSubmit?`<button class="btn btn-sm" style="margin-left:4px" onclick="aprovTrim(${t.id},'Submetido')">Submeter</button>`:''}
         ${canAprovDir?`<button class="btn btn-sm btn-aprov" onclick="aprovTrim(${t.id},'Aprovado Dir.')">Aprovar</button>`:''}
         ${canAprovGest?`<button class="btn btn-sm btn-aprov" onclick="aprovTrim(${t.id},'Aprovado Gestão')">Aprovar Gestão</button>`:''}
@@ -2852,7 +2854,7 @@ function renderSem(){
       <td>${t.responsavel||'—'}</td>
       <td>${fd(t.dataLimite)}</td>
       <td>${estB(t.prioridade)}</td>
-      <td>${bdg(origCls(t.origem),t.origem||'Plano')}</td>
+      <td>${badgeHTML(origCls(t.origem),t.origem||'Plano')}</td>
       <td><div class="actions">
         <button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">Editar</button>
       </div></td>
@@ -2935,7 +2937,7 @@ function renderKdefs(){
     <td style="font-weight:500" title="${k.nome}">${k.nome}</td>
     <td style="font-size:12px" title="${an(k.acaoId)}">${an(k.acaoId)}</td>
     <td>${estB(k.tipo)}</td>
-    <td>${bdg(k.dir==='limite'?'b-limite':'b-meta',k.dir==='limite'?'↓ Limite':'↑ Meta')}</td>
+    <td>${badgeHTML(k.dir==='limite'?'b-limite':'b-meta',k.dir==='limite'?'↓ Limite':'↑ Meta')}</td>
     <td style="font-weight:700">${k.meta||0}</td>
     <td>${k.uni||'—'}</td>
     <td style="font-size:12px">${k.freq||'—'}</td>
@@ -3135,7 +3137,7 @@ document.addEventListener('click',e=>{
 });
 
 /* ===== BOOT ===== */
-init();
+// init() call removed to avoid duplication
 
 function plInit(){
   const now=new Date();
@@ -3147,17 +3149,19 @@ function plInit(){
 
 
 // ═══ FINANCEIRO MODULE ═══
-let PROJECTS = {}; // year -> array of projects
+// Shared Financeiro State
+let PROJECTS = {}; 
 let RUBRICAS = {};
 let SOLICITACOES = [];
 let ALTERACOES = [];
+let GF_SOLICITACOES_DATA = [];
+let GF_ALTERACOES_DATA = [];
 
 // ═══ FINANCEIRO MODULE ═══
 
 
 // ── Utils Financeiro (from gestao-financeira.html) ──
-function fmt(v){return v==null?'—':new Intl.NumberFormat('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' €';}
-function pct(v,t){return t>0?Math.min(Math.round(v/t*100),100):0;}
+// Shared utility functions used: fmt, pct
 const ESTADO_BADGE = {
   solicitada:'<span class="bdg bdg-amber">Solicitada</span>',
   aprovada_dir:'<span class="bdg bdg-navy">Aguarda DF</span>',
@@ -3206,8 +3210,7 @@ const ROLE_LBL = {
 };
 
 
-let PROJECTS = {};
-let RUBRICAS = {};
+// Duplicate PROJECTS/RUBRICAS removed
 
 let GF = {
   user:null,screen:'login',
@@ -3286,7 +3289,7 @@ function gfInit(){
 function gfRender(){
   const app=document.getElementById('app');
   if(GF.screen==='login'){GF.screen='home';}
-  app.innerHTML=renderTopbar()+`<div class="page">${renderScreen()}</div>`+(GF.modal?renderModal():'');
+  app.innerHTML=`<div class="page">${renderScreen()}</div>`+(GF.modal?renderModal():'');
   // bind modal close on bg click
   document.querySelector('.modal-bg')?.addEventListener('click',e=>{if(e.target.classList.contains('modal-bg')){GF.modal=null;gfRender();}});
 }
