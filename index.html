@@ -3609,11 +3609,7 @@ async function gfLoadAll() {
       projetoNome: r.ProjetoId?.Title || '',
       tipo: r.TipoRubrica || 'Despesa',
       despOrc: r.DespOrcamentada || 0,
-      despSol: r.DespSolicitada || 0,
-      despProc: r.DespProcessada || 0,
       recOrc: r.RecOrcamentada || 0,
-      recSol: r.RecSolicitada || 0,
-      recProc: r.RecProcessada || 0,
       ano: r.AnoOrcamental || GF.year,
       estado: r.Estado || 'Ativo'
     }));
@@ -3630,6 +3626,7 @@ async function gfLoadAll() {
       rubricaNome: r.RubricaId?.Title || '',
       valor: r.Valor || 0,
       estado: r.Estado || 'Rascunho',
+      tipoSolicitacao: r.TipoSolicitacao || 'Despesa',
       fornecedor: r.Fornecedor || '',
       emailForn: r.EmailFornecedor || '',
       justificacao: r.Justificacao || '',
@@ -3694,6 +3691,35 @@ async function gfLoadAll() {
     console.error('gfLoadAll error:', e);
     showNotif('Erro ao carregar dados financeiros: ' + e.message, 'error');
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CÁLCULO DINÂMICO DE VALORES (baseado em solicitações)
+// ══════════════════════════════════════════════════════════════
+
+// Calcula valores de despesa para uma rúbrica
+function gfCalcDespesa(rubricaId) {
+  const sols = GF_SOLICITACOES.filter(s => s.rubricaId === rubricaId && s.tipoSolicitacao === 'Despesa');
+  return {
+    solicitada: sols.filter(s => s.estado !== 'Rejeitado').reduce((a, s) => a + (s.valor || 0), 0),
+    aprovada: sols.filter(s => ['Aprovado Dir.', 'Aprovado DF', 'Aprovado', 'Processado'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
+    processada: sols.filter(s => s.estado === 'Processado').reduce((a, s) => a + (s.valor || 0), 0)
+  };
+}
+
+// Calcula valores de receita para uma rúbrica
+function gfCalcReceita(rubricaId) {
+  const sols = GF_SOLICITACOES.filter(s => s.rubricaId === rubricaId && s.tipoSolicitacao === 'Receita');
+  return {
+    solicitada: sols.filter(s => s.estado !== 'Rejeitado').reduce((a, s) => a + (s.valor || 0), 0),
+    aprovada: sols.filter(s => ['Aprovado Dir.', 'Aprovado DF', 'Aprovado', 'Processado'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
+    processada: sols.filter(s => s.estado === 'Processado').reduce((a, s) => a + (s.valor || 0), 0)
+  };
+}
+
+// Obtém solicitações de uma rúbrica (para lista de faturas)
+function gfGetSolicitacoes(rubricaId, tipo = null) {
+  return GF_SOLICITACOES.filter(s => s.rubricaId === rubricaId && (tipo === null || s.tipoSolicitacao === tipo));
 }
 
 // ── NAVIGATION ──
@@ -3821,15 +3847,26 @@ function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_
 function gfRenderOrcamento() {
   const projs = GF_PROJETOS.filter(p => !p.anoOrcamental || p.anoOrcamental === GF.year);
   
-  // Calcular totais por projeto
+  // Calcular totais por projeto (valores dinâmicos)
   const projsWithTotals = projs.map(p => {
     const rubs = GF_RUBRICAS.filter(r => r.projetoId === p.id && r.ano === GF.year);
+    let despOrc = 0, despSol = 0, despProc = 0, recOrc = 0, recSol = 0, recProc = 0;
+    
+    rubs.forEach(r => {
+      const desp = gfCalcDespesa(r.id);
+      const rec = gfCalcReceita(r.id);
+      despOrc += r.despOrc || 0;
+      despSol += desp.solicitada;
+      despProc += desp.processada;
+      recOrc += r.recOrc || 0;
+      recSol += rec.solicitada;
+      recProc += rec.processada;
+    });
+    
     return {
       ...p,
-      despOrc: rubs.reduce((a, r) => a + (r.despOrc || 0), 0),
-      despSol: rubs.reduce((a, r) => a + (r.despSol || 0), 0),
-      despProc: rubs.reduce((a, r) => a + (r.despProc || 0), 0),
-      recOrc: rubs.reduce((a, r) => a + (r.recOrc || 0), 0),
+      despOrc, despSol, despProc,
+      recOrc, recSol, recProc,
       numRubricas: rubs.length
     };
   });
@@ -3953,11 +3990,24 @@ function gfRenderRubricas() {
   if (!proj) return '<p style="padding:40px;text-align:center">Projeto não encontrado</p>';
   
   const rubs = GF_RUBRICAS.filter(r => r.projetoId === proj.id && r.ano === GF.year);
-  const totOrc = rubs.reduce((a, r) => a + (r.despOrc || 0), 0);
-  const totSol = rubs.reduce((a, r) => a + (r.despSol || 0), 0);
-  const totProc = rubs.reduce((a, r) => a + (r.despProc || 0), 0);
-  const totRecOrc = rubs.reduce((a, r) => a + (r.recOrc || 0), 0);
-  const totDisp = totOrc - totSol;
+  
+  // Calcular totais dinamicamente
+  let totDespOrc = 0, totDespSol = 0, totDespAprov = 0, totDespProc = 0;
+  let totRecOrc = 0, totRecSol = 0, totRecProc = 0;
+  
+  rubs.forEach(r => {
+    const desp = gfCalcDespesa(r.id);
+    const rec = gfCalcReceita(r.id);
+    totDespOrc += r.despOrc || 0;
+    totDespSol += desp.solicitada;
+    totDespAprov += desp.aprovada;
+    totDespProc += desp.processada;
+    totRecOrc += r.recOrc || 0;
+    totRecSol += rec.solicitada;
+    totRecProc += rec.processada;
+  });
+  
+  const totDisp = totDespOrc - totDespSol;
   
   // Badge de departamento
   const depColors = {
@@ -3966,14 +4016,29 @@ function gfRenderRubricas() {
   };
   const depColor = depColors[proj.dep] || '#6B7280';
   
-  // Barra de progresso
-  const progressBar = (proc, sol, orc, color) => {
-    const pctProc = orc > 0 ? Math.min((proc / orc) * 100, 100) : 0;
-    const pctSol = orc > 0 ? Math.min(((sol - proc) / orc) * 100, 100 - pctProc) : 0;
+  // Barra de progresso segmentada
+  const progressBarDesp = (sol, aprov, proc, orc) => {
+    if (orc <= 0) return `<div style="width:100%;height:10px;background:var(--border);border-radius:5px"></div>`;
+    const pctProc = Math.min((proc / orc) * 100, 100);
+    const pctAprov = Math.min(((aprov - proc) / orc) * 100, 100 - pctProc);
+    const pctSol = Math.min(((sol - aprov) / orc) * 100, 100 - pctProc - pctAprov);
     return `
-      <div style="position:relative;width:100%;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
-        <div style="position:absolute;left:0;top:0;height:100%;width:${pctProc}%;background:${color}"></div>
-        <div style="position:absolute;left:${pctProc}%;top:0;height:100%;width:${pctSol > 0 ? pctSol : 0}%;background:${color};opacity:0.4;background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.3) 2px,rgba(255,255,255,.3) 4px)"></div>
+      <div style="position:relative;width:100%;height:10px;background:var(--border);border-radius:5px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pctProc}%;background:#2563EB" title="Processado"></div>
+        <div style="position:absolute;left:${pctProc}%;top:0;height:100%;width:${pctAprov > 0 ? pctAprov : 0}%;background:#60A5FA" title="Aprovado"></div>
+        <div style="position:absolute;left:${pctProc + pctAprov}%;top:0;height:100%;width:${pctSol > 0 ? pctSol : 0}%;background:#BFDBFE" title="Solicitado"></div>
+      </div>
+    `;
+  };
+  
+  const progressBarRec = (sol, proc, orc) => {
+    if (orc <= 0) return `<div style="width:100%;height:10px;background:var(--border);border-radius:5px"></div>`;
+    const pctProc = Math.min((proc / orc) * 100, 100);
+    const pctSol = Math.min(((sol - proc) / orc) * 100, 100 - pctProc);
+    return `
+      <div style="position:relative;width:100%;height:10px;background:var(--border);border-radius:5px;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${pctProc}%;background:#F97316" title="Processado"></div>
+        <div style="position:absolute;left:${pctProc}%;top:0;height:100%;width:${pctSol > 0 ? pctSol : 0}%;background:#FDBA74" title="Submetido"></div>
       </div>
     `;
   };
@@ -3982,126 +4047,194 @@ function gfRenderRubricas() {
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
       <a onclick="gfNav('home')" style="color:var(--mod-financeiro);cursor:pointer">Início</a>
       <span>›</span>
-      <a onclick="gfNav('orcamento')" style="color:var(--mod-financeiro);cursor:pointer">Orçamento</a>
+      <a onclick="gfNav('orcamento')" style="color:var(--mod-financeiro);cursor:pointer">Orçamento ${GF.year}</a>
       <span>›</span><span>${proj.nome}</span>
     </div>
     
     <!-- Header do projeto -->
-    <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg,var(--mod-financeiro-bg) 0%,#fff 100%)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between">
-        <div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <div style="font-size:22px;font-weight:700;color:var(--text)">${proj.nome}</div>
-            <span style="display:inline-block;padding:3px 10px;background:${depColor}15;color:${depColor};border-radius:4px;font-size:12px;font-weight:500">${proj.dep || '—'}</span>
-          </div>
-          <div style="font-size:13px;color:var(--text3)">
-            ${proj.dataInicio ? `<span>Início: ${proj.dataInicio}</span>` : ''}
-            ${proj.dataFim ? `<span style="margin-left:12px">Fim: ${proj.dataFim}</span>` : ''}
-          </div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div style="font-size:24px;font-weight:700;color:var(--text)">${proj.nome}</div>
         </div>
-        <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="GF.rubrica=null;gfNav('orcamento-rubrica-form')">+ Nova Rúbrica</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="display:inline-block;padding:3px 10px;background:${depColor}15;color:${depColor};border-radius:4px;font-size:12px;font-weight:500">${proj.dep || 'Sem departamento'}</span>
+          ${proj.dataInicio || proj.dataFim ? `<span style="font-size:12px;color:var(--text3)">${proj.dataInicio || '?'} → ${proj.dataFim || '?'}</span>` : ''}
+        </div>
       </div>
+      <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="GF.rubrica=null;gfNav('orcamento-rubrica-form')">+ Nova rúbrica</button>
     </div>
     
     <!-- KPIs -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-      <div class="card" style="padding:16px;border-left:4px solid #1E293B">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px">Desp. Orçamentada</div>
-        <div style="font-size:22px;font-weight:700;color:#1E293B">${gfFmt(totOrc)}</div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Desp. Orçamentada</div>
+        <div style="font-size:22px;font-weight:700">${gfFmt(totDespOrc)}</div>
       </div>
-      <div class="card" style="padding:16px;border-left:4px solid #F59E0B">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px">Desp. Solicitada</div>
-        <div style="font-size:22px;font-weight:700;color:#F59E0B">${gfFmt(totSol)}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Comprometido</div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Desp. Solicitada</div>
+        <div style="font-size:22px;font-weight:700">${gfFmt(totDespSol)}</div>
       </div>
-      <div class="card" style="padding:16px;border-left:4px solid var(--mod-financeiro)">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px">Desp. Processada</div>
-        <div style="font-size:22px;font-weight:700;color:var(--mod-financeiro)">${gfFmt(totProc)}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Executado</div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Desp. Processada</div>
+        <div style="font-size:22px;font-weight:700;color:var(--mod-financeiro)">${gfFmt(totDespProc)}</div>
       </div>
-      <div class="card" style="padding:16px;border-left:4px solid #10B981">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px">Disponível</div>
+      <div class="card" style="padding:16px;background:#F0FDF4">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Disponível</div>
         <div style="font-size:22px;font-weight:700;color:${totDisp >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(totDisp)}</div>
-        ${totRecOrc > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Receita prevista: ${gfFmt(totRecOrc)}</div>` : ''}
+        ${totRecOrc > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Rec: ${gfFmt(totRecProc)} proc. / ${gfFmt(totRecOrc)} orç.</div>` : ''}
       </div>
     </div>
     
-    <!-- Lista de Rúbricas (expandível) -->
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
-      <div style="padding:14px 16px;background:var(--mod-financeiro-bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:14px;font-weight:600;color:var(--mod-financeiro)">Rúbricas (${rubs.length})</div>
-      </div>
-      ${rubs.length === 0 ? `<div style="padding:40px;text-align:center;color:var(--text3)">Sem rúbricas definidas</div>` :
-        rubs.map(r => {
-          const orc = r.despOrc || 0;
-          const sol = r.despSol || 0;
-          const proc = r.despProc || 0;
-          const disp = orc - sol;
-          const recOrc = r.recOrc || 0;
-          const pct = orc > 0 ? Math.round((proc / orc) * 100) : 0;
-          const canClose = disp <= 0 || r.estado === 'Suspenso';
-          
-          return `
-            <div class="rubrica-item" style="border-bottom:1px solid var(--border)">
-              <div style="padding:16px;cursor:pointer" onclick="this.parentElement.classList.toggle('expanded')">
-                <div style="display:grid;grid-template-columns:2fr 1fr 1fr 40px;gap:16px;align-items:center">
-                  <div>
-                    <div style="font-weight:600;color:var(--text)">${r.titulo}</div>
-                    <div style="font-size:12px;color:var(--text3)">${r.tipo || 'Despesa'}</div>
+    <!-- Lista de Rúbricas -->
+    ${rubs.length === 0 ? `<div class="card" style="padding:40px;text-align:center;color:var(--text3)">Sem rúbricas definidas</div>` :
+      rubs.map(r => {
+        const desp = gfCalcDespesa(r.id);
+        const rec = gfCalcReceita(r.id);
+        const despOrc = r.despOrc || 0;
+        const recOrc = r.recOrc || 0;
+        const despDisp = despOrc - desp.solicitada;
+        const despPct = despOrc > 0 ? Math.round((desp.processada / despOrc) * 100) : 0;
+        const solicitacoes = gfGetSolicitacoes(r.id);
+        const canClose = despDisp <= 0 || r.estado === 'Suspenso';
+        const hasWarning = desp.processada > desp.solicitada;
+        
+        return `
+          <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden${hasWarning ? ';background:#FEF3C7;border-color:#FCD34D' : ''}">
+            ${hasWarning ? `<div style="padding:8px 16px;background:#FEF3C7;color:#92400E;font-size:12px">⚠ Despesa processada (${gfFmt(desp.processada)}) é superior à solicitada (${gfFmt(desp.solicitada)})</div>` : ''}
+            
+            <!-- Header da rúbrica -->
+            <div style="padding:16px;cursor:pointer;display:grid;grid-template-columns:1.5fr repeat(6,auto) 40px;gap:12px;align-items:center;border-bottom:1px solid var(--border)" onclick="this.parentElement.classList.toggle('rubrica-expanded')">
+              <div>
+                <div style="font-weight:600">${r.titulo}</div>
+                <div style="font-size:12px;color:var(--text3)">${r.tipo || 'Despesa'}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text3)">DESP. ORÇ.</div>
+                <div style="font-weight:600">${gfFmt(despOrc)}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text3)">DESP. SOL.</div>
+                <div style="font-weight:600;color:#2563EB">${gfFmt(desp.solicitada)}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text3)">DESP. PROC.</div>
+                <div style="font-weight:600;color:var(--mod-financeiro)">${gfFmt(desp.processada)}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text3)">REC. ORÇ.</div>
+                <div style="font-weight:500">${gfFmt(recOrc)}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text3)">REC. SUB.</div>
+                <div style="font-weight:500;color:#F97316">${gfFmt(rec.solicitada)}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;color:var(--text3)">REC. PROC.</div>
+                <div style="font-weight:500;color:#F97316">${gfFmt(rec.processada)}</div>
+              </div>
+              <div class="rubrica-arrow" style="text-align:center;font-size:14px;color:var(--text3);transition:transform 0.2s">▼</div>
+            </div>
+            
+            <!-- Detalhes expandidos -->
+            <div class="rubrica-details" style="display:none;padding:16px;background:var(--bg)">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                <!-- DESPESAS -->
+                <div style="padding:16px;background:#fff;border-radius:8px">
+                  <div style="font-size:12px;font-weight:600;color:#2563EB;margin-bottom:12px">DESPESAS</div>
+                  ${progressBarDesp(desp.solicitada, desp.aprovada, desp.processada, despOrc)}
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+                    <div>
+                      <div style="font-size:10px;color:var(--text3)">Solicitada</div>
+                      <div style="font-weight:600;color:#2563EB">${gfFmt(desp.solicitada)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:var(--text3)">Processada</div>
+                      <div style="font-weight:600;color:#1E40AF">${gfFmt(desp.processada)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:var(--text3)">Orçamentada</div>
+                      <div style="font-weight:600">${gfFmt(despOrc)}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Despesa</div>
-                    ${progressBar(proc, sol, orc, 'var(--mod-financeiro)')}
-                    <div style="font-size:11px;color:var(--text3);margin-top:2px">${pct}% executado</div>
+                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px">
+                    <span style="color:var(--text3)">Disponível: </span>
+                    <span style="font-weight:600;color:${despDisp >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(despDisp)}</span>
                   </div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Receita</div>
-                    ${progressBar(0, 0, recOrc, '#10B981')}
-                    <div style="font-size:11px;color:var(--text3);margin-top:2px">${gfFmt(recOrc)}</div>
+                </div>
+                
+                <!-- RECEITA -->
+                <div style="padding:16px;background:#fff;border-radius:8px">
+                  <div style="font-size:12px;font-weight:600;color:#F97316;margin-bottom:12px">RECEITA</div>
+                  ${progressBarRec(rec.solicitada, rec.processada, recOrc)}
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+                    <div>
+                      <div style="font-size:10px;color:var(--text3)">Submetida</div>
+                      <div style="font-weight:600;color:#F97316">${gfFmt(rec.solicitada)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:var(--text3)">Processada</div>
+                      <div style="font-weight:600;color:#EA580C">${gfFmt(rec.processada)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:var(--text3)">Orçamentada</div>
+                      <div style="font-weight:600">${gfFmt(recOrc)}</div>
+                    </div>
                   </div>
-                  <div class="rubrica-arrow" style="text-align:center;font-size:18px;color:var(--text3);transition:transform 0.2s">▼</div>
                 </div>
               </div>
-              <div class="rubrica-details" style="display:none;padding:0 16px 16px 16px;background:var(--bg)">
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-                  <div style="padding:10px;background:#fff;border-radius:6px">
-                    <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Orçamentada</div>
-                    <div style="font-weight:600">${gfFmt(orc)}</div>
-                  </div>
-                  <div style="padding:10px;background:#fff;border-radius:6px">
-                    <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Solicitada</div>
-                    <div style="font-weight:600;color:#F59E0B">${gfFmt(sol)}</div>
-                  </div>
-                  <div style="padding:10px;background:#fff;border-radius:6px">
-                    <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Processada</div>
-                    <div style="font-weight:600;color:var(--mod-financeiro)">${gfFmt(proc)}</div>
-                  </div>
-                  <div style="padding:10px;background:#fff;border-radius:6px">
-                    <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Disponível</div>
-                    <div style="font-weight:600;color:${disp >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(disp)}</div>
-                  </div>
+              
+              <!-- Lista de solicitações/faturas -->
+              ${solicitacoes.length > 0 ? `
+                <div style="margin-bottom:16px">
+                  <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px">FATURAS / SOLICITAÇÕES</div>
+                  <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px;overflow:hidden">
+                    <thead>
+                      <tr style="background:var(--bg)">
+                        <th style="padding:8px 12px;text-align:left;font-weight:500;color:#2563EB">Cód. encomenda</th>
+                        <th style="padding:8px 12px;text-align:left;font-weight:500">Fornecedor</th>
+                        <th style="padding:8px 12px;text-align:left;font-weight:500">Data</th>
+                        <th style="padding:8px 12px;text-align:right;font-weight:500">Valor</th>
+                        <th style="padding:8px 12px;text-align:left;font-weight:500">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${solicitacoes.slice(0, 5).map(s => `
+                        <tr style="border-top:1px solid var(--border)">
+                          <td style="padding:8px 12px;color:#2563EB">${s.codigo || '—'}</td>
+                          <td style="padding:8px 12px">${s.fornecedor || '—'}</td>
+                          <td style="padding:8px 12px">${s.dataSubmissao ? new Date(s.dataSubmissao).toLocaleDateString('pt-PT') : '—'}</td>
+                          <td style="padding:8px 12px;text-align:right;font-weight:500">${gfFmt(s.valor)}</td>
+                          <td style="padding:8px 12px">${GF_BADGES[s.estado] || s.estado}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:#fff;border-radius:6px;margin-bottom:12px">
-                  <div>
-                    <span style="font-size:12px;color:var(--text3)">Resultado orçamentado: </span>
-                    <span style="font-weight:600">${gfFmt(recOrc - orc)}</span>
-                    <span style="font-size:12px;color:var(--text3);margin-left:20px">Resultado real: </span>
-                    <span style="font-weight:600;color:${(recOrc - proc) >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(recOrc - proc)}</span>
-                  </div>
-                  <div style="font-size:12px">
-                    <span style="color:var(--text3)">Condição de encerramento: </span>
-                    <span style="${canClose ? 'color:#10B981' : 'color:#EF4444'}">${canClose ? '✓ Satisfeita' : '✗ Saldo disponível'}</span>
-                  </div>
+              ` : ''}
+              
+              <!-- Resultado e ações -->
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fff;border-radius:6px">
+                <div style="font-size:12px">
+                  <span style="color:var(--text3)">Resultado orçamentado: </span>
+                  <span style="font-weight:600">${gfFmt(recOrc - despOrc)}</span>
+                  <span style="color:var(--text3);margin-left:16px">Resultado real: </span>
+                  <span style="font-weight:600;color:${(rec.processada - desp.processada) >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(rec.processada - desp.processada)}</span>
+                  <br>
+                  <span style="font-size:11px;color:${canClose ? '#10B981' : '#9CA3AF'}">
+                    ${canClose ? '✓ Condição de encerramento satisfeita' : ''}
+                  </span>
                 </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end">
-                  <button class="btn btn-sm" style="border-color:var(--mod-financeiro);color:var(--mod-financeiro)" onclick="GF.rubrica=${r.id};gfNav('orcamento-rubrica-form')">Editar</button>
-                  ${canClose ? `<button class="btn btn-sm" onclick="gfSolicitarFecho(${r.id})">Solicitar encerramento</button>` : ''}
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-sm" style="border-color:var(--mod-financeiro);color:var(--mod-financeiro)" onclick="event.stopPropagation();GF.rubrica=${r.id};gfNav('orcamento-rubrica-form')">Editar</button>
+                  ${canClose ? `<button class="btn btn-sm" onclick="event.stopPropagation();gfSolicitarFecho(${r.id})">Solicitar encerramento</button>` : ''}
                 </div>
               </div>
             </div>
-          `;
-        }).join('')
-      }
+          </div>
+        `;
+      }).join('')
+    }
     </div>
     
     <!-- Secção Membros do Projeto -->
@@ -4124,6 +4257,8 @@ function gfRenderRubricas() {
     <style>
       .rubrica-item.expanded .rubrica-details { display:block !important; }
       .rubrica-item.expanded .rubrica-arrow { transform:rotate(180deg) !important; }
+      .rubrica-expanded .rubrica-details { display:block !important; }
+      .rubrica-expanded .rubrica-arrow { transform:rotate(180deg) !important; }
     </style>
   `;
 }
@@ -4371,6 +4506,20 @@ function gfRenderSolicitacaoForm() {
               </select>
             </div>
           </div>
+          
+          <div style="margin-top:16px">
+            <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Tipo de Solicitação <span style="color:#EF4444">*</span></label>
+            <div style="display:flex;gap:16px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="gf-sol-tipo" value="Despesa" ${!sol || sol.tipoSolicitacao === 'Despesa' ? 'checked' : ''} style="width:18px;height:18px;accent-color:#2563EB">
+                <span style="color:#2563EB;font-weight:500">Despesa</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="gf-sol-tipo" value="Receita" ${sol?.tipoSolicitacao === 'Receita' ? 'checked' : ''} style="width:18px;height:18px;accent-color:#F97316">
+                <span style="color:#F97316;font-weight:500">Receita</span>
+              </label>
+            </div>
+          </div>
         </div>
         
         <div class="card" style="margin-bottom:16px">
@@ -4441,31 +4590,39 @@ function gfSolRubricaInfo(rubId) {
   const info = gfEl('gf-sol-rub-info');
   if (!rub || !info) return;
   
-  const disp = (rub.despOrc || 0) - (rub.despSol || 0);
+  const desp = gfCalcDespesa(rubId);
+  const rec = gfCalcReceita(rubId);
+  const despDisp = (rub.despOrc || 0) - desp.solicitada;
   const valorInput = gfEl('gf-sol-valor');
   
   info.innerHTML = `
     <div style="margin-bottom:8px"><strong>${rub.titulo}</strong></div>
+    <div style="font-size:12px;font-weight:600;color:#2563EB;margin:8px 0 4px">DESPESA</div>
     <div>Orçamentado: ${gfFmt(rub.despOrc)}</div>
-    <div>Solicitado: ${gfFmt(rub.despSol)}</div>
-    <div style="font-weight:600;color:${disp <= 0 ? '#EF4444' : '#10B981'}">Disponível: ${gfFmt(disp)}</div>
-    ${disp <= 0 ? '<div style="margin-top:8px;padding:8px;background:#FEE2E2;color:#991B1B;border-radius:6px;font-size:12px">⚠️ Rúbrica sem saldo disponível</div>' : ''}
+    <div>Solicitado: ${gfFmt(desp.solicitada)}</div>
+    <div>Processado: ${gfFmt(desp.processada)}</div>
+    <div style="font-weight:600;color:${despDisp <= 0 ? '#EF4444' : '#10B981'}">Disponível: ${gfFmt(despDisp)}</div>
+    ${despDisp <= 0 ? '<div style="margin-top:8px;padding:8px;background:#FEE2E2;color:#991B1B;border-radius:6px;font-size:12px">⚠️ Rúbrica sem saldo disponível</div>' : ''}
+    <div style="font-size:12px;font-weight:600;color:#F97316;margin:12px 0 4px">RECEITA</div>
+    <div>Orçamentado: ${gfFmt(rub.recOrc)}</div>
+    <div>Submetido: ${gfFmt(rec.solicitada)}</div>
   `;
   
   // Adicionar validação em tempo real no campo valor
   if (valorInput) {
-    valorInput.max = disp > 0 ? disp : 0;
+    valorInput.max = despDisp > 0 ? despDisp : 0;
     valorInput.oninput = function() {
+      const tipo = document.querySelector('input[name="gf-sol-tipo"]:checked')?.value || 'Despesa';
       const val = parseFloat(this.value) || 0;
-      if (val > disp) {
+      if (tipo === 'Despesa' && val > despDisp) {
         this.style.borderColor = '#EF4444';
         this.style.background = '#FEF2F2';
-        info.innerHTML += `<div id="gf-val-warn" style="margin-top:8px;padding:8px;background:#FEE2E2;color:#991B1B;border-radius:6px;font-size:12px;animation:pulse 0.5s">⚠️ Valor excede o disponível (${gfFmt(disp)})</div>`;
+        document.getElementById('gf-val-warn')?.remove();
+        info.innerHTML += `<div id="gf-val-warn" style="margin-top:8px;padding:8px;background:#FEE2E2;color:#991B1B;border-radius:6px;font-size:12px">⚠️ Valor excede o disponível (${gfFmt(despDisp)})</div>`;
       } else {
         this.style.borderColor = 'var(--border)';
         this.style.background = '';
-        const warn = document.getElementById('gf-val-warn');
-        if (warn) warn.remove();
+        document.getElementById('gf-val-warn')?.remove();
       }
     };
   }
@@ -4480,18 +4637,22 @@ async function gfSaveSolicitacao(id, estado) {
   const fornecedor = gfVal('gf-sol-fornecedor').trim();
   const emailForn = gfVal('gf-sol-email').trim();
   const justificacao = gfVal('gf-sol-justificacao').trim();
+  const tipoSolicitacao = document.querySelector('input[name="gf-sol-tipo"]:checked')?.value || 'Despesa';
   
   if (!titulo || !projetoId || !rubricaId || valor <= 0 || !fornecedor) {
     showNotif('Preencha todos os campos obrigatórios', 'error');
     return;
   }
   
-  // Validar disponível
-  const rub = GF_RUBRICAS.find(r => r.id === rubricaId);
-  const disp = (rub?.despOrc || 0) - (rub?.despSol || 0);
-  if (valor > disp && estado === 'Submetido') {
-    showNotif('Valor excede o disponível na rúbrica', 'error');
-    return;
+  // Validar disponível (apenas para Despesa)
+  if (tipoSolicitacao === 'Despesa' && estado === 'Submetido') {
+    const rub = GF_RUBRICAS.find(r => r.id === rubricaId);
+    const desp = gfCalcDespesa(rubricaId);
+    const disp = (rub?.despOrc || 0) - desp.solicitada;
+    if (valor > disp) {
+      showNotif(`Valor excede o disponível na rúbrica (${gfFmt(disp)})`, 'error');
+      return;
+    }
   }
   
   const body = {
@@ -4502,6 +4663,7 @@ async function gfSaveSolicitacao(id, estado) {
     RubricaIdId: rubricaId,
     Valor: valor,
     Estado: estado,
+    TipoSolicitacao: tipoSolicitacao,
     Fornecedor: fornecedor,
     EmailFornecedor: emailForn,
     Justificacao: justificacao
@@ -5201,6 +5363,6 @@ async function getCurrentUserId() {
 init();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9d1da6efd15910',t:'MTc3NTc3NTQ5OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9d5e537b510c00',t:'MTc3NTc3ODE0OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
 >
