@@ -1198,9 +1198,19 @@ tr:hover td{background:var(--bg3)}
           <div class="toolbar">
             <select class="flt" id="ff-kr-kpi" onchange="renderKregs()"><option value="">Todos os KPIs</option></select>
             <select class="flt" id="ff-kr-ano" onchange="renderKregs()"><option value="">Todos os anos</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /module-pl -->
 
-</div>
-<div id="module-gf" style="display:none"><div id="app"></div></div>
+<div id="module-gf" style="display:none">
+  <div id="gf-app" style="padding:20px">
+    <div style="text-align:center;padding:40px;color:var(--text3)">A carregar dados financeiros...</div>
+  </div>
+</div><!-- /module-gf -->
+
 </div><!-- /main -->
 </div><!-- /layout -->
 </div><!-- /app-screen -->
@@ -3560,15 +3570,17 @@ function gfNavigate(screen, params = {}) {
 
 // ── INIT ──
 function gfInit() {
-  const gfApp = document.getElementById('module-gf');
-  if (gfApp) gfApp.innerHTML = '<div id="gf-app" style="padding:20px"><div style="text-align:center;padding:40px;color:var(--text3)">A carregar dados financeiros...</div></div>';
+  // gf-app already exists in HTML, just load data
   gfLoadAll();
 }
 
 // ── MAIN RENDER ──
 function gfRender() {
-  const app = document.getElementById('gf-app') || document.getElementById('module-gf');
-  if (!app) return;
+  const app = document.getElementById('gf-app');
+  if (!app) {
+    console.error('gfRender: gf-app not found');
+    return;
+  }
   
   let content = '';
   switch (GF.screen) {
@@ -3581,7 +3593,7 @@ function gfRender() {
     default: content = gfRenderHome();
   }
   
-  app.innerHTML = `<div style="max-width:1200px;margin:0 auto;padding:20px">${content}</div>`;
+  app.innerHTML = `<div style="max-width:1200px;margin:0 auto">${content}</div>`;
   
   // Bind modal close
   if (GF.modal) {
