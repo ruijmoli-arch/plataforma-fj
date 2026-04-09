@@ -3403,1280 +3403,813 @@ function plInit(){
 }
 
 
+
 // ═══ FINANCEIRO MODULE ═══
-// Shared Financeiro State
-let PROJECTS = {}; 
+// Clean rewrite - integrado com SharePoint
+
+// ── STATE ──
+let GF = {
+  screen: 'home',
+  year: 2026,
+  project: null,
+  tab: { aprovacoes: 'aprovar', alteracoes: 'novo' },
+  modal: null,
+  expandedRubs: new Set()
+};
+
+let PROJECTS = {};
 let RUBRICAS = {};
 let SOLICITACOES = [];
 let ALTERACOES = [];
-let GF_SOLICITACOES_DATA = [];
-let GF_ALTERACOES_DATA = [];
 
-// ═══ FINANCEIRO MODULE ═══
-
-
-// ── Utils Financeiro (from gestao-financeira.html) ──
-// Shared utility functions used: fmt, pct
+// ── BADGES ──
 const ESTADO_BADGE = {
-  solicitada:'<span class="bdg bdg-amber">Solicitada</span>',
-  aprovada_dir:'<span class="bdg bdg-navy">Aguarda DF</span>',
-  aprovada:'<span class="bdg bdg-green">Aprovada</span>',
-  processada:'<span class="bdg bdg-green">Processada</span>',
-  rejeitada:'<span class="bdg bdg-red">Rejeitada</span>',
-  encerrada:'<span class="bdg bdg-gray">Encerrada</span>',
-  pendente:'<span class="bdg bdg-amber">Pendente</span>',
-  aprovada_df:'<span class="bdg bdg-green">Aprovada DF</span>',
+  solicitada: '<span class="bdg bdg-amber">Solicitada</span>',
+  aprovada_dir: '<span class="bdg" style="background:#1C3557;color:#fff">Aguarda DF</span>',
+  aprovada: '<span class="bdg bdg-green">Aprovada</span>',
+  processada: '<span class="bdg bdg-green">Processada</span>',
+  rejeitada: '<span class="bdg bdg-red">Rejeitada</span>',
+  pendente: '<span class="bdg bdg-amber">Pendente</span>',
+  aprovada_df: '<span class="bdg bdg-green">Aprovada DF</span>'
 };
-const NIVEL_LBL = {df:'Diretora Financeira',df_pe:'DF + Presidente Executivo',df_pe_pca:'DF + PE + Presidente CA'};
 
-function userProjects(){
-  const projs=PROJECTS[GF.year]||[];
-  return projs;
+// ── UTILITY FUNCTIONS ──
+function isFinDir() { return _financeRole === 'df'; }
+function isDir() { return ['area_director', 'df', 'pe', 'pca'].includes(_financeRole); }
+function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_financeRole); }
+
+function userProjects() {
+  return PROJECTS[GF.year] || [];
 }
 
-function projMetrics(pid){
-  const rubs=RUBRICAS[pid]||[];
-  return{
-    desp_orc:rubs.reduce((a,r)=>a+(r.desp_orc||0),0),
-    desp_sol:rubs.reduce((a,r)=>a+(r.desp_sol||0),0),
-    desp_proc:rubs.reduce((a,r)=>a+(r.desp_proc||0),0),
-    rec_orc:rubs.reduce((a,r)=>a+(r.rec_orc||0),0),
-    rec_sol:rubs.reduce((a,r)=>a+(r.rec_sol||0),0),
-    rec_proc:rubs.reduce((a,r)=>a+(r.rec_proc||0),0),
+function projMetrics(pid) {
+  const rubs = RUBRICAS[pid] || [];
+  return {
+    desp_orc: rubs.reduce((a, r) => a + (r.desp_orc || 0), 0),
+    desp_sol: rubs.reduce((a, r) => a + (r.desp_sol || 0), 0),
+    desp_proc: rubs.reduce((a, r) => a + (r.desp_proc || 0), 0),
+    rec_orc: rubs.reduce((a, r) => a + (r.rec_orc || 0), 0),
+    rec_sol: rubs.reduce((a, r) => a + (r.rec_sol || 0), 0),
+    rec_proc: rubs.reduce((a, r) => a + (r.rec_proc || 0), 0)
   };
 }
 
-function canCloseRub(r){return((r.desp_proc||0)-(r.rec_proc||0))<=((r.desp_orc||0)-(r.rec_orc||0));}
-
-function rubErrors(r){
-  const errs=[];
-  if((r.desp_proc||0)>(r.desp_sol||0))errs.push(`Despesa processada (${fmt(r.desp_proc||0)}) é superior à solicitada (${fmt(r.desp_sol||0)})`);
-  if((r.rec_proc||0)>(r.rec_sol||0))errs.push(`Receita processada (${fmt(r.rec_proc||0)}) é superior à submetida (${fmt(r.rec_sol||0)})`);
-  return errs;
+function gfFmt(v) {
+  return v == null ? '—' : new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
 }
 
-// ROLE_LBL uses ROLE_LABELS from admin section
-// const ROLE_LBL = ROLE_LABELS; (ROLE_LABELS defined above in admin section)
+function gfPct(v, t) { return t > 0 ? Math.min(Math.round(v / t * 100), 100) : 0; }
 
+function pendingAprovCount() {
+  return (SOLICITACOES || []).filter(s => {
+    if (_financeRole === 'area_director') return s.estado === 'solicitada';
+    if (_financeRole === 'df') return s.estado === 'solicitada' || s.estado === 'aprovada_dir';
+    if (_financeRole === 'pe' || _financeRole === 'pca') return s.estado === 'aprovada';
+    return false;
+  }).length;
+}
 
-// Duplicate PROJECTS/RUBRICAS removed
-
-let GF = {
-  user:null,screen:'login',
-  year:2026,project:null,
-  expandedRubs:new Set(),
-  tab:{aprovacoes:'aprovar',alteracoes:'novo',historico:'hist'},
-  modal:null,
-  rascunhos:[],
-  altOrigemCount:0,
-};
-
-// RUBRICAS and PROJECTS data (loaded from SP in gfLoadAll)
-let GF_RUBRICAS = {};
-
-async function gfLoadAll(){
-  try{
+// ── LOAD DATA FROM SHAREPOINT ──
+async function gfLoadAll() {
+  try {
     // Use shared projetos
-    if(!sharedProjetos.length) await loadSharedProjetos();
+    if (!sharedProjetos.length) await loadSharedProjetos();
+    
     // Load rubricas
-    const dr=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items?$select=*&$top=1000`);
-    GF_RUBRICAS={};
-    dr.d.results.forEach(r=>{
-      const pid=r.ProjetoId;
-      if(!GF_RUBRICAS[pid])GF_RUBRICAS[pid]=[];
-      GF_RUBRICAS[pid].push({id:r.Id,name:r.Title||'',tipo:r.TipoRubrica||'despesa',
-        desp_orc:r.DespOrcamentada||0,desp_sol:r.DespSolicitada||0,desp_proc:r.DespProcessada||0,
-        rec_orc:r.RecOrcamentada||0,rec_sol:r.RecSolicitada||0,rec_proc:r.RecProcessada||0,
-        status:r.Estado||'active'});
+    const dr = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items?$select=*&$top=1000`);
+    RUBRICAS = {};
+    dr.d.results.forEach(r => {
+      const pid = r.ProjetoId;
+      if (!RUBRICAS[pid]) RUBRICAS[pid] = [];
+      RUBRICAS[pid].push({
+        id: r.Id,
+        name: r.Title || '',
+        tipo: r.TipoRubrica || 'despesa',
+        desp_orc: r.DespOrcamentada || 0,
+        desp_sol: r.DespSolicitada || 0,
+        desp_proc: r.DespProcessada || 0,
+        rec_orc: r.RecOrcamentada || 0,
+        rec_sol: r.RecSolicitada || 0,
+        rec_proc: r.RecProcessada || 0,
+        status: r.Estado || 'active'
+      });
     });
+    
     // Load solicitacoes
-    const ds=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items?$select=*,Autor/Title&$expand=Autor&$orderby=Created desc&$top=200`);
-    GF_SOLICITACOES_DATA=ds.d.results.map(r=>{
-      const proj=sharedProjetos.find(p=>p.id===r.ProjetoId);
-      return{id:r.Id,tipo:'despesa',titulo:r.Title||'',projeto:r.ProjetoId||null,
-        rubrica:r.RubricaId||null,valor:r.Valor||0,estado:r.Estado||'solicitada',
-        autor:r.Autor?.Title||user?.name||'',data:r.DataSubmissao?r.DataSubmissao.split('T')[0]:'',
-        fornecedor:r.Fornecedor||'',email_forn:r.EmailFornecedor||'',cod:r.Codigo||''};
-    });
+    const ds = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items?$select=*,Autor/Title&$expand=Autor&$orderby=Created desc&$top=200`);
+    SOLICITACOES = ds.d.results.map(r => ({
+      id: r.Id,
+      titulo: r.Title || '',
+      projeto: r.ProjetoId || null,
+      rubrica: r.RubricaId || null,
+      valor: r.Valor || 0,
+      estado: r.Estado || 'solicitada',
+      autor: r.Autor?.Title || user?.name || '',
+      data: r.DataSubmissao ? r.DataSubmissao.split('T')[0] : '',
+      fornecedor: r.Fornecedor || '',
+      email_forn: r.EmailFornecedor || '',
+      justificacao: r.Justificacao || '',
+      aprovDir: r.AprovDir?.Title || null,
+      dataAprovDir: r.DataAprovDir ? r.DataAprovDir.split('T')[0] : null
+    }));
+    
     // Load alteracoes
-    const da=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items?$select=*,Solicitante/Title&$expand=Solicitante&$orderby=Created desc&$top=200`);
-    GF_ALTERACOES_DATA=da.d.results.map(r=>{
-      return{id:r.Id,titulo:r.Title||'',justificacao:r.Justificacao||'',
-        valorTotal:r.ValorTotal||0,estado:r.Estado||'pendente',
-        nivelAprovacao:r.NivelAprovacao||'df',
-        destProj:r.DestProjetoId||null,destRub:r.DestRubricaId||null,
-        solicitante:r.Solicitante?.Title||'',data:r.DataSubmissao?r.DataSubmissao.split('T')[0]:''
-      };
-    });
-    // Patch SOLICITACOES and ALTERACOES references
-    SOLICITACOES=GF_SOLICITACOES_DATA;
-    ALTERACOES=GF_ALTERACOES_DATA;
-    RUBRICAS=GF_RUBRICAS;
-    // Patch PROJECTS to use shared
-    PROJECTS[GF.year]=sharedProjetos.filter(p=>!p.anoOrcamental||p.anoOrcamental===GF.year)
-      .map(p=>{return{id:p.id,name:p.nome,dept:p.dep,start:p.dataInicio,end:p.dataFim,status:p.estado,members:[],isBanco:p.isBancoGlobal}});
+    const da = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items?$select=*,Solicitante/Title&$expand=Solicitante&$orderby=Created desc&$top=200`);
+    ALTERACOES = da.d.results.map(r => ({
+      id: r.Id,
+      titulo: r.Title || '',
+      justificacao: r.Justificacao || '',
+      valorTotal: r.ValorTotal || 0,
+      estado: r.Estado || 'pendente',
+      nivelAprovacao: r.NivelAprovacao || 'df',
+      destProj: r.DestProjetoId || null,
+      destRub: r.DestRubricaId || null,
+      solicitante: r.Solicitante?.Title || '',
+      data: r.DataSubmissao ? r.DataSubmissao.split('T')[0] : ''
+    }));
+    
+    // Build PROJECTS from shared
+    PROJECTS[GF.year] = sharedProjetos
+      .filter(p => !p.anoOrcamental || p.anoOrcamental === GF.year)
+      .map(p => ({
+        id: p.id,
+        name: p.nome,
+        dept: p.dep,
+        status: p.estado,
+        isBanco: p.isBancoGlobal
+      }));
+    
     gfRender();
-  }catch(e){console.error('gfLoadAll',e);showNotif('Erro financeiro: '+e.message,'error');gfRender();}
+  } catch (e) {
+    console.error('gfLoadAll error:', e);
+    showNotif('Erro ao carregar dados financeiros: ' + e.message, 'error');
+  }
 }
 
+// ── NAVIGATION ──
+function gfNavigate(screen, params = {}) {
+  GF.screen = screen;
+  if (params.project) GF.project = params.project;
+  gfRender();
+  
+  // Update sidebar
+  document.querySelectorAll('#sidebar-gf .nav-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById('gf-nav-' + screen);
+  if (navEl) navEl.classList.add('active');
+}
 
-function isFinDir(){return _financeRole==='df';}
-function isDir(){return ['area_director','df','pe','pca'].includes(_financeRole);}
-function canApprove(){return ['area_director','df','pe','pca'].includes(_financeRole);}
-
-function gfInit(){
-  // Point GF render target to module div
-  const origRender=gfRender;
-  const gfApp=document.getElementById('module-gf');
-  if(gfApp)gfApp.innerHTML='<div id="app"></div>';
+// ── INIT ──
+function gfInit() {
+  const gfApp = document.getElementById('module-gf');
+  if (gfApp) gfApp.innerHTML = '<div id="gf-app" style="padding:20px"><div style="text-align:center;padding:40px;color:var(--text3)">A carregar dados financeiros...</div></div>';
   gfLoadAll();
 }
 
-// ═══════════════ RENDER ═══════════════
-function gfRender(){
-  const app=document.getElementById('app');
-  if(GF.screen==='login'){GF.screen='home';}
-  app.innerHTML=`<div class="page">${renderScreen()}</div>`+(GF.modal?renderModal():'');
-  // bind modal close on bg click
-  document.querySelector('.modal-bg')?.addEventListener('click',e=>{if(e.target.classList.contains('modal-bg')){GF.modal=null;gfRender();}});
-}
-
-// ── TOPBAR ──
-function renderTopbar(){
-  const pc=pendingAprovCount();
-  return `<div class="topbar">
-    <div class="topbar-brand" onclick="gfNavigate('home')">
-      <div class="logo-mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-      <div><div class="brand-name">Fundação da Juventude</div><div class="brand-sub">Gestão Financeira</div></div>
-    </div>
-    <nav class="topbar-nav">
-      <a onclick="gfNavigate('projetos')" class="${['projetos','projeto'].includes(GF.screen)?'active':''}">Orçamento</a>
-      <a onclick="gfNavigate('solicitacao')" class="${GF.screen==='solicitacao'?'active':''}">Nova solicitação</a>
-      <a onclick="gfNavigate('alteracoes',{tab:{...GF.tab,alteracoes:'novo'}})" class="${GF.screen==='alteracoes'?'active':''}">Alterações orçamentais</a>
-      ${canApprove()?`<a onclick="gfNavigate('aprovacoes',{tab:{...GF.tab,aprovacoes:'aprovar'}})" class="${GF.screen==='aprovacoes'?'active':''}">Aprovações${pc>0?`<span class="badge-notif">${pc}</span>`:''}</a>`:''}
-      ${isDir()?`<a onclick="gfNavigate('direcao')" class="${GF.screen==='direcao'?'active':''}">Direção</a>`:''}
-    </nav>
-    <div class="topbar-right">
-      <div style="text-align:right"><div class="topbar-user-name">${user?.name}</div><div class="topbar-user-role">${ROLE_LABELS[_financeRole]||'Colaborador'}</div></div>
-      <div class="avatar" title="Sair" onclick="doLogout()">${user?.name?.charAt(0)}</div>
-    </div>
-  </div>`;
-}
-
-function renderScreen(){
-  switch(GF.screen){
-    case 'home':return '<div class="container">'+renderHome()+'</div>';
-    case 'projetos':return '<div class="container">'+renderProjetos()+'</div>';
-    case 'projeto':return '<div class="container">'+renderProjeto()+'</div>';
-    case 'solicitacao':return '<div class="container">'+renderSolicitacao()+'</div>';
-    case 'alteracoes':return renderAlteracoes();
-    case 'aprovacoes':return renderAprovacoes();
-    case 'direcao':return '<div class="container">'+renderDirecao()+'</div>';
-    default:return '<div class="container">'+renderHome()+'</div>';
+// ── MAIN RENDER ──
+function gfRender() {
+  const app = document.getElementById('gf-app') || document.getElementById('module-gf');
+  if (!app) return;
+  
+  let content = '';
+  switch (GF.screen) {
+    case 'home': content = gfRenderHome(); break;
+    case 'projetos': content = gfRenderProjetos(); break;
+    case 'projeto': content = gfRenderProjeto(); break;
+    case 'solicitacao': content = gfRenderSolicitacao(); break;
+    case 'alteracoes': content = gfRenderAlteracoes(); break;
+    case 'aprovacoes': content = gfRenderAprovacoes(); break;
+    default: content = gfRenderHome();
   }
-}
-
-// ── LOGIN ──
-// Login handled by MSAL in unified app - this function is kept for compatibility
-function renderLogin(){
-  return `<div class="login-wrap"><div class="login-card">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:32px">
-      <div style="width:48px;height:48px;background:var(--navy);border-radius:12px;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
-      <div><div style="font-family:'DM Serif Display',serif;font-size:20px">Fundação da Juventude</div><div style="font-size:12px;color:var(--text-3)">Plataforma de Gestão Financeira</div></div>
-    </div>
-    <div style="font-size:18px;font-weight:600;margin-bottom:4px">Bem-vindo/a</div>
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:24px">Autenticado como <strong>${user?.name||'Utilizador'}</strong></div>
-  </div></div>`;
+  
+  app.innerHTML = `<div style="max-width:1200px;margin:0 auto;padding:20px">${content}</div>`;
+  
+  // Bind modal close
+  if (GF.modal) {
+    document.querySelector('.gf-modal-bg')?.addEventListener('click', e => {
+      if (e.target.classList.contains('gf-modal-bg')) { GF.modal = null; gfRender(); }
+    });
+  }
 }
 
 // ── HOME ──
-function renderHome(){
-  const pc=pendingAprovCount();
+function gfRenderHome() {
+  const pc = pendingAprovCount();
+  const userName = user?.name?.split(' ')[0] || 'Utilizador';
+  
   return `
-  <div style="margin-bottom:28px">
-    <div style="font-size:22px;font-weight:600;margin-bottom:3px">Bom dia, ${user?.name?.split(' ')[0]}.</div>
-    <div style="font-size:13px;color:var(--text-2)">O que pretende fazer hoje?</div>
-  </div>
-  <div class="home-grid">
-    <div class="home-card" onclick="gfNavigate('projetos')">
-      <div class="hc-icon" style="background:var(--blue-light)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
-      <div class="hc-title">Consultar orçamento</div>
-      <div class="hc-desc">Ver projetos, rúbricas e execução orçamental por ano</div>
+    <div style="margin-bottom:28px">
+      <div style="font-size:22px;font-weight:600;margin-bottom:4px">Bom dia, ${userName}.</div>
+      <div style="font-size:14px;color:var(--text3)">O que pretende fazer hoje?</div>
     </div>
-    <div class="home-card" onclick="gfNavigate('solicitacao')">
-      <div class="hc-icon" style="background:var(--amber-light)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
-      <div class="hc-title">Solicitar despesa</div>
-      <div class="hc-desc">Submeter pedido de efetivação de despesa a um projeto</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+      <div class="card" onclick="gfNavigate('projetos')" style="cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+        <div style="width:44px;height:44px;background:#EFF6FF;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">Consultar orçamento</div>
+        <div style="font-size:13px;color:var(--text3)">Ver projetos, rúbricas e execução orçamental</div>
+      </div>
+      <div class="card" onclick="gfNavigate('solicitacao')" style="cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+        <div style="width:44px;height:44px;background:#FFFBEB;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">Solicitar despesa</div>
+        <div style="font-size:13px;color:var(--text3)">Submeter pedido de efetivação de despesa</div>
+      </div>
+      <div class="card" onclick="gfNavigate('alteracoes')" style="cursor:pointer;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+        <div style="width:44px;height:44px;background:#F0FDF4;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:4px">Alteração orçamental</div>
+        <div style="font-size:13px;color:var(--text3)">Transferir dotação entre rúbricas</div>
+      </div>
     </div>
-    <div class="home-card" onclick="gfNavigate('alteracoes')">
-      <div class="hc-icon" style="background:var(--green-light)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></div>
-      <div class="hc-title">Alteração orçamental</div>
-      <div class="hc-desc">Solicitar transferência de dotação entre rúbricas</div>
-    </div>
-  </div>
-  ${canApprove()?`
-  <div class="home-card" onclick="gfNavigate('aprovacoes')" style="${pc>0?'border-color:#FDE68A':''}">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="hc-icon" style="background:var(--amber-light);margin:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
-      ${pc>0?`<span class="bdg bdg-amber">${pc} pendente${pc>1?'s':''}</span>`:''}
-    </div>
-    <div class="hc-title">Aprovações</div>
-    <div class="hc-desc">Rever e aprovar pedidos de despesa e alterações orçamentais pendentes</div>
-  </div>`:''}`;
+    ${gfCanApprove() ? `
+    <div class="card" onclick="gfNavigate('aprovacoes')" style="margin-top:16px;cursor:pointer;${pc > 0 ? 'border-color:#FDE68A;background:#FFFEF5' : ''}" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="width:40px;height:40px;background:#FFFBEB;border-radius:10px;display:flex;align-items:center;justify-content:center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        ${pc > 0 ? `<span class="bdg bdg-amber">${pc} pendente${pc > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">Aprovações</div>
+      <div style="font-size:13px;color:var(--text3)">Rever e aprovar pedidos pendentes</div>
+    </div>` : ''}
+  `;
 }
 
-// ── PROJETOS ──
-function miniBar(sol,proc,orc,c1,c2,c3){
-  const max=Math.max(orc,sol,proc,1);
-  const pP=Math.min(proc/max*100,100),pS=Math.min(Math.max(sol-proc,0)/max*100,100-pP),pR=Math.max(100-pP-pS,0);
-  return `<div style="display:flex;height:10px;border-radius:3px;overflow:hidden;gap:1px">
-    ${pP>0.5?`<div style="width:${pP}%;background:${c1};flex-shrink:0"></div>`:''}
-    ${pS>0.5?`<div style="width:${pS}%;background:${c2};flex-shrink:0"></div>`:''}
-    ${pR>0.5?`<div style="flex:1;background:${c3}"></div>`:''}
-  </div>`;
-}
-
-function renderProjetos(){
-  const projs=userProjects();
-  const totD=projs.reduce((a,p)=>a+projMetrics(p.id).desp_orc,0);
-  const totDp=projs.reduce((a,p)=>a+projMetrics(p.id).desp_proc,0);
-  const totR=projs.reduce((a,p)=>a+projMetrics(p.id).rec_orc,0);
-  const totRp=projs.reduce((a,p)=>a+projMetrics(p.id).rec_proc,0);
+// ── PROJETOS LIST ──
+function gfRenderProjetos() {
+  const projs = userProjects();
+  const totD = projs.reduce((a, p) => a + projMetrics(p.id).desp_orc, 0);
+  const totDp = projs.reduce((a, p) => a + projMetrics(p.id).desp_proc, 0);
+  
   return `
-  <div class="bc"><a onclick="gfNavigate('home')">Início</a><span class="s">›</span><span>Orçamento</span></div>
-  <div class="ph">
-    <div><div class="ph-title">Orçamento ${GF.year}</div><div class="ph-sub">${projs.length} projeto${projs.length!==1?'s':''}</div></div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="year-sel">${[2026,2025,2024].map(y=>`<button class="yr-btn${y===GF.year?' active':''}" onclick="GF.year=${y};gfNavigate('projetos')">${y}</button>`).join('')}</div>
-      ${isFinDir()?`<button class="btn btn-navy btn-sm" onclick="openModal('novo-projeto')">+ Novo projeto</button>`:''}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13px;color:var(--text3)">
+      <a onclick="gfNavigate('home')" style="color:var(--blue);cursor:pointer">Início</a>
+      <span>›</span>
+      <span>Orçamento</span>
     </div>
-  </div>
-  <div class="card" style="padding:0;overflow:hidden"><div class="tbl-wrap"><table>
-    <thead><tr>
-      <th>Projeto</th><th>Departamento</th>
-      <th style="width:28%"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:2px;background:#0EA5E9;flex-shrink:0"></div>Despesas</div></th>
-      <th style="width:28%;border-left:1px solid var(--border);padding-left:14px"><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:2px;background:#F97316;flex-shrink:0"></div>Receita</div></th>
-    </tr></thead>
-    <tbody>${projs.map(p=>{
-      const m=projMetrics(p.id);const hasRec=m.rec_orc>0;const dp=pct(m.desp_proc,m.desp_orc);
-      return `<tr class="click" onclick="gfNavigate('projeto',{project:'${p.id}'})">
-        <td style="color:var(--blue);font-weight:500">${p.isBanco?'<span style="color:var(--amber)">⚙ </span>':''}${p.name}</td>
-        <td><span class="bdg bdg-blue">${p.dept}</span></td>
-        <td style="width:28%;padding-right:8px">
-          <div style="margin-bottom:4px">${miniBar(m.desp_sol,m.desp_proc,m.desp_orc,'#0284C7','#7DD3FC','#E0F2FE')}</div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;font-variant-numeric:tabular-nums">
-            <span style="color:var(--text-3)">Sol: <span style="color:#0284C7;font-weight:500">${fmt(m.desp_sol)}</span></span>
-            <span style="color:var(--text-3)">Proc: <span style="color:#0EA5E9;font-weight:500">${fmt(m.desp_proc)}</span></span>
-            <span style="color:var(--text-3)">${fmt(m.desp_orc)} (${dp}%)</span>
-          </div>
-        </td>
-        <td style="width:28%;border-left:1px solid var(--border);padding-left:14px">
-          ${hasRec?`<div style="margin-bottom:4px">${miniBar(m.rec_sol,m.rec_proc,m.rec_orc,'#EA580C','#FCA37F','#FFF0E8')}</div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;font-variant-numeric:tabular-nums">
-            <span style="color:var(--text-3)">Sub: <span style="color:#7C3AED;font-weight:500">${fmt(m.rec_sol)}</span></span>
-            <span style="color:var(--text-3)">Proc: <span style="color:#5B21B6;font-weight:500">${fmt(m.rec_proc)}</span></span>
-            <span style="color:var(--text-3)">${fmt(m.rec_orc)}</span>
-          </div>`:`<span style="color:var(--text-3);font-size:12px">—</span>`}
-        </td>
-      </tr>`;
-    }).join('')}</tbody>
-    <tfoot><tr>
-      <td colspan="2" style="font-weight:600">Total</td>
-      <td style="font-size:12px;color:var(--text-2)">Orç: <strong>${fmt(totD)}</strong> &nbsp;·&nbsp; Proc: <strong style="color:var(--blue)">${fmt(totDp)}</strong></td>
-      <td style="font-size:12px;color:var(--text-2);border-left:1px solid var(--border);padding-left:14px">${totR>0?`Orç: <strong>${fmt(totR)}</strong> &nbsp;·&nbsp; Proc: <strong style="color:#F97316">${fmt(totRp)}</strong>`:'—'}</td>
-    </tr></tfoot>
-  </table></div></div>`;
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:22px;font-weight:600">Orçamento ${GF.year}</div>
+        <div style="font-size:13px;color:var(--text3)">${projs.length} projeto${projs.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${[2026, 2025, 2024].map(y => `
+          <button class="btn btn-sm ${y === GF.year ? 'btn-primary' : ''}" onclick="GF.year=${y};gfLoadAll()">${y}</button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--bg)">
+            <th style="padding:12px 16px;text-align:left;font-weight:500;color:var(--blue)">Projeto</th>
+            <th style="padding:12px 16px;text-align:left;font-weight:500;color:var(--blue)">Departamento</th>
+            <th style="padding:12px 16px;text-align:right;font-weight:500;color:var(--blue)">Orçamentado</th>
+            <th style="padding:12px 16px;text-align:right;font-weight:500;color:var(--blue)">Solicitado</th>
+            <th style="padding:12px 16px;text-align:right;font-weight:500;color:var(--blue)">Processado</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--blue)">Execução</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${projs.length === 0 ? `<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--text3)">Sem projetos para ${GF.year}</td></tr>` : 
+            projs.map(p => {
+              const m = projMetrics(p.id);
+              const pct = gfPct(m.desp_proc, m.desp_orc);
+              return `
+                <tr onclick="GF.project='${p.id}';gfNavigate('projeto')" style="cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='#F8FAFC'" onmouseout="this.style.background='white'">
+                  <td style="padding:14px 16px;font-weight:500;color:var(--blue)">${p.isBanco ? '⚙ ' : ''}${p.name}</td>
+                  <td style="padding:14px 16px"><span class="bdg" style="background:#EFF6FF;color:#2563EB">${p.dept || '—'}</span></td>
+                  <td style="padding:14px 16px;text-align:right;font-variant-numeric:tabular-nums">${gfFmt(m.desp_orc)}</td>
+                  <td style="padding:14px 16px;text-align:right;font-variant-numeric:tabular-nums;color:var(--amber)">${gfFmt(m.desp_sol)}</td>
+                  <td style="padding:14px 16px;text-align:right;font-variant-numeric:tabular-nums;color:var(--blue)">${gfFmt(m.desp_proc)}</td>
+                  <td style="padding:14px 16px;text-align:center">
+                    <div style="width:60px;height:8px;background:var(--border);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle">
+                      <div style="width:${pct}%;height:100%;background:${pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--amber)' : 'var(--blue)'};border-radius:4px"></div>
+                    </div>
+                    <span style="margin-left:8px;font-weight:500">${pct}%</span>
+                  </td>
+                </tr>
+              `;
+            }).join('')
+          }
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--bg);font-weight:600">
+            <td colspan="2" style="padding:14px 16px">Total</td>
+            <td style="padding:14px 16px;text-align:right">${gfFmt(totD)}</td>
+            <td style="padding:14px 16px;text-align:right;color:var(--amber)">${gfFmt(projs.reduce((a, p) => a + projMetrics(p.id).desp_sol, 0))}</td>
+            <td style="padding:14px 16px;text-align:right;color:var(--blue)">${gfFmt(totDp)}</td>
+            <td style="padding:14px 16px;text-align:center">${gfPct(totDp, totD)}%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
 }
 
 // ── PROJETO DETAIL ──
-function renderProjeto(){
-  const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===GF.project);
-  if(!proj)return '<p>Projeto não encontrado.</p>';
-  const rubs=RUBRICAS[proj.id]||[];
-  const m=projMetrics(proj.id);
+function gfRenderProjeto() {
+  const proj = (PROJECTS[GF.year] || []).find(p => String(p.id) === String(GF.project));
+  if (!proj) return '<p style="padding:40px;text-align:center">Projeto não encontrado.</p>';
+  
+  const rubs = RUBRICAS[proj.id] || [];
+  const m = projMetrics(proj.id);
+  
   return `
-  <div class="bc"><a onclick="gfNavigate('home')">Início</a><span class="s">›</span><a onclick="gfNavigate('projetos')">Orçamento ${GF.year}</a><span class="s">›</span><span>${proj.name}</span></div>
-  <div class="ph">
-    <div>
-      <div class="ph-title">${proj.name}</div>
-      <div class="ph-sub" style="display:flex;align-items:center;gap:8px;margin-top:6px">
-        <span class="bdg bdg-blue">${proj.dept}</span>
-        <span style="color:var(--text-3)">${proj.start} → ${proj.end}</span>
-        ${proj.isBanco?'<span class="bdg bdg-amber">Banco Global</span>':''}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13px;color:var(--text3)">
+      <a onclick="gfNavigate('home')" style="color:var(--blue);cursor:pointer">Início</a>
+      <span>›</span>
+      <a onclick="gfNavigate('projetos')" style="color:var(--blue);cursor:pointer">Orçamento</a>
+      <span>›</span>
+      <span>${proj.name}</span>
+    </div>
+    <div style="margin-bottom:24px">
+      <div style="font-size:22px;font-weight:600;margin-bottom:4px">${proj.name}</div>
+      <div style="font-size:13px;color:var(--text3)">${proj.dept || 'Sem departamento'} · ${rubs.length} rúbrica${rubs.length !== 1 ? 's' : ''}</div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Orçamentado</div>
+        <div style="font-size:20px;font-weight:600">${gfFmt(m.desp_orc)}</div>
+      </div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Solicitado</div>
+        <div style="font-size:20px;font-weight:600;color:var(--amber)">${gfFmt(m.desp_sol)}</div>
+      </div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Processado</div>
+        <div style="font-size:20px;font-weight:600;color:var(--blue)">${gfFmt(m.desp_proc)}</div>
+      </div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Disponível</div>
+        <div style="font-size:20px;font-weight:600;color:var(--green)">${gfFmt(m.desp_orc - m.desp_sol)}</div>
       </div>
     </div>
-    <div style="display:flex;gap:8px">
-      ${proj.isBanco&&isFinDir()?`<button class="btn btn-amber btn-sm" onclick="openModal('aumento-nao-orc')">+ Aumento não orçamentado</button>`:''}
-      ${isFinDir()?`<button class="btn btn-navy btn-sm" onclick="openModal('nova-rubrica','${proj.id}')">+ Nova rúbrica</button>`:''}
-    </div>
-  </div>
-  <div class="metrics">
-    <div class="metric"><div class="metric-lbl">Desp. orçamentada</div><div class="metric-val">${fmt(m.desp_orc)}</div></div>
-    <div class="metric"><div class="metric-lbl">Desp. solicitada</div><div class="metric-val" style="color:var(--navy)">${fmt(m.desp_sol)}</div></div>
-    <div class="metric"><div class="metric-lbl">Desp. processada</div><div class="metric-val" style="color:var(--blue)">${fmt(m.desp_proc)}</div></div>
-    <div class="metric"><div class="metric-lbl">Disponível</div><div class="metric-val" style="color:var(--green)">${fmt(m.desp_orc-m.desp_sol)}</div>
-      <div class="metric-sub">Rec: ${fmt(m.rec_proc)} proc. / ${fmt(m.rec_orc)} orç.</div></div>
-  </div>
-  ${rubs.length===0?`<div class="card" style="text-align:center;padding:40px;color:var(--text-3)">Nenhuma rúbrica criada.</div>`
-    :rubs.map(r=>renderRubCard(r,proj)).join('')}
-  ${isFinDir()?`
-  <div style="margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
-    <div>
-      <div style="font-size:13px;font-weight:500;margin-bottom:2px">Membros do projeto</div>
-      <div style="font-size:12px;color:var(--text-2)">${(proj.members||[]).map(e=>getUserName(e)).join(' · ')||'—'}</div>
-    </div>
-    <button class="btn btn-ghost btn-sm" onclick="openModal('gerir-membros','${proj.id}')">Gerir membros</button>
-  </div>`:''}`;
-}
-
-// ── RUBRICA CARD ──
-function biBar(sol,proc,orc,cP,cS,cR){
-  const max=Math.max(orc,sol,proc,1);
-  const pP=Math.min(proc/max*100,100),pS=Math.min(Math.max(sol-proc,0)/max*100,100-pP),pR=Math.max(100-pP-pS,0);
-  return `<div style="display:flex;height:22px;border-radius:5px;overflow:hidden;gap:1px">
-    ${pP>0.5?`<div style="width:${pP}%;background:${cP};flex-shrink:0"></div>`:''}
-    ${pS>0.5?`<div style="width:${pS}%;background:${cS};flex-shrink:0"></div>`:''}
-    ${pR>0.5?`<div style="flex:1;background:${cR}"></div>`:''}
-  </div>`;
-}
-
-function renderRubCard(r, proj){
-  const exp=GF.expandedRubs.has(r.id);
-  const fats=FATURAS[r.id]||[];
-  const closed=r.status==='closed';
-  const errs=rubErrors(r);
-  const resOrc=r.desp_orc-r.rec_orc,resReal=r.desp_proc-r.rec_proc;
-  const canClose=canCloseRub(r);
-  // Always show both sections
-  const hdrNums=`
-    <div class="rn"><div class="rn-lbl">Desp. orç.</div><div class="rn-val">${fmt(r.desp_orc)}</div></div>
-    <div class="rn"><div class="rn-lbl">Desp. sol.</div><div class="rn-val" style="color:var(--navy)">${fmt(r.desp_sol)}</div></div>
-    <div class="rn"><div class="rn-lbl">Desp. proc.</div><div class="rn-val" style="color:${errs.some(e=>e.includes('processada é superior')&&e.includes('solicitada'))?'var(--red)':'var(--blue)'}">${fmt(r.desp_proc)}</div></div>
-    <div style="width:1px;background:var(--border);margin:0 6px;align-self:stretch"></div>
-    <div class="rn"><div class="rn-lbl">Rec. orç.</div><div class="rn-val">${fmt(r.rec_orc)}</div></div>
-    <div class="rn"><div class="rn-lbl">Rec. sub.</div><div class="rn-val" style="color:#EA580C">${fmt(r.rec_sol)}</div></div>
-    <div class="rn"><div class="rn-lbl">Rec. proc.</div><div class="rn-val" style="color:${errs.some(e=>e.includes('Receita processada'))?'var(--red)':'#F97316'}">${fmt(r.rec_proc)}</div></div>`;
-  return `
-  <div class="rub-card" style="${errs.length>0?'border-color:var(--red)':''}">
-    ${errs.length>0?`<div style="background:var(--red-light);padding:8px 18px;border-bottom:1px solid #FECACA">
-      ${errs.map(e=>`<div style="font-size:12px;color:var(--red)">⚠ ${e}</div>`).join('')}
-    </div>`:''}
-    <div class="rub-hdr${closed?' closed-hdr':''}" onclick="toggleRub('${r.id}')">
-      <div>
-        <div class="rub-name">${r.name} ${closed?ESTADO_BADGE.encerrada:''}</div>
-        <div class="rub-tipo">${r.tipo==='despesa'?'Despesa':r.tipo==='receita'?'Receita':'Despesa + Receita'}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <div class="rub-nums">${hdrNums}</div>
-        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2" style="transform:rotate(${exp?180:0}deg)"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-    </div>
-    <div class="rub-body${exp?' open':''}">
-      <div class="bibar-wrap">
-        <div class="bibar-section">
-          <div class="bibar-title" style="color:#0284C7">Despesas</div>
-          ${biBar(r.desp_sol,r.desp_proc,r.desp_orc,'#0284C7','#7DD3FC','#E0F2FE')}
-          <div class="bibar-vals">
-            <div><div class="bv-lbl">Solicitada</div><div class="bv-val" style="color:#0284C7">${fmt(r.desp_sol)}</div></div>
-            <div><div class="bv-lbl">Processada</div><div class="bv-val" style="color:#0EA5E9">${fmt(r.desp_proc)}</div></div>
-            <div><div class="bv-lbl">Orçamentada</div><div class="bv-val" style="color:var(--text-2)">${fmt(r.desp_orc)}</div></div>
+    
+    <div style="font-size:16px;font-weight:600;margin-bottom:14px">Rúbricas</div>
+    ${rubs.length === 0 ? '<div class="card" style="padding:40px;text-align:center;color:var(--text3)">Sem rúbricas definidas</div>' :
+      rubs.map(r => {
+        const pct = gfPct(r.desp_proc, r.desp_orc);
+        const disp = (r.desp_orc || 0) - (r.desp_sol || 0);
+        return `
+          <div class="card" style="padding:16px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-weight:600">${r.name}</div>
+              <span class="bdg" style="background:${r.tipo === 'receita' ? '#FFF0E8' : '#EFF6FF'};color:${r.tipo === 'receita' ? '#EA580C' : '#2563EB'}">${r.tipo === 'receita' ? 'Receita' : 'Despesa'}</span>
+            </div>
+            <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:12px">
+              <div style="width:${gfPct(r.desp_sol, r.desp_orc)}%;height:100%;background:#94A3B8;position:relative">
+                <div style="width:${r.desp_sol > 0 ? gfPct(r.desp_proc, r.desp_sol) * 100 / gfPct(r.desp_sol, r.desp_orc) : 0}%;height:100%;background:var(--blue)"></div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="color:var(--text3)">Orçamentado: <strong>${gfFmt(r.desp_orc)}</strong></span>
+              <span style="color:var(--text3)">Solicitado: <strong style="color:var(--amber)">${gfFmt(r.desp_sol)}</strong></span>
+              <span style="color:var(--text3)">Processado: <strong style="color:var(--blue)">${gfFmt(r.desp_proc)}</strong></span>
+              <span style="color:var(--text3)">Disponível: <strong style="color:${disp < 0 ? 'var(--red)' : 'var(--green)'}">${gfFmt(disp)}</strong></span>
+            </div>
           </div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:6px">Disponível: <strong style="color:${(r.desp_orc-r.desp_sol)<0?'var(--red)':'var(--green)'}">${fmt(r.desp_orc-r.desp_sol)}</strong></div>
-        </div>
-        <div class="bibar-divider"></div>
-        <div class="bibar-section">
-          <div class="bibar-title" style="color:#EA580C">Receita</div>
-          ${biBar(r.rec_sol,r.rec_proc,r.rec_orc,'#EA580C','#FCA37F','#FFF0E8')}
-          <div class="bibar-vals">
-            <div><div class="bv-lbl">Submetida</div><div class="bv-val" style="color:#EA580C">${fmt(r.rec_sol)}</div></div>
-            <div><div class="bv-lbl">Processada</div><div class="bv-val" style="color:#F97316">${fmt(r.rec_proc)}</div></div>
-            <div><div class="bv-lbl">Orçamentada</div><div class="bv-val" style="color:var(--text-2)">${fmt(r.rec_orc)}</div></div>
-          </div>
-        </div>
-      </div>
-      ${fats.length>0?`
-      <div style="padding:0 18px 14px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin:12px 0 8px">Faturas</div>
-        <table><thead><tr><th>Cód. encomenda</th><th>Fornecedor</th><th>Data</th><th style="text-align:right">Valor</th><th>Estado</th></tr></thead>
-        <tbody>${fats.map(f=>`<tr><td style="color:var(--blue);font-weight:500">${f.cod}</td><td>${f.fornecedor}</td><td style="color:var(--text-2)">${f.data}</td><td class="num">${fmt(f.valor)}</td><td>${f.estado==='pago'?ESTADO_BADGE.processada:'<span class="bdg bdg-amber">Pendente</span>'}</td></tr>`).join('')}</tbody>
-        </table>
-      </div>`:''}
-      ${isFinDir()?`
-      <div class="fecho-bar">
-        <div>
-          <div style="font-size:12px;color:var(--text-2)">Resultado orçamentado: <strong>${fmt(resOrc)}</strong> &nbsp;·&nbsp; Resultado real: <strong>${fmt(resReal)}</strong></div>
-          <div class="${canClose?'fecho-ok':'fecho-nok'}">${canClose?'✓ Condição de encerramento satisfeita':'✗ Resultado real superior ao orçamentado — encerramento indisponível'}</div>
-        </div>
-        ${!closed?`<button class="btn btn-sm btn-ghost" style="${canClose?'':'opacity:.4;cursor:not-allowed'}" ${canClose?`onclick="solicFecho('${r.id}')"`:'disabled'}>${canClose?'Solicitar encerramento':'Indisponível'}</button>`:ESTADO_BADGE.encerrada}
-      </div>`:''}
-    </div>
-  </div>`;
+        `;
+      }).join('')
+    }
+  `;
 }
 
 // ── SOLICITAÇÃO ──
-function renderSolicitacao(){
-  const projs=userProjects().filter(p=>!p.isBanco);
-  const rascs=GF.rascunhos.filter(r=>r.tipo==='despesa');
+function gfRenderSolicitacao() {
+  const projs = userProjects().filter(p => !p.isBanco);
+  
   return `
-  <div class="bc"><a onclick="gfNavigate('home')">Início</a><span class="s">›</span><span>Nova solicitação</span></div>
-  <div class="ph">
-    <div class="ph-title">Nova solicitação de despesa</div>
-    ${rascs.length>0?`<button class="btn btn-ghost btn-sm" onclick="openModal('rascunhos')">📋 Rascunhos (${rascs.length})</button>`:''}
-  </div>
-  <div class="card-section">
-    <div class="slbl">Identificação</div>
-    <div class="field" style="margin-bottom:14px"><label>Título <span class="req">*</span></label><input type="text" id="f-titulo" placeholder="Ex: Reserva alojamento — FórUM 2.ª Ed."></div>
-    <div class="fg2">
-      <div class="field"><label>Projeto <span class="req">*</span> <span class="hint">(onde está afeto)</span></label>
-        <select id="f-proj" onchange="onProjChange()">
-          <option value="">Selecionar...</option>${projs.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
-        </select></div>
-      <div class="field"><label>Rúbrica <span class="req">*</span></label>
-        <select id="f-rub" onchange="onRubChange()" disabled><option value="">Selecionar primeiro o projeto...</option></select>
-        <div id="rub-saldo" style="display:none;font-size:12px;color:var(--text-2);margin-top:4px"></div>
-      </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13px;color:var(--text3)">
+      <a onclick="gfNavigate('home')" style="color:var(--blue);cursor:pointer">Início</a>
+      <span>›</span>
+      <span>Nova solicitação</span>
     </div>
-  </div>
-  <div class="card-section">
-    <div class="slbl">Valor</div>
-    <div class="field">
-      <label>Valor solicitado (€) <span class="req">*</span></label>
-      <input type="number" id="f-valor" min="0" step="0.01" placeholder="0,00" oninput="onValorChange()">
-      <div class="bud-ind" id="bud-ind">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-2);margin-bottom:7px"><span>Execução após este pedido</span><span id="bud-pct" style="font-weight:500"></span></div>
-        <div style="height:10px;border-radius:5px;background:var(--border);position:relative;overflow:hidden">
-          <div id="bsol" style="position:absolute;left:0;top:0;height:100%;background:#1C3557;border-radius:5px"></div>
-          <div id="bnew" style="position:absolute;top:0;height:100%;background:var(--blue);border-radius:0 5px 5px 0"></div>
+    <div style="font-size:22px;font-weight:600;margin-bottom:24px">Nova solicitação de despesa</div>
+    
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">Identificação</div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Título <span style="color:var(--red)">*</span></label>
+        <input type="text" id="gf-titulo" placeholder="Ex: Reserva alojamento — FórUM" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Projeto <span style="color:var(--red)">*</span></label>
+          <select id="gf-proj" onchange="gfOnProjChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+            <option value="">Selecionar...</option>
+            ${projs.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+          </select>
         </div>
-        <div style="display:flex;gap:10px;margin-top:7px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-2)"><div style="width:8px;height:8px;border-radius:50%;background:#1C3557"></div><span id="bleg-sol"></span></div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-2)"><div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div><span id="bleg-new"></span></div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-2)"><div style="width:8px;height:8px;border-radius:50%;background:var(--border)"></div><span id="bleg-disp"></span></div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Rúbrica <span style="color:var(--red)">*</span></label>
+          <select id="gf-rub" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px" disabled>
+            <option value="">Selecionar primeiro o projeto...</option>
+          </select>
         </div>
       </div>
-      <div class="alert alert-err" id="err-valor">O valor ultrapassa o saldo disponível. Reduza ou submeta uma alteração orçamental primeiro.</div>
     </div>
-  </div>
-  <div class="card-section">
-    <div class="slbl">Notas de encomenda</div>
-    <table class="enc-tbl"><thead><tr><th style="width:42%">Descrição</th><th style="width:13%">Qtd.</th><th style="width:20%">Preço unit. (€)</th><th style="width:20%">Total (€)</th><th style="width:5%"></th></tr></thead>
-    <tbody id="enc-body">
-      <tr><td><input type="text" placeholder="Ex: Noite de alojamento"></td><td><input type="number" min="0" placeholder="0" oninput="calcRow(this)" class="qty"></td><td><input type="number" min="0" step="0.01" placeholder="0,00" oninput="calcRow(this)" class="price"></td><td><input type="text" readonly placeholder="—" class="total-cell" style="background:var(--bg)"></td><td style="text-align:center"><span style="cursor:pointer;color:var(--text-3)" onclick="removeEncRow(this)">×</span></td></tr>
-    </tbody>
-    <tfoot><tr class="enc-tot"><td colspan="3" style="font-weight:400;color:var(--text-3)">Total das linhas</td><td id="enc-total">—</td><td></td></tr></tfoot>
-    </table>
-    <button class="btn-add" onclick="addEncRow()">+ Adicionar linha</button>
-    <div class="field" style="margin-top:14px"><label>Descrição / observações</label><textarea id="f-desc" placeholder="Informação adicional..."></textarea></div>
-  </div>
-  <div class="card-section">
-    <div class="slbl">Fornecedor</div>
-    <div class="fg2">
-      <div class="field"><label>Nome da empresa <span class="req">*</span></label><input type="text" id="f-empresa" placeholder="Ex: Movijovem, Lda."></div>
-      <div class="field"><label>E-mail de contacto <span class="req">*</span></label><input type="email" id="f-email-forn" placeholder="fornecedor@empresa.pt"></div>
-    </div>
-  </div>
-  <div class="card-section">
-    <div class="slbl">Documentos</div>
-    <div class="fg2">
-      <div style="border:1px solid var(--border);border-radius:var(--r);padding:16px">
-        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">
-          <div style="width:36px;height:36px;background:var(--bg);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-          <div><div style="font-size:14px;font-weight:500">Orçamentos recebidos</div><div style="font-size:12px;color:var(--text-2)">Todos os que pediu — pode anexar vários</div></div>
+    
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">Valor e Fornecedor</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Valor (€) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="gf-valor" min="0" step="0.01" placeholder="0,00" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
         </div>
-        <label class="file-zone" for="fi-rec">
-          <input type="file" id="fi-rec" multiple accept=".pdf,.doc,.docx,.jpg,.png" onchange="handleFileInput('rec',this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="display:inline-block;margin-bottom:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <div>Clique para selecionar ficheiros</div>
-        </label>
-        <div class="file-list" id="list-rec"></div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Fornecedor <span style="color:var(--red)">*</span></label>
+          <input type="text" id="gf-fornecedor" placeholder="Nome da empresa" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Email fornecedor</label>
+          <input type="email" id="gf-email-forn" placeholder="email@empresa.pt" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+        </div>
       </div>
-      <div style="border:1px solid #86EFAC;border-radius:var(--r);padding:16px">
-        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">
-          <div style="width:36px;height:36px;background:var(--green-light);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div><div style="font-size:14px;font-weight:500;color:var(--green)">Orçamento aprovado</div><div style="font-size:12px;color:var(--text-2)">Apenas o selecionado — um único ficheiro</div></div>
-        </div>
-        <label class="file-zone zone-green" for="fi-aprov">
-          <input type="file" id="fi-aprov" accept=".pdf,.doc,.docx,.jpg,.png" onchange="handleFileInput('aprov',this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="display:inline-block;margin-bottom:3px"><polyline points="9 11 12 14 22 4"/></svg>
-          <div style="color:var(--green)">Clique para selecionar o ficheiro adjudicado</div>
-        </label>
-        <div class="file-list" id="list-aprov"></div>
+      <div style="margin-top:14px">
+        <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Justificação</label>
+        <textarea id="gf-justificacao" placeholder="Descreva o motivo do pedido..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;min-height:80px;resize:vertical"></textarea>
       </div>
     </div>
-  </div>
-  <div class="form-actions">
-    <button class="btn btn-ghost" onclick="gfNavigate('home')">Cancelar</button>
-    <button class="btn btn-ghost" onclick="guardarRascunho()">Guardar rascunho</button>
-    <button class="btn btn-navy" onclick="submitSolicitacao()">Submeter solicitação</button>
-  </div>`;
+    
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="gfNavigate('home')">Cancelar</button>
+      <button class="btn btn-primary" onclick="gfSubmitSolicitacao()">Submeter solicitação</button>
+    </div>
+  `;
+}
+
+function gfOnProjChange() {
+  const projId = document.getElementById('gf-proj')?.value;
+  const rubSel = document.getElementById('gf-rub');
+  if (!rubSel) return;
+  
+  if (!projId) {
+    rubSel.innerHTML = '<option value="">Selecionar primeiro o projeto...</option>';
+    rubSel.disabled = true;
+    return;
+  }
+  
+  const rubs = RUBRICAS[projId] || [];
+  rubSel.innerHTML = '<option value="">Selecionar rúbrica...</option>' + 
+    rubs.filter(r => r.tipo !== 'receita').map(r => {
+      const disp = (r.desp_orc || 0) - (r.desp_sol || 0);
+      return `<option value="${r.id}">${r.name} (Disp: ${gfFmt(disp)})</option>`;
+    }).join('');
+  rubSel.disabled = false;
+}
+
+async function gfSubmitSolicitacao() {
+  const titulo = document.getElementById('gf-titulo')?.value?.trim();
+  const projId = document.getElementById('gf-proj')?.value;
+  const rubId = document.getElementById('gf-rub')?.value;
+  const valor = parseFloat(document.getElementById('gf-valor')?.value) || 0;
+  const fornecedor = document.getElementById('gf-fornecedor')?.value?.trim();
+  const emailForn = document.getElementById('gf-email-forn')?.value?.trim();
+  const justificacao = document.getElementById('gf-justificacao')?.value?.trim();
+  
+  if (!titulo || !projId || !rubId || valor <= 0 || !fornecedor) {
+    showNotif('Preencha todos os campos obrigatórios', 'error');
+    return;
+  }
+  
+  try {
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
+      Title: titulo,
+      ProjetoId: parseInt(projId),
+      RubricaId: parseInt(rubId),
+      Valor: valor,
+      Estado: 'solicitada',
+      Fornecedor: fornecedor,
+      EmailFornecedor: emailForn,
+      Justificacao: justificacao,
+      DataSubmissao: new Date().toISOString()
+    };
+    
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items`, body, 'POST');
+    showNotif('Solicitação submetida com sucesso!', 'success');
+    await gfLoadAll();
+    gfNavigate('home');
+  } catch (e) {
+    console.error('Submit error:', e);
+    showNotif('Erro ao submeter: ' + e.message, 'error');
+  }
 }
 
 // ── ALTERAÇÕES ORÇAMENTAIS ──
-function renderAlteracoes(){
-  const tab=GF.tab.alteracoes||'novo';
-  const tabs=[{k:'novo',l:'Novo pedido'},{k:'pendentes',l:'Pendentes'},{k:'historico',l:'Histórico'}];
-  const subnav=`<div class="subnav">${tabs.map(t=>`<a class="${tab===t.k?'active':''}" onclick="gfSetTab('alteracoes','${t.k}')">${t.l}</a>`).join('')}</div>`;
-  let body='';
-  if(tab==='novo') body='<div class="container has-subnav">'+renderAltNovo()+'</div>';
-  else if(tab==='pendentes') body='<div class="container has-subnav">'+renderAltPendentes()+'</div>';
-  else body='<div class="container has-subnav">'+renderAltHistorico()+'</div>';
-  return subnav+body;
-}
-
-function renderAltNovo(){
-  const projs=userProjects();
-  GF.altOrigemCount=0;
+function gfRenderAlteracoes() {
+  const projs = userProjects();
+  const pendentes = ALTERACOES.filter(a => a.estado === 'pendente');
+  const historico = ALTERACOES.filter(a => a.estado !== 'pendente');
+  
+  const tab = GF.tab.alteracoes || 'novo';
+  
   return `
-  <div class="ph"><div class="ph-title">Novo pedido de alteração orçamental</div></div>
-  <div class="card-section">
-    <div class="slbl">Identificação</div>
-    <div class="fg2">
-      <div class="field"><label>Título <span class="req">*</span></label><input type="text" id="alt-titulo" placeholder="Ex: Reforço alojamento — FórUM 2.ª Ed."></div>
-      <div class="field"><label>Justificação <span class="req">*</span></label><input type="text" id="alt-just" placeholder="Motivo da alteração..."></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13px;color:var(--text3)">
+      <a onclick="gfNavigate('home')" style="color:var(--blue);cursor:pointer">Início</a>
+      <span>›</span>
+      <span>Alterações orçamentais</span>
     </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 44px 1fr;gap:12px;align-items:start">
-    <div class="card-section" style="margin-bottom:0">
-      <div class="slbl" style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:var(--red)"></div>Origem — dotação a transferir</div>
-      <div id="alt-origens"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
-        <button class="btn-add" onclick="addAltOrigem()">+ Adicionar origem</button>
-        <div style="font-size:13px;color:var(--text-2)">Total: <strong id="alt-total-val" style="color:var(--navy)">0,00 €</strong></div>
-      </div>
+    
+    <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)">
+      <button onclick="GF.tab.alteracoes='novo';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'novo' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'novo' ? 'var(--blue)' : 'transparent'}">Novo pedido</button>
+      <button onclick="GF.tab.alteracoes='pendentes';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'pendentes' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'pendentes' ? 'var(--blue)' : 'transparent'}">Pendentes (${pendentes.length})</button>
+      <button onclick="GF.tab.alteracoes='historico';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'historico' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'historico' ? 'var(--blue)' : 'transparent'}">Histórico</button>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:64px;color:var(--text-3)">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </div>
-    <div class="card-section" style="margin-bottom:0">
-      <div class="slbl" style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>Destino — rúbrica a reforçar</div>
-      <div class="field" style="margin-bottom:12px"><label>Projeto <span class="req">*</span></label>
-        <select id="alt-dest-proj" onchange="onAltDestProj()"><option value="">Selecionar...</option>${projs.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}</select></div>
-      <div class="field" style="margin-bottom:12px"><label>Rúbrica <span class="req">*</span></label>
-        <select id="alt-dest-rub" disabled><option value="">Selecionar projeto primeiro...</option></select></div>
-      <div style="padding:10px;background:var(--bg);border-radius:var(--rs);font-size:13px">
-        Valor a transferir: <strong id="alt-dest-valor-display" style="color:var(--green)">—</strong>
-        <div style="font-size:11px;color:var(--text-3);margin-top:2px">Calculado automaticamente a partir das origens</div>
-      </div>
-    </div>
-  </div>
-  <div class="card-section" style="margin-top:12px">
-    <div class="slbl">Nível de aprovação requerido</div>
-    <div id="nivel-info" class="alert alert-info show">Introduza valores nas origens para determinar o nível de aprovação necessário.</div>
-  </div>
-  <div class="form-actions">
-    <button class="btn btn-ghost" onclick="gfNavigate('home')">Cancelar</button>
-    <button class="btn btn-ghost" onclick="guardarRascunhoAlt()">Guardar rascunho</button>
-    <button class="btn btn-navy" onclick="submitAlteracao()">Submeter pedido</button>
-  </div>`;
+    
+    ${tab === 'novo' ? gfRenderAltNovo(projs) : ''}
+    ${tab === 'pendentes' ? gfRenderAltList(pendentes, 'Sem alterações pendentes') : ''}
+    ${tab === 'historico' ? gfRenderAltList(historico, 'Sem histórico de alterações') : ''}
+  `;
 }
 
-function renderAltPendentes(){
-  const pendentes=ALTERACOES.filter(a=>a.estado==='pendente');
+function gfRenderAltNovo(projs) {
   return `
-  <div class="ph"><div class="ph-title">Pedidos pendentes</div><div class="ph-sub">${pendentes.length} pedido${pendentes.length!==1?'s':''} em curso</div></div>
-  ${pendentes.length===0?`<div class="card" style="text-align:center;padding:40px;color:var(--text-3)">Sem pedidos pendentes.</div>`
-  :pendentes.map(a=>renderAltItem(a,'pendentes')).join('')}`;
-}
-
-function renderAltHistorico(){
-  const hist=ALTERACOES.filter(a=>a.estado!=='pendente');
-  return `
-  <div class="ph"><div class="ph-title">Histórico de alterações</div></div>
-  ${hist.length===0?`<div class="card" style="text-align:center;padding:40px;color:var(--text-3)">Sem registos.</div>`
-  :hist.map(a=>renderAltItem(a,'hist')).join('')}`;
-}
-
-function renderAltItem(a,ctx){
-  const destProj=(PROJECTS[GF.year]||[]).find(p=>p.id===a.destProj);
-  const destRub=(RUBRICAS[a.destProj]||[]).find(r=>r.id===a.destRub);
-  const solName=getUserName(a.solicitante);
-  const steps=[
-    {lbl:'Submissão',done:true,info:`${solName} · ${a.data}`},
-    {lbl:'Aprovação DF',done:!!a.aprovDF,info:a.aprovDF?getUserName(a.aprovDF)+' · '+a.dataAprovDF:'Aguarda aprovação'},
-    ...(a.nivel==='df_pe'||a.nivel==='df_pe_pca'?[{lbl:'Aprovação PE',done:!!a.aprovPE,info:a.aprovPE?getUserName(a.aprovPE):'Aguarda aprovação'}]:[]),
-    ...(a.nivel==='df_pe_pca'?[{lbl:'Aprovação PCA',done:!!a.aprovPCA,info:a.aprovPCA?getUserName(a.aprovPCA):'Aguarda aprovação'}]:[]),
-  ];
-  return `<div class="aprov-item" style="flex-direction:column;align-items:flex-start">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;width:100%;margin-bottom:12px">
-      <div>
-        <div class="aprov-title">${a.titulo}</div>
-        <div class="aprov-meta">
-          <span>${fmt(a.valorTotal)}</span>
-          <span>Para: <strong>${destProj?.name||a.destProj}</strong> / ${destRub?.name||a.destRub}</span>
-          ${ESTADO_BADGE[a.estado]||''}
+    <div style="font-size:18px;font-weight:600;margin-bottom:16px">Nova alteração orçamental</div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:14px">Destino da transferência</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Projeto destino <span style="color:var(--red)">*</span></label>
+          <select id="gf-alt-dest-proj" onchange="gfOnAltDestProjChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+            <option value="">Selecionar...</option>
+            ${projs.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+          </select>
         </div>
-        <div style="font-size:12px;color:var(--text-3);margin-top:4px">${a.justificacao}</div>
-      </div>
-      ${ctx==='pendentes'&&isFinDir()?`<div style="display:flex;gap:6px">
-        <button class="btn btn-danger btn-sm" onclick="rejeitarAlt('${a.id}')">Rejeitar</button>
-        <button class="btn btn-success btn-sm" onclick="aprovarAlt('${a.id}')">Aprovar</button>
-      </div>`:''}
-    </div>
-    <div style="display:flex;gap:0">
-      ${steps.map((s,i)=>`
-      <div style="display:flex;align-items:center;gap:0">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:120px">
-          <div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;background:${s.done?'var(--green)':'var(--border)'};color:${s.done?'white':'var(--text-3)'}">✓</div>
-          <div style="font-size:11px;font-weight:500;color:${s.done?'var(--text)':'var(--text-3)'}">${s.lbl}</div>
-          <div style="font-size:10px;color:var(--text-3);text-align:center">${s.info}</div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Rúbrica destino <span style="color:var(--red)">*</span></label>
+          <select id="gf-alt-dest-rub" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px" disabled>
+            <option value="">Selecionar primeiro o projeto...</option>
+          </select>
         </div>
-        ${i<steps.length-1?`<div style="height:1px;background:${steps[i+1].done?'var(--green)':'var(--border)'};flex:1;min-width:20px;margin-bottom:28px"></div>`:''}
-      </div>`).join('')}
+      </div>
+      <div style="margin-top:14px">
+        <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Valor total (€) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="gf-alt-valor" min="0" step="0.01" placeholder="0,00" style="width:100%;max-width:200px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+      </div>
+      <div style="margin-top:14px">
+        <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Justificação <span style="color:var(--red)">*</span></label>
+        <textarea id="gf-alt-justificacao" placeholder="Explique o motivo da alteração..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;min-height:80px;resize:vertical"></textarea>
+      </div>
     </div>
-  </div>`;
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn" onclick="gfNavigate('home')">Cancelar</button>
+      <button class="btn btn-primary" onclick="gfSubmitAlteracao()">Submeter alteração</button>
+    </div>
+  `;
+}
+
+function gfOnAltDestProjChange() {
+  const projId = document.getElementById('gf-alt-dest-proj')?.value;
+  const rubSel = document.getElementById('gf-alt-dest-rub');
+  if (!rubSel) return;
+  
+  if (!projId) {
+    rubSel.innerHTML = '<option value="">Selecionar primeiro o projeto...</option>';
+    rubSel.disabled = true;
+    return;
+  }
+  
+  const rubs = RUBRICAS[projId] || [];
+  rubSel.innerHTML = '<option value="">Selecionar rúbrica...</option>' + 
+    rubs.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+  rubSel.disabled = false;
+}
+
+async function gfSubmitAlteracao() {
+  const destProjId = document.getElementById('gf-alt-dest-proj')?.value;
+  const destRubId = document.getElementById('gf-alt-dest-rub')?.value;
+  const valor = parseFloat(document.getElementById('gf-alt-valor')?.value) || 0;
+  const justificacao = document.getElementById('gf-alt-justificacao')?.value?.trim();
+  
+  if (!destProjId || !destRubId || valor <= 0 || !justificacao) {
+    showNotif('Preencha todos os campos obrigatórios', 'error');
+    return;
+  }
+  
+  const proj = (PROJECTS[GF.year] || []).find(p => String(p.id) === String(destProjId));
+  const rub = (RUBRICAS[destProjId] || []).find(r => String(r.id) === String(destRubId));
+  
+  try {
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' },
+      Title: `Alteração: ${rub?.name || 'Rúbrica'} — ${proj?.name || 'Projeto'}`,
+      Justificacao: justificacao,
+      ValorTotal: valor,
+      Estado: 'pendente',
+      NivelAprovacao: 'df',
+      DestProjetoId: parseInt(destProjId),
+      DestRubricaId: parseInt(destRubId),
+      DataSubmissao: new Date().toISOString()
+    };
+    
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items`, body, 'POST');
+    showNotif('Alteração submetida com sucesso!', 'success');
+    await gfLoadAll();
+    gfNavigate('home');
+  } catch (e) {
+    console.error('Submit error:', e);
+    showNotif('Erro ao submeter: ' + e.message, 'error');
+  }
+}
+
+function gfRenderAltList(list, emptyMsg) {
+  if (list.length === 0) {
+    return `<div class="card" style="padding:40px;text-align:center;color:var(--text3)">${emptyMsg}</div>`;
+  }
+  
+  return list.map(a => {
+    const proj = (PROJECTS[GF.year] || []).find(p => String(p.id) === String(a.destProj));
+    return `
+      <div class="card" style="margin-bottom:10px;padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:600">${a.titulo}</div>
+          ${ESTADO_BADGE[a.estado] || `<span class="bdg">${a.estado}</span>`}
+        </div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:8px">
+          Projeto: ${proj?.name || '—'} · Valor: <strong>${gfFmt(a.valorTotal)}</strong> · ${a.data}
+        </div>
+        <div style="font-size:13px;color:var(--text2)">${a.justificacao}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── APROVAÇÕES ──
-function renderAprovacoes(){
-  const tab=GF.tab.aprovacoes||'aprovar';
-  const tabs=[{k:'aprovar',l:'Para aprovar'},{k:'historico',l:'Estado & histórico'}];
-  const subnav=`<div class="subnav">${tabs.map(t=>`<a class="${tab===t.k?'active':''}" onclick="gfSetTab('aprovacoes','${t.k}')">${t.l}</a>`).join('')}</div>`;
-  let body='';
-  if(tab==='aprovar') body='<div class="container has-subnav">'+renderAprovAprovar()+'</div>';
-  else body='<div class="container has-subnav">'+renderAprovHistorico()+'</div>';
-  return subnav+body;
-}
-
-function renderAprovAprovar(){
-  const u={role:_financeRole};
-  const sols=SOLICITACOES.filter(s=>{
-    if(u.role==='area_director'||_financeRole==='area_director') return s.estado==='solicitada';
-    if(u.role==='df'||_financeRole==='df') return s.estado==='solicitada'||s.estado==='aprovada_dir';
+function gfRenderAprovacoes() {
+  const tab = GF.tab.aprovacoes || 'aprovar';
+  
+  const solsPendentes = SOLICITACOES.filter(s => {
+    if (_financeRole === 'area_director') return s.estado === 'solicitada';
+    if (_financeRole === 'df') return s.estado === 'solicitada' || s.estado === 'aprovada_dir';
     return false;
   });
-  const alts=ALTERACOES.filter(a=>(_financeRole==='df'||_financeRole==='pe'||_financeRole==='pca')&&a.estado==='pendente');
-  const total=sols.length+alts.length;
+  
+  const altsPendentes = ALTERACOES.filter(a => a.estado === 'pendente');
+  
+  const historico = SOLICITACOES.filter(s => ['aprovada', 'processada', 'rejeitada'].includes(s.estado));
+  
   return `
-  <div class="ph"><div class="ph-title">Para aprovar</div><div class="ph-sub">${total} pedido${total!==1?'s':''} a aguardar decisão</div></div>
-  ${sols.length>0?`
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">Solicitações de despesa</div>
-    ${sols.map(s=>{
-      const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===s.projeto);
-      const rub=(RUBRICAS[s.projeto]||[]).find(r=>r.id===s.rubrica);
-      const autorName=getUserName(s.autor);
-      return `<div class="aprov-item">
-        <div class="aprov-info">
-          <div class="aprov-title">${s.titulo}</div>
-          <div class="aprov-meta">
-            <span>${proj?.name||s.projeto}</span><span>·</span><span>${rub?.name||s.rubrica}</span>
-            <span><strong>${fmt(s.valor)}</strong></span><span>·</span>
-            <span>${autorName}</span><span>·</span><span>${s.data}</span>
-            ${ESTADO_BADGE[s.estado]||''}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13px;color:var(--text3)">
+      <a onclick="gfNavigate('home')" style="color:var(--blue);cursor:pointer">Início</a>
+      <span>›</span>
+      <span>Aprovações</span>
+    </div>
+    
+    <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)">
+      <button onclick="GF.tab.aprovacoes='aprovar';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'aprovar' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'aprovar' ? 'var(--blue)' : 'transparent'}">Pendentes (${solsPendentes.length + altsPendentes.length})</button>
+      <button onclick="GF.tab.aprovacoes='historico';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'historico' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'historico' ? 'var(--blue)' : 'transparent'}">Histórico</button>
+    </div>
+    
+    ${tab === 'aprovar' ? gfRenderAprovPendentes(solsPendentes, altsPendentes) : gfRenderAprovHistorico(historico)}
+  `;
+}
+
+function gfRenderAprovPendentes(sols, alts) {
+  if (sols.length === 0 && alts.length === 0) {
+    return `<div class="card" style="padding:40px;text-align:center;color:var(--text3)">Sem pedidos pendentes de aprovação</div>`;
+  }
+  
+  let html = '';
+  
+  if (sols.length > 0) {
+    html += `<div style="font-size:14px;font-weight:600;margin-bottom:10px">Solicitações de despesa</div>`;
+    html += sols.map(s => {
+      const proj = (PROJECTS[GF.year] || []).find(p => String(p.id) === String(s.projeto));
+      return `
+        <div class="card" style="margin-bottom:10px;padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-weight:600">${s.titulo}</div>
+            ${ESTADO_BADGE[s.estado] || ''}
           </div>
-          ${s.fornecedor?`<div style="font-size:12px;color:var(--text-3);margin-top:3px">${s.fornecedor} · ${s.email_forn}</div>`:''}
+          <div style="font-size:13px;color:var(--text3);margin-bottom:10px">
+            ${proj?.name || '—'} · <strong>${gfFmt(s.valor)}</strong> · ${s.autor} · ${s.data}
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm" style="background:var(--green);color:white" onclick="gfAprovarSol(${s.id})">✓ Aprovar</button>
+            <button class="btn btn-sm" style="background:var(--red);color:white" onclick="gfRejeitarSol(${s.id})">✕ Rejeitar</button>
+          </div>
         </div>
-        <div class="aprov-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openModal('detalhe-sol','${s.id}')">Ver detalhe</button>
-          <button class="btn btn-danger btn-sm" onclick="rejeitarSol('${s.id}')">Rejeitar</button>
-          <button class="btn btn-success btn-sm" onclick="aprovarSol('${s.id}')">Aprovar</button>
+      `;
+    }).join('');
+  }
+  
+  if (alts.length > 0) {
+    html += `<div style="font-size:14px;font-weight:600;margin:20px 0 10px">Alterações orçamentais</div>`;
+    html += alts.map(a => `
+      <div class="card" style="margin-bottom:10px;padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:600">${a.titulo}</div>
+          ${ESTADO_BADGE[a.estado] || ''}
         </div>
-      </div>`;
-    }).join('')}`:''}
-  ${alts.length>0?`
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin:${sols.length>0?'16px':0} 0 8px">Alterações orçamentais</div>
-    ${alts.map(a=>renderAltItem(a,'pendentes')).join('')}`:''}
-  ${total===0?`<div class="card" style="text-align:center;padding:48px;color:var(--text-3)">Sem pedidos pendentes.</div>`:''}`;
-}
-
-function renderAprovHistorico(){
-  const u={role:_financeRole};
-  const allSols=SOLICITACOES.filter(s=>['aprovada','rejeitada','processada'].includes(s.estado)||(u.role==='area_director'&&s.estado==='aprovada_dir'));
-  const allAlts=ALTERACOES.filter(a=>a.estado!=='pendente');
-  return `
-  <div class="ph"><div class="ph-title">Estado & histórico</div></div>
-  ${allSols.length>0?`
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">Solicitações de despesa</div>
-    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px"><div class="tbl-wrap"><table>
-      <thead><tr><th>Título</th><th>Projeto</th><th style="text-align:right">Valor</th><th>Estado</th><th>Fluxo</th></tr></thead>
-      <tbody>${allSols.map(s=>{
-        const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===s.projeto);
-        const steps=[
-          {lbl:'Solicitada',done:true},
-          {lbl:'Dir. Área',done:!!s.aprovDir||s.estado==='aprovada'||s.estado==='processada'},
-          {lbl:'DF',done:s.estado==='aprovada'||s.estado==='processada'},
-        ];
-        return `<tr><td style="font-weight:500">${s.titulo}</td><td>${proj?.name||s.projeto}</td><td class="num">${fmt(s.valor)}</td><td>${ESTADO_BADGE[s.estado]||s.estado}</td>
-          <td><div style="display:flex;align-items:center;gap:4px">${steps.map((st,i)=>`
-            <div style="display:flex;align-items:center;gap:4px">
-              <div style="font-size:10px;padding:1px 6px;border-radius:10px;background:${st.done?'var(--green-light)':'var(--bg)'};color:${st.done?'var(--green)':'var(--text-3)'};border:1px solid ${st.done?'#86EFAC':'var(--border)'}">${st.lbl}</div>
-              ${i<steps.length-1?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`:''}
-            </div>`).join('')}</div></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div></div>`:''}
-  ${allAlts.length>0?`
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:8px">Alterações orçamentais</div>
-    ${allAlts.map(a=>renderAltItem(a,'hist')).join('')}`:''}
-  ${allSols.length===0&&allAlts.length===0?`<div class="card" style="text-align:center;padding:48px;color:var(--text-3)">Sem registos de aprovações.</div>`:''}`;
-}
-
-// ── DIREÇÃO ──
-function renderDirecao(){
-  const projs=PROJECTS[GF.year]||[];
-  const depts=[...new Set(projs.map(p=>p.dept))];
-  const anomalias=[];
-  Object.entries(RUBRICAS).forEach(([pid,rubs])=>{
-    const proj=projs.find(p=>p.id===pid);if(!proj)return;
-    rubs.forEach(r=>rubErrors(r).forEach(e=>anomalias.push({proj,r,e})));
-  });
-  return `
-  <div class="ph">
-    <div><div class="ph-title">Vista de Direção — ${GF.year}</div></div>
-    <div class="year-sel">${[2026,2025,2024].map(y=>`<button class="yr-btn${y===GF.year?' active':''}" onclick="GF.year=${y};gfNavigate('direcao')">${y}</button>`).join('')}</div>
-  </div>
-  <div class="dept-grid">${depts.map(dept=>{
-    const dp=projs.filter(p=>p.dept===dept);
-    const orc=dp.reduce((a,p)=>a+projMetrics(p.id).desp_orc,0);
-    const proc=dp.reduce((a,p)=>a+projMetrics(p.id).desp_proc,0);
-    const sol=dp.reduce((a,p)=>a+projMetrics(p.id).desp_sol,0);
-    const pc=pct(proc,orc),ps=pct(sol,orc);
-    return `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div><div style="font-size:14px;font-weight:500">${dept}</div><div style="font-size:12px;color:var(--text-2)">${dp.length} projeto${dp.length!==1?'s':''}</div></div>
-        <span style="font-size:22px;font-weight:600;color:var(--navy)">${pc}%</span>
-      </div>
-      ${miniBar(sol,proc,orc,'#0284C7','#7DD3FC','#E0F2FE').replace('height:10px','height:8px')}
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:6px">
-        <span>Orç: ${fmt(orc)}</span><span>Sol: ${fmt(sol)}</span><span>Proc: ${fmt(proc)}</span>
-      </div>
-    </div>`;
-  }).join('')}</div>
-  <div class="card-section">
-    <div class="slbl">Anomalias detetadas</div>
-    ${anomalias.length===0?`<div style="font-size:13px;color:var(--text-3)">Nenhuma anomalia.</div>`
-    :anomalias.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--red-light);border-radius:6px;margin-bottom:6px;border-left:3px solid var(--red)">
-      <span style="font-size:13px;color:var(--red)"><strong>${a.proj?.name}</strong> / ${a.r.name}: ${a.e}</span>
-    </div>`).join('')}
-  </div>
-  <div class="card-section">
-    <div class="slbl">Pendentes de aprovação</div>
-    ${SOLICITACOES.filter(s=>s.estado==='solicitada'||s.estado==='aprovada_dir').length===0
-      ?`<div style="font-size:13px;color:var(--text-3)">Sem pedidos pendentes.</div>`
-      :SOLICITACOES.filter(s=>s.estado==='solicitada'||s.estado==='aprovada_dir').map(s=>{
-        const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===s.projeto);
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div><div style="font-size:13px;font-weight:500">${s.titulo}</div><div style="font-size:12px;color:var(--text-2)">${proj?.name||s.projeto} · ${fmt(s.valor)}</div></div>
-          ${ESTADO_BADGE[s.estado]||''}
-        </div>`;
-      }).join('')}
-  </div>
-  <div class="card-section">
-    <div class="slbl">Visão plurianual</div>
-    <table><thead><tr><th>Projeto</th><th style="text-align:right">2024</th><th style="text-align:right">2025</th><th style="text-align:right">2026</th></tr></thead>
-    <tbody>
-      <tr><td>PANSUM</td><td class="num" style="color:var(--text-3)">—</td><td class="num">${fmt(projMetrics('pansum25').desp_proc)}</td><td class="num">${fmt(projMetrics('pansum').desp_proc)}</td></tr>
-      <tr><td>Plano de Comunicação</td><td class="num" style="color:var(--text-3)">—</td><td class="num">${fmt(projMetrics('com125').desp_proc)}</td><td class="num">${fmt(projMetrics('com1').desp_proc)}</td></tr>
-    </tbody></table>
-  </div>`;
-}
-
-// ── MODAIS ──
-function openModal(type,param){GF.modal={type,param};gfRender();}
-
-function renderModal(){
-  const m=GF.modal;
-  let content='';
-  if(m.type==='novo-projeto') content=modalNovoProjeto();
-  else if(m.type==='nova-rubrica') content=modalNovaRubrica(m.param);
-  else if(m.type==='gerir-membros') content=modalGerirMembros(m.param);
-  else if(m.type==='detalhe-sol') content=modalDetalheSol(m.param);
-  else if(m.type==='rascunhos') content=modalRascunhos();
-  else if(m.type==='aumento-nao-orc') content=modalAumentoNaoOrc();
-  return `<div class="modal-bg">
-    <div class="modal-box">
-      <div class="modal-hdr"><div class="modal-title">${modalTitle(m.type)}</div><button class="modal-close" onclick="GF.modal=null;gfRender()">×</button></div>
-      ${content}
-    </div>
-  </div>`;
-}
-
-function modalTitle(t){return{
-  'novo-projeto':'Novo projeto','nova-rubrica':'Nova rúbrica','gerir-membros':'Gerir membros',
-  'detalhe-sol':'Detalhe da solicitação','rascunhos':'Rascunhos guardados','aumento-nao-orc':'Aumento não orçamentado'
-}[t]||'';}
-
-function modalNovoProjeto(){
-  const depts=['Ação Educativa','Associativismo','Administração','Comunicação','Financeiro','Presidência'];
-  return `
-  <div style="display:flex;flex-direction:column;gap:14px">
-    <div class="field"><label>Nome do projeto <span class="req">*</span></label><input type="text" id="m-proj-nome" placeholder="Ex: MOstra Nacional de Jovens Cientistas"></div>
-    <div class="fg2">
-      <div class="field"><label>Departamento <span class="req">*</span></label>
-        <select id="m-proj-dept"><option value="">Selecionar...</option>${depts.map(d=>`<option>${d}</option>`).join('')}</select></div>
-      <div class="field"><label>Ano orçamental <span class="req">*</span></label>
-        <select id="m-proj-ano">${[2026,2025,2024].map(y=>`<option value="${y}"${y===GF.year?' selected':''}>${y}</option>`).join('')}</select></div>
-    </div>
-    <div class="fg2">
-      <div class="field"><label>Data início</label><input type="date" id="m-proj-inicio"></div>
-      <div class="field"><label>Data fim</label><input type="date" id="m-proj-fim"></div>
-    </div>
-    <div class="form-actions" style="margin-top:8px">
-      <button class="btn btn-ghost" onclick="GF.modal=null;gfRender()">Cancelar</button>
-      <button class="btn btn-navy" onclick="criarProjeto()">Criar projeto</button>
-    </div>
-  </div>`;
-}
-
-function modalNovaRubrica(projId){
-  return `
-  <div style="display:flex;flex-direction:column;gap:14px">
-    <div class="field"><label>Nome da rúbrica <span class="req">*</span></label><input type="text" id="m-rub-nome" placeholder="Ex: Alojamento"></div>
-    <div class="field"><label>Tipo <span class="req">*</span></label>
-      <select id="m-rub-tipo">
-        <option value="despesa">Despesa</option>
-        <option value="receita">Receita</option>
-        <option value="ambos">Despesa + Receita</option>
-      </select></div>
-    <div class="fg2">
-      <div class="field"><label>Desp. orçamentada (€)</label><input type="number" min="0" step="0.01" id="m-rub-desp" placeholder="0,00"></div>
-      <div class="field"><label>Rec. orçamentada (€)</label><input type="number" min="0" step="0.01" id="m-rub-rec" placeholder="0,00"></div>
-    </div>
-    <div class="form-actions" style="margin-top:8px">
-      <button class="btn btn-ghost" onclick="GF.modal=null;gfRender()">Cancelar</button>
-      <button class="btn btn-navy" onclick="criarRubrica('${projId}')">Criar rúbrica</button>
-    </div>
-  </div>`;
-}
-
-function modalGerirMembros(projId){
-  const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===projId);
-  if(!proj)return '<p>Projeto não encontrado.</p>';
-  const userList=orgUsers.length?orgUsers:[{email:user?.username,name:user?.name}];
-  return `
-  <div>
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:14px">Membros atuais do projeto <strong>${proj.name}</strong>:</div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-      ${userList.map(u=>{
-        const isMember=(proj.members||[]).includes(u.email);
-        const roleLabel=ROLE_LABELS[userRoles[u.email]?.role]||'Colaborador';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:var(--rs);background:${isMember?'var(--blue-light)':'var(--bg)'};border:1px solid ${isMember?'#BFDBFE':'var(--border)'}">
-          <div><div style="font-size:13px;font-weight:500">${u.name}</div><div style="font-size:11px;color:var(--text-3)">${roleLabel}</div></div>
-          <button onclick="toggleMembro('${projId}','${u.email}')" class="btn btn-sm ${isMember?'btn-ghost':'btn-primary'}" style="font-size:11px">${isMember?'Remover':'Adicionar'}</button>
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="form-actions"><button class="btn btn-navy" onclick="GF.modal=null;gfRender()">Fechar</button></div>
-  </div>`;
-}
-
-function modalDetalheSol(id){
-  const s=SOLICITACOES.find(s=>s.id===id);
-  if(!s)return '<p>Não encontrado.</p>';
-  const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===s.projeto);
-  const rub=(RUBRICAS[s.projeto]||[]).find(r=>r.id===s.rubrica);
-  const autorName=getUserName(s.autor);
-  const steps=[
-    {lbl:'Submetida',done:true,info:`${autorName} · ${s.data}`},
-    {lbl:'Aprovação Dir. Área',done:!!s.aprovDir,info:s.aprovDir?(getUserName(s.aprovDir)+' · '+s.dataAprovDir):'Aguarda'},
-    {lbl:'Aprovação DF',done:s.estado==='aprovada'||s.estado==='processada',info:s.estado==='aprovada'?'Aprovada':'Aguarda'},
-    {lbl:'Processada',done:s.estado==='processada',info:s.estado==='processada'?'Fatura recebida':'Aguarda'},
-  ];
-  return `
-  <div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-      <div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em">Projeto</div><div style="font-size:13px;font-weight:500">${proj?.name||s.projeto}</div></div>
-      <div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em">Rúbrica</div><div style="font-size:13px;font-weight:500">${rub?.name||s.rubrica}</div></div>
-      <div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em">Valor</div><div style="font-size:16px;font-weight:600;color:var(--navy)">${fmt(s.valor)}</div></div>
-      <div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em">Cód. encomenda</div><div style="font-size:13px;font-weight:500;color:var(--blue)">${s.cod}</div></div>
-      <div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em">Fornecedor</div><div style="font-size:13px">${s.fornecedor||'—'}</div></div>
-      <div><div style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em">E-mail fornecedor</div><div style="font-size:13px">${s.email_forn||'—'}</div></div>
-    </div>
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);margin-bottom:10px">Fluxo de aprovação</div>
-    <div style="display:flex;gap:0;margin-bottom:16px">
-      ${steps.map((step,i)=>`
-      <div style="display:flex;align-items:center;gap:0">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px">
-          <div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:${step.done?'var(--green)':'var(--border)'};color:${step.done?'white':'var(--text-3)'}">✓</div>
-          <div style="font-size:10px;font-weight:500;color:${step.done?'var(--text)':'var(--text-3)'};text-align:center">${step.lbl}</div>
-          <div style="font-size:9px;color:var(--text-3);text-align:center">${step.info}</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:10px">
+          <strong>${gfFmt(a.valorTotal)}</strong> · ${a.solicitante} · ${a.data}
         </div>
-        ${i<steps.length-1?`<div style="height:1px;background:${steps[i+1].done?'var(--green)':'var(--border)'};flex:1;min-width:16px;margin-bottom:28px"></div>`:''}
-      </div>`).join('')}
-    </div>
-    ${s.estado!=='aprovada'&&s.estado!=='processada'&&s.estado!=='rejeitada'?`
-    <div class="form-actions">
-      <button class="btn btn-danger btn-sm" onclick="GF.modal=null;rejeitarSol('${s.id}')">Rejeitar</button>
-      <button class="btn btn-success btn-sm" onclick="GF.modal=null;aprovarSol('${s.id}')">Aprovar</button>
-    </div>`:`<div class="form-actions"><button class="btn btn-ghost" onclick="GF.modal=null;gfRender()">Fechar</button></div>`}
-  </div>`;
-}
-
-function modalRascunhos(){
-  const rascs=GF.rascunhos.filter(r=>r.tipo==='despesa');
-  return `
-  <div>
-    ${rascs.length===0?'<div style="text-align:center;padding:20px;color:var(--text-3)">Sem rascunhos guardados.</div>'
-    :rascs.map((r,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px">
-      <div><div style="font-size:13px;font-weight:500">${r.titulo||'(sem título)'}</div><div style="font-size:12px;color:var(--text-3)">${r.data}</div></div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm" onclick="carregarRascunho(${i})">Carregar</button>
-        <button class="btn btn-danger btn-sm" onclick="GF.rascunhos.splice(${i},1);gfRender()">×</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" style="background:var(--green);color:white" onclick="gfAprovarAlt(${a.id})">✓ Aprovar</button>
+          <button class="btn btn-sm" style="background:var(--red);color:white" onclick="gfRejeitarAlt(${a.id})">✕ Rejeitar</button>
+        </div>
       </div>
-    </div>`).join('')}
-    <div class="form-actions"><button class="btn btn-ghost" onclick="GF.modal=null;gfRender()">Fechar</button></div>
-  </div>`;
+    `).join('');
+  }
+  
+  return html;
 }
 
-function modalAumentoNaoOrc(){
-  return `
-  <div>
-    <div class="alert alert-amber show" style="margin-bottom:16px">Esta operação acrescenta dotação não orçamentada ao Banco Global. Fica registada no histórico de auditoria.</div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div class="field"><label>Valor a acrescentar (€) <span class="req">*</span></label><input type="number" id="sp-valor" min="0" step="0.01" placeholder="0,00"></div>
-      <div class="field"><label>Justificação <span class="req">*</span></label><input type="text" id="sp-just" placeholder="Motivo do aumento..."></div>
-    </div>
-    <div class="form-actions" style="margin-top:16px">
-      <button class="btn btn-ghost" onclick="GF.modal=null;gfRender()">Cancelar</button>
-      <button class="btn btn-amber" onclick="submitAumentoNaoOrc()">Confirmar reforço</button>
-    </div>
-  </div>`;
+function gfRenderAprovHistorico(list) {
+  if (list.length === 0) {
+    return `<div class="card" style="padding:40px;text-align:center;color:var(--text3)">Sem histórico</div>`;
+  }
+  
+  return list.map(s => {
+    const proj = (PROJECTS[GF.year] || []).find(p => String(p.id) === String(s.projeto));
+    return `
+      <div class="card" style="margin-bottom:10px;padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:600">${s.titulo}</div>
+          ${ESTADO_BADGE[s.estado] || ''}
+        </div>
+        <div style="font-size:13px;color:var(--text3)">
+          ${proj?.name || '—'} · <strong>${gfFmt(s.valor)}</strong> · ${s.autor} · ${s.data}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-// ═══════════════ HANDLERS ═══════════════
-function toggleRub(id){
-  if(GF.expandedRubs.has(id))GF.expandedRubs.delete(id);else GF.expandedRubs.add(id);
-  gfRender();
-}
-
-// ─ File upload ─
-function handleFileInput(type,input){
-  const files=Array.from(input.files);
-  if(type==='aprov'){
-    const l=document.getElementById('list-aprov');if(!l)return;
-    l.innerHTML='';
-    if(files[0]){
-      const d=document.createElement('div');d.className='file-item fi-aprov';
-      d.innerHTML=`<div class="fi-name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>${files[0].name} <span class="bdg bdg-green" style="font-size:10px;margin-left:4px">Aprovado</span></div><span class="fi-rm" onclick="document.getElementById('fi-aprov').value='';this.parentElement.remove()">remover</span>`;
-      l.appendChild(d);
+// ── APPROVAL ACTIONS ──
+async function gfAprovarSol(id) {
+  if (!confirm('Aprovar esta solicitação?')) return;
+  try {
+    const novoEstado = _financeRole === 'area_director' ? 'aprovada_dir' : 'aprovada';
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
+      Estado: novoEstado
+    };
+    if (_financeRole === 'area_director') {
+      body.DataAprovDir = new Date().toISOString();
     }
-  } else {
-    const l=document.getElementById('list-rec');if(!l)return;
-    files.forEach(f=>{
-      const d=document.createElement('div');d.className='file-item';
-      d.innerHTML=`<div class="fi-name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${f.name}</div><span class="fi-rm" onclick="this.parentElement.remove()">remover</span>`;
-      l.appendChild(d);
-    });
-  }
-  input.value='';
-}
-
-// ─ Solicitação form ─
-function onProjChange(){
-  const pid=document.getElementById('f-proj')?.value;
-  const rs=document.getElementById('f-rub');
-  if(!pid||!rs)return;
-  const rubs=(RUBRICAS[pid]||[]).filter(r=>r.tipo==='despesa'||r.tipo==='ambos');
-  rs.disabled=false;
-  rs.innerHTML='<option value="">Selecionar rúbrica...</option>'+rubs.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
-  document.getElementById('rub-saldo').style.display='none';
-  document.getElementById('bud-ind')?.classList.remove('show');
-  document.getElementById('err-valor')?.classList.remove('show');
-}
-
-function onRubChange(){
-  const pid=document.getElementById('f-proj')?.value;
-  const rid=document.getElementById('f-rub')?.value;
-  const sd=document.getElementById('rub-saldo');
-  if(!pid||!rid){if(sd)sd.style.display='none';return;}
-  const rub=(RUBRICAS[pid]||[]).find(r=>r.id===rid);if(!rub)return;
-  const disp=rub.desp_orc-rub.desp_sol;
-  if(sd){sd.style.display='block';sd.innerHTML=`Orçamentado: <strong>${fmt(rub.desp_orc)}</strong> · Solicitado: <strong>${fmt(rub.desp_sol)}</strong> · Disponível: <strong style="color:var(--green)">${fmt(disp)}</strong>`;}
-  document.getElementById('bud-ind')?.classList.add('show');
-  const fv=document.getElementById('f-valor');if(fv)fv.value='';
-  updateBudBar(rub,0);
-}
-
-function getCurrRub(){
-  const pid=document.getElementById('f-proj')?.value;
-  const rid=document.getElementById('f-rub')?.value;
-  if(!pid||!rid)return null;
-  return(RUBRICAS[pid]||[]).find(r=>r.id===rid);
-}
-
-function onValorChange(){const v=parseFloat(document.getElementById('f-valor')?.value)||0;const rub=getCurrRub();if(!rub)return;updateBudBar(rub,v);}
-
-function updateBudBar(rub,nv){
-  const orc=rub.desp_orc,sol=rub.desp_sol;
-  const sp=Math.min(sol/orc*100,100),np=Math.max(0,Math.min(nv/orc*100,100-sp));
-  const bsol=document.getElementById('bsol');if(bsol)bsol.style.width=sp+'%';
-  const bnew=document.getElementById('bnew');if(bnew){bnew.style.left=sp+'%';bnew.style.width=np+'%';}
-  const bp=document.getElementById('bud-pct');if(bp)bp.textContent=Math.round((sol+nv)/orc*100)+'% do orçamentado';
-  const bs=document.getElementById('bleg-sol');if(bs)bs.textContent='Já solicitado: '+fmt(sol);
-  const bn=document.getElementById('bleg-new');if(bn)bn.textContent='Este pedido: '+fmt(nv);
-  const bd=document.getElementById('bleg-disp');if(bd)bd.textContent='Disponível: '+fmt(orc-sol-nv);
-  const ev=document.getElementById('err-valor');
-  if(sol+nv>orc){ev?.classList.add('show');if(bnew)bnew.style.background='var(--red)';if(bp)bp.style.color='var(--red)';}
-  else{ev?.classList.remove('show');if(bnew)bnew.style.background='var(--blue)';if(bp)bp.style.color='var(--text-2)';}
-}
-
-function calcRow(inp){
-  const row=inp.closest('tr');
-  const qty=parseFloat(row.querySelector('.qty')?.value)||0;
-  const price=parseFloat(row.querySelector('.price')?.value)||0;
-  const tc=row.querySelector('.total-cell');
-  if(tc)tc.value=qty&&price?((qty*price).toFixed(2)+' €'):'—';
-  calcEncTotal();
-}
-
-function calcEncTotal(){
-  let sum=0;
-  document.querySelectorAll('.total-cell').forEach(c=>{const v=parseFloat(c.value);if(!isNaN(v))sum+=v;});
-  const el=document.getElementById('enc-total');if(el)el.textContent=sum>0?sum.toFixed(2)+' €':'—';
-}
-
-function addEncRow(){
-  const b=document.getElementById('enc-body');if(!b)return;
-  const tr=document.createElement('tr');
-  tr.innerHTML=`<td><input type="text" placeholder="Descrição..."></td><td><input type="number" min="0" placeholder="0" oninput="calcRow(this)" class="qty"></td><td><input type="number" min="0" step="0.01" placeholder="0,00" oninput="calcRow(this)" class="price"></td><td><input type="text" readonly placeholder="—" class="total-cell" style="background:var(--bg)"></td><td style="text-align:center"><span style="cursor:pointer;color:var(--text-3)" onclick="removeEncRow(this)">×</span></td>`;
-  b.appendChild(tr);
-}
-
-function removeEncRow(el){const rows=document.getElementById('enc-body')?.querySelectorAll('tr');if(rows&&rows.length<=1)return;el.closest('tr')?.remove();calcEncTotal();}
-
-// ─ Rascunhos ─
-function guardarRascunho(){
-  const titulo=document.getElementById('f-titulo')?.value?.trim();
-  const proj=document.getElementById('f-proj')?.value;
-  const rub=document.getElementById('f-rub')?.value;
-  const valor=document.getElementById('f-valor')?.value;
-  GF.rascunhos.push({tipo:'despesa',titulo,proj,rub,valor,data:new Date().toLocaleDateString('pt-PT')});
-  alert('Rascunho guardado! Pode recuperá-lo clicando em "Rascunhos" no topo do formulário.');
-}
-
-function guardarRascunhoAlt(){
-  GF.rascunhos.push({tipo:'alteracao',titulo:document.getElementById('alt-titulo')?.value,data:new Date().toLocaleDateString('pt-PT')});
-  alert('Rascunho guardado.');
-}
-
-function carregarRascunho(i){
-  const r=GF.rascunhos[i];
-  GF.modal=null;
-  gfNavigate('solicitacao');
-  setTimeout(()=>{
-    if(r.titulo)document.getElementById('f-titulo').value=r.titulo;
-    if(r.proj){document.getElementById('f-proj').value=r.proj;onProjChange();
-      if(r.rub)setTimeout(()=>{document.getElementById('f-rub').value=r.rub;onRubChange();
-        if(r.valor)setTimeout(()=>{document.getElementById('f-valor').value=r.valor;onValorChange();},50);
-      },50);}
-  },100);
-}
-
-function submitSolicitacao(){
-  const titulo=document.getElementById('f-titulo')?.value?.trim();
-  const proj=document.getElementById('f-proj')?.value;
-  const rub=document.getElementById('f-rub')?.value;
-  const valor=parseFloat(document.getElementById('f-valor')?.value)||0;
-  const empresa=document.getElementById('f-empresa')?.value?.trim();
-  const email_forn=document.getElementById('f-email-forn')?.value?.trim();
-  if(!titulo||!proj||!rub||!valor||!empresa||!email_forn){alert('Por favor preencha todos os campos obrigatórios.');return;}
-  const rubData=getCurrRub();
-  if(rubData&&(rubData.desp_sol+valor)>rubData.desp_orc){alert('O valor ultrapassa o saldo disponível.');return;}
-  const cod='ENC-'+new Date().getFullYear()+'-'+Math.floor(Math.random()*9000+1000);
-  SOLICITACOES.push({id:'s'+Date.now(),tipo:'despesa',titulo,projeto:proj,rubrica:rub,valor,estado:'solicitada',autor:user?.username,data:new Date().toISOString().slice(0,10),fornecedor:empresa,email_forn,cod});
-  if(rubData)rubData.desp_sol+=valor;
-  alert(`✓ Solicitação submetida!\n\nCódigo de encomenda: ${cod}\n\nO/a Diretor/a de área foi notificado/a.`);
-  gfNavigate('home');
-}
-
-// ─ Alterações ─
-function calcAltTotal(){
-  let sum=0;let hasErr=false;
-  document.querySelectorAll('.alt-valor-inp').forEach(inp=>{
-    const row=inp.closest('[id^="alt-orig-"]');
-    const disp=row?getAltOrigDisp(row):null;
-    const val=parseFloat(inp.value)||0;
-    if(disp!=null&&val>disp)hasErr=true;
-    sum+=val;
-  });
-  const tv=document.getElementById('alt-total-val');if(tv)tv.textContent=fmt(sum);
-  const dv=document.getElementById('alt-dest-valor-display');if(dv)dv.textContent=sum>0?fmt(sum):'—';
-  // nivel
-  const el=document.getElementById('nivel-info');if(!el)return;
-  if(sum===0){el.innerHTML='Introduza valores nas origens para determinar o nível de aprovação necessário.';el.className='alert alert-info show';return;}
-  let msg,cls='alert alert-info show';
-  if(sum<=1000)msg=`${fmt(sum)} — Aprovação: <strong>Diretora Financeira</strong>`;
-  else if(sum<=10000)msg=`${fmt(sum)} — Aprovação: <strong>DF</strong> + <strong>Presidente Executivo</strong>`;
-  else{msg=`${fmt(sum)} — Aprovação: <strong>DF</strong> + <strong>PE</strong> + <strong>Presidente do Conselho de Administração</strong>`;cls='alert alert-amber show';}
-  el.innerHTML=msg;el.className=cls;
-}
-
-function addAltOrigem(){
-  const projs=userProjects();
-  const c=document.getElementById('alt-origens');if(!c)return;
-  const i=GF.altOrigemCount++;
-  const div=document.createElement('div');div.id='alt-orig-'+i;
-  div.style.cssText='border:1px solid var(--border);border-radius:var(--rs);padding:12px;margin-bottom:8px';
-  div.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-    <div style="font-size:12px;font-weight:500;color:var(--text-2)">Origem ${i+1}</div>
-    ${i>0?`<button class="btn-icon" onclick="document.getElementById('alt-orig-${i}').remove();calcAltTotal()">×</button>`:''}
-  </div>
-  <div class="fg2" style="margin-bottom:8px">
-    <div class="field"><label>Projeto <span class="req">*</span></label>
-      <select class="alt-proj-sel" onchange="onAltOrigProj(this,${i})">
-        <option value="">Selecionar...</option>${projs.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
-      </select></div>
-    <div class="field"><label>Rúbrica <span class="req">*</span></label>
-      <select class="alt-rub-sel" disabled><option>Selecionar projeto primeiro...</option></select></div>
-  </div>
-  <div class="field"><label>Valor a transferir (€) <span class="req">*</span></label>
-    <input type="number" min="0" step="0.01" placeholder="0,00" class="alt-valor-inp" oninput="validarAltOrigem(this);calcAltTotal()">
-    <div class="alt-err" style="display:none;font-size:12px;color:var(--red);margin-top:4px"></div>
-    <div class="alt-disp" style="font-size:11px;color:var(--text-3);margin-top:3px"></div></div>`;
-  c.appendChild(div);
-}
-
-function onAltOrigProj(sel,i){
-  const pid=sel.value;const row=document.getElementById('alt-orig-'+i);if(!row)return;
-  const rs=row.querySelector('.alt-rub-sel');if(!rs)return;
-  // reset valor when project changes
-  const vi=row.querySelector('.alt-valor-inp');if(vi)vi.value='';
-  clearAltOrigErr(row);
-  if(!pid){rs.disabled=true;rs.innerHTML='<option>Selecionar projeto primeiro...</option>';return;}
-  const rubs=RUBRICAS[pid]||[];
-  rs.disabled=false;
-  rs.innerHTML='<option value="">Selecionar rúbrica...</option>'+rubs.map(r=>`<option value="${r.id}">${r.name} (Disp: ${fmt(r.desp_orc-r.desp_sol)})</option>`).join('');
-  rs.onchange=()=>onAltOrigRub(rs,i);
-}
-
-function onAltOrigRub(sel,i){
-  const row=document.getElementById('alt-orig-'+i);if(!row)return;
-  const vi=row.querySelector('.alt-valor-inp');if(vi)vi.value='';
-  clearAltOrigErr(row);
-  const disp=getAltOrigDisp(row);
-  const dl=row.querySelector('.alt-disp');
-  if(dl&&disp!=null)dl.textContent='Disponível nesta rúbrica: '+fmt(disp);
-  calcAltTotal();
-}
-
-function getAltOrigDisp(row){
-  const pid=row.querySelector('.alt-proj-sel')?.value;
-  const rid=row.querySelector('.alt-rub-sel')?.value;
-  if(!pid||!rid)return null;
-  const rub=(RUBRICAS[pid]||[]).find(r=>r.id===rid);
-  return rub?rub.desp_orc-rub.desp_sol:null;
-}
-
-function validarAltOrigem(inp){
-  const row=inp.closest('[id^="alt-orig-"]');if(!row)return;
-  const disp=getAltOrigDisp(row);
-  const val=parseFloat(inp.value)||0;
-  const err=row.querySelector('.alt-err');
-  const dl=row.querySelector('.alt-disp');
-  if(disp==null){
-    if(err){err.textContent='Selecione projeto e rúbrica primeiro.';err.style.display='block';}
-    inp.style.borderColor='var(--red)';
-    return;
-  }
-  if(dl)dl.textContent='Disponível: '+fmt(disp);
-  if(val>disp){
-    if(err){err.textContent='Valor superior ao disponível ('+fmt(disp)+') — reduza o valor.';err.style.display='block';}
-    inp.style.borderColor='var(--red)';
-  } else {
-    clearAltOrigErr(row);
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${id})`, body, 'MERGE');
+    showNotif('Solicitação aprovada!', 'success');
+    await gfLoadAll();
+  } catch (e) {
+    showNotif('Erro: ' + e.message, 'error');
   }
 }
 
-function clearAltOrigErr(row){
-  const err=row.querySelector('.alt-err');if(err){err.textContent='';err.style.display='none';}
-  const vi=row.querySelector('.alt-valor-inp');if(vi)vi.style.borderColor='';
-}
-
-function onAltDestProj(){
-  const pid=document.getElementById('alt-dest-proj')?.value;
-  const rs=document.getElementById('alt-dest-rub');if(!rs)return;
-  if(!pid){rs.disabled=true;rs.innerHTML='<option>Selecionar projeto primeiro...</option>';return;}
-  const rubs=RUBRICAS[pid]||[];
-  rs.disabled=false;
-  rs.innerHTML='<option value="">Selecionar rúbrica...</option>'+rubs.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
-}
-
-function submitAlteracao(){
-  alert('Pedido de alteração orçamental submetido.\nOs aprovadores foram notificados.\nPode acompanhar o estado em Alterações Orçamentais → Pendentes.');
-  gfNavigate('alteracoes');
-}
-
-// ─ Aprovações ─
-function aprovarSol(id){
-  const s=SOLICITACOES.find(s=>s.id===id);if(!s)return;
-  if(_financeRole==='area_director'){
-    s.estado='aprovada_dir';s.aprovDir=user?.username;s.dataAprovDir=new Date().toISOString().slice(0,10);
-    alert('✓ Aprovado pelo Diretor de Área.\nA Diretora Financeira foi notificada.');
-  } else if(_financeRole==='df'){
-    s.estado='aprovada';
-    alert('✓ Aprovado pela Diretora Financeira.\n\nRascunho de e-mail criado no Gmail com nota de encomenda, código '+s.cod+' e orçamento aprovado em anexo.');
+async function gfRejeitarSol(id) {
+  const motivo = prompt('Motivo da rejeição:');
+  if (!motivo) return;
+  try {
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
+      Estado: 'rejeitada',
+      MotivoRejeicao: motivo
+    };
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${id})`, body, 'MERGE');
+    showNotif('Solicitação rejeitada', 'success');
+    await gfLoadAll();
+  } catch (e) {
+    showNotif('Erro: ' + e.message, 'error');
   }
-  GF.modal=null;gfNavigate('aprovacoes');
 }
 
-function rejeitarSol(id){
-  const motivo=prompt('Motivo de rejeição (obrigatório):');
-  if(motivo===null)return;if(!motivo.trim()){alert('Indique o motivo.');return;}
-  const s=SOLICITACOES.find(s=>s.id===id);if(!s)return;
-  const rub=(RUBRICAS[s.projeto]||[]).find(r=>r.id===s.rubrica);
-  if(rub)rub.desp_sol=Math.max(0,rub.desp_sol-s.valor);
-  s.estado='rejeitada';
-  alert('Solicitação rejeitada. O colaborador foi notificado.');
-  GF.modal=null;gfNavigate('aprovacoes');
+async function gfAprovarAlt(id) {
+  if (!confirm('Aprovar esta alteração?')) return;
+  try {
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' },
+      Estado: 'aprovada_df',
+      DataAprovDF: new Date().toISOString()
+    };
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items(${id})`, body, 'MERGE');
+    showNotif('Alteração aprovada!', 'success');
+    await gfLoadAll();
+  } catch (e) {
+    showNotif('Erro: ' + e.message, 'error');
+  }
 }
 
-function aprovarAlt(id){
-  const a=ALTERACOES.find(a=>a.id===id);if(!a)return;
-  a.estado='aprovada_df';a.aprovDF=user?.username;a.dataAprovDF=new Date().toISOString().slice(0,10);
-  alert('✓ Alteração orçamental aprovada.');gfNavigate('aprovacoes');
-}
-
-function rejeitarAlt(id){
-  const motivo=prompt('Motivo de rejeição:');if(!motivo?.trim())return;
-  const a=ALTERACOES.find(a=>a.id===id);if(!a)return;
-  a.estado='rejeitada';alert('Alteração rejeitada.');gfNavigate('aprovacoes');
-}
-
-// ─ Projeto/Rúbrica ─
-function criarProjeto(){
-  const nome=document.getElementById('m-proj-nome')?.value?.trim();
-  const dept=document.getElementById('m-proj-dept')?.value;
-  const ano=parseInt(document.getElementById('m-proj-ano')?.value);
-  if(!nome||!dept){alert('Preencha nome e departamento.');return;}
-  const id='proj'+Date.now();
-  if(!PROJECTS[ano])PROJECTS[ano]=[];
-  PROJECTS[ano].push({id,name:nome,dept,start:'',end:'',status:'active',members:[user?.username]});
-  RUBRICAS[id]=[];
-  GF.modal=null;gfNavigate('projetos');
-}
-
-function criarRubrica(projId){
-  const nome=document.getElementById('m-rub-nome')?.value?.trim();
-  const tipo=document.getElementById('m-rub-tipo')?.value;
-  const desp=parseFloat(document.getElementById('m-rub-desp')?.value)||0;
-  const rec=parseFloat(document.getElementById('m-rub-rec')?.value)||0;
-  if(!nome){alert('Preencha o nome da rúbrica.');return;}
-  if(!RUBRICAS[projId])RUBRICAS[projId]=[];
-  RUBRICAS[projId].push({id:'r'+Date.now(),name:nome,tipo,desp_orc:desp,desp_sol:0,desp_proc:0,rec_orc:rec,rec_sol:0,rec_proc:0,status:'active'});
-  GF.modal=null;GF.expandedRubs=new Set();gfNavigate('projeto',{project:projId});
-}
-
-function toggleMembro(projId,email){
-  const proj=(PROJECTS[GF.year]||[]).find(p=>p.id===projId);if(!proj)return;
-  if(!proj.members)proj.members=[];
-  const idx=proj.members.indexOf(email);
-  if(idx>=0)proj.members.splice(idx,1);else proj.members.push(email);
-  gfRender();
-}
-
-function solicFecho(rid){
-  if(!confirm('Confirma o pedido de encerramento?\n\nFluxo: Diretor de Área → Diretora Financeira'))return;
-  alert('Pedido submetido.\nO Diretor de Área foi notificado para validação.');
-}
-
-function submitAumentoNaoOrc(){
-  const v=parseFloat(document.getElementById('sp-valor')?.value)||0;
-  const j=document.getElementById('sp-just')?.value?.trim();
-  if(!v||!j){alert('Preencha todos os campos.');return;}
-  const rub=(RUBRICAS['banco']||[]).find(r=>r.id==='r9');
-  if(rub)rub.desp_orc+=v;
-  GF.modal=null;
-  alert(`✓ Reforço de ${fmt(v)} confirmado no Banco Global.\nRegistado no histórico.`);
-  gfNavigate('projeto',{project:'banco'});
+async function gfRejeitarAlt(id) {
+  const motivo = prompt('Motivo da rejeição:');
+  if (!motivo) return;
+  try {
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' },
+      Estado: 'rejeitada',
+      MotivoRejeicao: motivo
+    };
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items(${id})`, body, 'MERGE');
+    showNotif('Alteração rejeitada', 'success');
+    await gfLoadAll();
+  } catch (e) {
+    showNotif('Erro: ' + e.message, 'error');
+  }
 }
 
 // ═══════════════ INIT ═══════════════
