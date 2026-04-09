@@ -21,10 +21,10 @@
   --amber:#633806;--amber-bg:#FAEEDA;
   --gray:#5F5E5A;--gray-bg:#F1EFE8;
   --r:10px;--r-lg:14px;
-  /* Cores por módulo */
-  --mod-reunioes:#3B82F6;--mod-reunioes-bg:#EFF6FF;--mod-reunioes-mid:#60A5FA;
-  --mod-planeamento:#22C55E;--mod-planeamento-bg:#F0FDF4;--mod-planeamento-mid:#4ADE80;
-  --mod-financeiro:#F97316;--mod-financeiro-bg:#FFF7ED;--mod-financeiro-mid:#FB923C;
+  /* Cores por módulo - tons suaves */
+  --mod-reunioes:#1E3A5F;--mod-reunioes-bg:#EFF6FF;--mod-reunioes-mid:#3B6B9A;
+  --mod-planeamento:#1E4D3A;--mod-planeamento-bg:#F0FDF4;--mod-planeamento-mid:#3A7D5F;
+  --mod-financeiro:#8B4513;--mod-financeiro-bg:#FFF7ED;--mod-financeiro-mid:#B8860B;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:14px;color:var(--text);background:var(--bg);min-height:100vh}
 
@@ -595,15 +595,15 @@ tr:hover td{background:var(--bg3)}
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6l6-4 6 4v8H2z"/></svg>
         Início
       </div>
-      <div class="nav-item" id="gf-nav-projetos" onclick="gfNav('projetos')" style="color:rgba(255,255,255,.75)">
+      <div class="nav-item" id="gf-nav-orcamento" onclick="gfNav('orcamento')" style="color:rgba(255,255,255,.75)">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1"/><path d="M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1"/></svg>
         Orçamento
       </div>
-      <div class="nav-item" id="gf-nav-solicitacao" onclick="gfNav('solicitacao')" style="color:rgba(255,255,255,.75)">
+      <div class="nav-item" id="gf-nav-solicitacao" onclick="gfNav('solicitacao-form')" style="color:rgba(255,255,255,.75)">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
         Nova solicitação
       </div>
-      <div class="nav-item" id="gf-nav-alteracoes" onclick="gfNav('alteracoes')" style="color:rgba(255,255,255,.75)">
+      <div class="nav-item" id="gf-nav-alteracoes" onclick="gfNav('alteracao-form')" style="color:rgba(255,255,255,.75)">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8h14M9 4l5 4-5 4"/></svg>
         Alterações orç.
       </div>
@@ -1134,7 +1134,7 @@ tr:hover td{background:var(--bg3)}
             </div>
             <div class="panel-footer">
               <button class="btn" onclick="closeTarForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-tar-btn" onclick="saveTarefa()">Guardar</button>
+              <button class="btn btn-primary" id="save-tar-btn" onclick="plSaveTarefa()">Guardar</button>
             </div>
           </div>
         </div>
@@ -2684,8 +2684,8 @@ async function loadProjetos(){
 async function loadAcoes(){
   // Acoes = lista manual criada na plataforma, filho de Factorial_Projetos
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*&$orderby=Title asc&$top=1000`);
-    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId||null,dep:r.Departamento||'',tipoFJ:r.TipoAcao||'Recorrente',responsavel:'',notas:r.Notas||''}));
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*,ProjetoId/Id&$expand=ProjetoId&$orderby=Title asc&$top=1000`);
+    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId?.Id||r.ProjetoIdId||null,dep:r.Departamento?.Title||r.Departamento||'',tipoFJ:r.TipoAcao||'Recorrente',responsavel:'',notas:r.Notas||''}));
   }catch(e){console.warn('Acoes list error:',e.message);plAcoes=[];}
 }
 async function loadTarefas(){
@@ -3265,7 +3265,7 @@ function openTarFormEdit(compId){
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
 function closeTarForm(){el('frm-tar-ov').classList.remove('open');plEditTarId=null;}
-async function saveTarefa(){
+async function plSaveTarefa(){
   if(gv('ftar-origem')==='Factorial'){showNotif('As plTarefas do Factorial devem ser criadas no Factorial.','warn');return;}
   const desc=gv('ftar-desc').trim();
   if(!desc){alert('Descrição obrigatória.');return;}
@@ -4059,7 +4059,7 @@ function gfRenderRubricas() {
                     ${progressBar(0, 0, recOrc, '#10B981')}
                     <div style="font-size:11px;color:var(--text3);margin-top:2px">${gfFmt(recOrc)}</div>
                   </div>
-                  <div style="text-align:center;font-size:18px;color:var(--text3);transform:rotate(0deg);transition:transform 0.2s">▼</div>
+                  <div class="rubrica-arrow" style="text-align:center;font-size:18px;color:var(--text3);transition:transform 0.2s">▼</div>
                 </div>
               </div>
               <div class="rubrica-details" style="display:none;padding:0 16px 16px 16px;background:var(--bg)">
@@ -4123,7 +4123,7 @@ function gfRenderRubricas() {
     
     <style>
       .rubrica-item.expanded .rubrica-details { display:block !important; }
-      .rubrica-item.expanded div:first-child > div:last-child { transform:rotate(180deg) !important; }
+      .rubrica-item.expanded .rubrica-arrow { transform:rotate(180deg) !important; }
     </style>
   `;
 }
@@ -5201,6 +5201,6 @@ async function getCurrentUserId() {
 init();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9d1da6efd15910',t:'MTc3NTc3NTQ5OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
 >
