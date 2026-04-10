@@ -1267,6 +1267,44 @@ tr:hover td{background:var(--bg3)}
 
 </div><!-- /main -->
 </div><!-- /layout -->
+
+<!-- Overlay global de novo projeto (acessível de qualquer módulo) -->
+<div id="frm-proj-ov-global" class="overlay">
+  <div class="panel">
+    <div class="panel-title" id="frm-proj-title-global">Novo projeto</div>
+    <div class="fgrid">
+      <div class="fg" style="grid-column:span 2"><label>Nome do projeto *</label><input id="fp-nome-g" placeholder="Nome do projeto"></div>
+      <div class="fg"><label>Código</label><input id="fp-codigo-g" placeholder="Ex: PROJ-001"></div>
+      <div class="fg"><label>Departamento</label>
+        <select id="fp-dep-g">
+          <option value="">Selecionar...</option>
+          <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option>
+        </select>
+      </div>
+      <div class="fg"><label>Data de início</label><input id="fp-inicio-g" type="date"></div>
+      <div class="fg"><label>Data de fim</label><input id="fp-fim-g" type="date"></div>
+      <div class="fg"><label>Ano orçamental</label>
+        <select id="fp-ano-g"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option></select>
+      </div>
+      <div class="fg"><label>Estado</label>
+        <select id="fp-estado-g"><option value="active">Ativo</option><option value="Concluído">Concluído</option><option value="Pausado">Pausado</option></select>
+      </div>
+      <div class="fg people-wrap">
+        <label>Responsável</label>
+        <input id="fp-resp-g" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'fp-sug-g','fp-resp-g','fp-resp-email-g')">
+        <input id="fp-resp-email-g" type="hidden">
+        <div id="fp-sug-g" class="people-sugg"></div>
+      </div>
+      <div class="fg"></div>
+      <div class="fg" style="grid-column:span 2"><label>Notas</label><textarea id="fp-notas-g"></textarea></div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn" onclick="closeProjetoFormGlobal()">Cancelar</button>
+      <button class="btn btn-primary" id="save-proj-btn-g" onclick="saveProjetoGlobal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app-screen -->
 
 <script>// v3
@@ -2966,6 +3004,14 @@ async function delAcao(id){
 /* ===== PROJETOS CRUD ===== */
 let editProjId=null;
 function openProjetoForm(projId){
+  // Usar overlay global se estamos no módulo financeiro
+  const inFinanceiro = document.getElementById('module-gf')?.style.display !== 'none';
+  
+  if (inFinanceiro) {
+    openProjetoFormGlobal(projId);
+    return;
+  }
+  
   editProjId=projId||null;
   el('frm-proj-ov').classList.add('open');
   if(projId){
@@ -2982,6 +3028,52 @@ function openProjetoForm(projId){
     sv2('fp-inicio','');sv2('fp-fim','');
     sv2('fp-resp','');sv2('fp-resp-email','');sv2('fp-notas','');
   }
+}
+
+// Funções para o overlay global (acessível do Financeiro)
+let editProjIdGlobal = null;
+function openProjetoFormGlobal(projId){
+  editProjIdGlobal = projId || null;
+  el('frm-proj-ov-global').classList.add('open');
+  if(projId){
+    const p = [...plProjetos, ...GF_PROJETOS].find(x=>x.id===projId);if(!p)return;
+    el('frm-proj-title-global').textContent='Editar projeto';
+    sv2('fp-nome-g',p.nome||p.Title||'');sv2('fp-codigo-g',p.codigo||'');sv2('fp-dep-g',p.dep||'');
+    sv2('fp-estado-g',p.estado||'active');sv2('fp-ano-g',p.anoOrcamental||2026);
+    sv2('fp-inicio-g',p.dataInicio||'');sv2('fp-fim-g',p.dataFim||'');
+    sv2('fp-resp-g',p.responsavel||'');sv2('fp-notas-g',p.notas||'');
+  }else{
+    el('frm-proj-title-global').textContent='Novo projeto';
+    sv2('fp-nome-g','');sv2('fp-codigo-g','');sv2('fp-dep-g','');
+    sv2('fp-estado-g','active');sv2('fp-ano-g',2026);
+    sv2('fp-inicio-g','');sv2('fp-fim-g','');
+    sv2('fp-resp-g','');sv2('fp-resp-email-g','');sv2('fp-notas-g','');
+  }
+}
+function closeProjetoFormGlobal(){el('frm-proj-ov-global').classList.remove('open');editProjIdGlobal=null;}
+async function saveProjetoGlobal(){
+  const nome=gv('fp-nome-g').trim();if(!nome){alert('Nome do projeto obrigatório.');return;}
+  const btn=el('save-proj-btn-g');btn.textContent='A guardar...';btn.disabled=true;
+  try{
+    const depVal=gv('fp-dep-g');
+    const body={__metadata:{type:'SP.Data.FJ_x005f_ProjetosListItem'},Title:nome,Codigo:gv('fp-codigo-g'),Estado:gv('fp-estado-g'),AnoOrcamental:parseInt(gv('fp-ano-g')),Notas:gv('fp-notas-g')};
+    if(gv('fp-inicio-g'))body.DataInicio=gv('fp-inicio-g')+'T00:00:00Z';
+    if(gv('fp-fim-g'))body.DataFim=gv('fp-fim-g')+'T00:00:00Z';
+    const email=gv('fp-resp-email-g');
+    if(email){const uid=await getSpUID(email);if(uid)body.ResponsavelId=uid;}
+    if(depVal && plDepartamentos){
+      const depItem=plDepartamentos.find(d=>d.Title===depVal||d.nome===depVal);
+      if(depItem)body.DepartamentoId=depItem.id||depItem.ID;
+    }
+    if(editProjIdGlobal)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items(${editProjIdGlobal})`,body,'MERGE','*');
+    else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items`,body,'POST');
+    closeProjetoFormGlobal();
+    // Recarregar dados
+    await loadProjetos();
+    await gfLoadAll();
+    showNotif('Projeto guardado!','success');
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+  btn.textContent='Guardar';btn.disabled=false;
 }
 function closeProjetoForm(){el('frm-proj-ov').classList.remove('open');editProjId=null;}
 async function saveProjeto(){
@@ -3938,14 +4030,21 @@ function gfRenderOrcamento() {
       </div>
     </div>
     
-    <div class="card" style="padding:0;overflow:hidden">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <div class="card" style="padding:0;overflow-x:auto">
+      <table style="width:100%;min-width:900px;border-collapse:collapse;font-size:13px;table-layout:fixed">
+        <colgroup>
+          <col style="width:30%">
+          <col style="width:10%">
+          <col style="width:25%">
+          <col style="width:25%">
+          <col style="width:10%">
+        </colgroup>
         <thead>
           <tr style="background:var(--mod-financeiro-bg)">
             <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--mod-financeiro)">Projeto</th>
-            <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--mod-financeiro)">Departamento</th>
-            <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--mod-financeiro);min-width:200px">Despesas</th>
-            <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--mod-financeiro);min-width:200px">Receita</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:600;color:var(--mod-financeiro)">Dep.</th>
+            <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--mod-financeiro)">Despesas</th>
+            <th style="padding:12px 16px;text-align:left;font-weight:600;color:var(--mod-financeiro)">Receita</th>
             <th style="padding:12px 16px;text-align:center;font-weight:600;color:var(--mod-financeiro)">Ações</th>
           </tr>
         </thead>
@@ -3961,25 +4060,25 @@ function gfRenderOrcamento() {
                       ${p.isBanco ? '🏦 ' : ''}${p.nome}
                     </a>
                   </td>
-                  <td style="padding:14px 16px">${depBadge(p.dep)}</td>
-                  <td style="padding:14px 16px">
+                  <td style="padding:14px 16px;text-align:center">${depBadge(p.dep)}</td>
+                  <td style="padding:14px 20px">
                     ${progressBar(p.despProc, p.despSol, p.despOrc)}
-                    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text3)">
+                    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text3)">
                       <span>Sol: ${gfFmt(p.despSol)}</span>
                       <span>Proc: ${gfFmt(p.despProc)}</span>
-                      <span style="font-weight:600;color:var(--text)">Total: ${gfFmt(p.despOrc)}</span>
+                      <span style="font-weight:600;color:var(--text)">Orç: ${gfFmt(p.despOrc)}</span>
                     </div>
                   </td>
-                  <td style="padding:14px 16px">
+                  <td style="padding:14px 20px">
                     ${progressBar(p.recProc, p.recSol, p.recOrc, '#F97316')}
-                    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text3)">
+                    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text3)">
                       <span>Sol: ${gfFmt(p.recSol)}</span>
                       <span>Proc: ${gfFmt(p.recProc)}</span>
-                      <span style="font-weight:600;color:var(--text)">Total: ${gfFmt(p.recOrc)}</span>
+                      <span style="font-weight:600;color:var(--text)">Orç: ${gfFmt(p.recOrc)}</span>
                     </div>
                   </td>
                   <td style="padding:14px 16px;text-align:center">
-                    <button class="btn btn-sm" style="border-color:var(--mod-financeiro);color:var(--mod-financeiro)" onclick="GF.project=${p.id};gfNav('orcamento-rubricas')">Ver rúbricas</button>
+                    <button class="btn btn-sm" style="border-color:var(--mod-financeiro);color:var(--mod-financeiro)" onclick="GF.project=${p.id};gfNav('orcamento-rubricas')">Ver</button>
                   </td>
                 </tr>
               `;
@@ -4131,28 +4230,28 @@ function gfRenderRubricas() {
                 <div style="font-size:12px;color:var(--text3)">${r.tipo || 'Despesa'}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text3)">DESP. ORÇ.</div>
-                <div style="font-weight:600">${gfFmt(despOrc)}</div>
+                <div style="font-size:10px;color:#2563EB">DESP. ORÇ.</div>
+                <div style="font-weight:600;color:#1E40AF">${gfFmt(despOrc)}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text3)">DESP. SOL.</div>
-                <div style="font-weight:600;color:#2563EB">${gfFmt(desp.solicitada)}</div>
+                <div style="font-size:10px;color:#2563EB">DESP. SOL.</div>
+                <div style="font-weight:600;color:#3B82F6">${gfFmt(desp.solicitada)}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text3)">DESP. PROC.</div>
-                <div style="font-weight:600;color:var(--mod-financeiro)">${gfFmt(desp.processada)}</div>
+                <div style="font-size:10px;color:#2563EB">DESP. PROC.</div>
+                <div style="font-weight:600;color:#60A5FA">${gfFmt(desp.processada)}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text3)">REC. ORÇ.</div>
-                <div style="font-weight:500">${gfFmt(recOrc)}</div>
+                <div style="font-size:10px;color:#EA580C">REC. ORÇ.</div>
+                <div style="font-weight:500;color:#C2410C">${gfFmt(recOrc)}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text3)">REC. SUB.</div>
+                <div style="font-size:10px;color:#EA580C">REC. SOL.</div>
                 <div style="font-weight:500;color:#F97316">${gfFmt(rec.solicitada)}</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:10px;color:var(--text3)">REC. PROC.</div>
-                <div style="font-weight:500;color:#F97316">${gfFmt(rec.processada)}</div>
+                <div style="font-size:10px;color:#EA580C">REC. PROC.</div>
+                <div style="font-weight:500;color:#FB923C">${gfFmt(rec.processada)}</div>
               </div>
               <div class="rubrica-arrow" style="text-align:center;font-size:14px;color:var(--text3);transition:transform 0.2s">▼</div>
             </div>
@@ -4161,45 +4260,45 @@ function gfRenderRubricas() {
             <div class="rubrica-details" style="display:none;padding:16px;background:var(--bg)">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
                 <!-- DESPESAS -->
-                <div style="padding:16px;background:#fff;border-radius:8px">
-                  <div style="font-size:12px;font-weight:600;color:#2563EB;margin-bottom:12px">DESPESAS</div>
+                <div style="padding:16px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
+                  <div style="font-size:12px;font-weight:600;color:#1E40AF;margin-bottom:12px">DESPESAS</div>
                   ${progressBarDesp(desp.solicitada, desp.aprovada, desp.processada, despOrc)}
-                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
                     <div>
-                      <div style="font-size:10px;color:var(--text3)">Solicitada</div>
+                      <div style="font-size:10px;color:#1E40AF">Orçamentada</div>
+                      <div style="font-weight:600;color:#1E3A8A">${gfFmt(despOrc)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:#1E40AF">Solicitada</div>
                       <div style="font-weight:600;color:#2563EB">${gfFmt(desp.solicitada)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:var(--text3)">Processada</div>
-                      <div style="font-weight:600;color:#1E40AF">${gfFmt(desp.processada)}</div>
+                      <div style="font-size:10px;color:#1E40AF">Processada</div>
+                      <div style="font-weight:600;color:#3B82F6">${gfFmt(desp.processada)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:var(--text3)">Orçamentada</div>
-                      <div style="font-weight:600">${gfFmt(despOrc)}</div>
+                      <div style="font-size:10px;color:#1E40AF">Disponível</div>
+                      <div style="font-weight:600;color:${despDisp >= 0 ? '#059669' : '#DC2626'}">${gfFmt(despDisp)}</div>
                     </div>
-                  </div>
-                  <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px">
-                    <span style="color:var(--text3)">Disponível: </span>
-                    <span style="font-weight:600;color:${despDisp >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(despDisp)}</span>
                   </div>
                 </div>
                 
                 <!-- RECEITA -->
-                <div style="padding:16px;background:#fff;border-radius:8px">
-                  <div style="font-size:12px;font-weight:600;color:#F97316;margin-bottom:12px">RECEITA</div>
+                <div style="padding:16px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
+                  <div style="font-size:12px;font-weight:600;color:#C2410C;margin-bottom:12px">RECEITA</div>
                   ${progressBarRec(rec.solicitada, rec.processada, recOrc)}
                   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
                     <div>
-                      <div style="font-size:10px;color:var(--text3)">Submetida</div>
-                      <div style="font-weight:600;color:#F97316">${gfFmt(rec.solicitada)}</div>
+                      <div style="font-size:10px;color:#C2410C">Orçamentada</div>
+                      <div style="font-weight:600;color:#9A3412">${gfFmt(recOrc)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:var(--text3)">Processada</div>
-                      <div style="font-weight:600;color:#EA580C">${gfFmt(rec.processada)}</div>
+                      <div style="font-size:10px;color:#C2410C">Solicitada</div>
+                      <div style="font-weight:600;color:#EA580C">${gfFmt(rec.solicitada)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:var(--text3)">Orçamentada</div>
-                      <div style="font-weight:600">${gfFmt(recOrc)}</div>
+                      <div style="font-size:10px;color:#C2410C">Processada</div>
+                      <div style="font-weight:600;color:#F97316">${gfFmt(rec.processada)}</div>
                     </div>
                   </div>
                 </div>
@@ -5432,7 +5531,7 @@ async function getCurrentUserId() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9d8b5178406936',t:'MTc3NTc3OTk5MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ea352dd1adf8c92',t:'MTc3NTg0MDU5Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
 >
