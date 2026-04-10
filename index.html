@@ -878,77 +878,83 @@ tr:hover td{background:var(--bg3)}
         <div class="page-title">Gestão de Utilizadores e Permissões</div>
         <div class="stats">
           <div class="stat"><span class="stat-n" id="admin-total">—</span><span class="stat-l">Utilizadores</span></div>
-          <div class="stat"><span class="stat-n" id="admin-df">—</span><span class="stat-l">Diretores Financeiros</span></div>
-          <div class="stat"><span class="stat-n" id="admin-dir">—</span><span class="stat-l">Diretores de Área</span></div>
-          <div class="stat"><span class="stat-n" id="admin-colab">—</span><span class="stat-l">Colaboradores</span></div>
+          <div class="stat"><span class="stat-n" id="admin-pe">—</span><span class="stat-l">Presidente Executivo</span></div>
+          <div class="stat"><span class="stat-n" id="admin-dir">—</span><span class="stat-l">Diretores</span></div>
+          <div class="stat"><span class="stat-n" id="admin-membros">—</span><span class="stat-l">Membros</span></div>
         </div>
         <div class="toolbar">
-          <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="admin-search" placeholder="Pesquisar utilizador..." oninput="renderAdminUsers()"></div>
-          <select class="flt" id="admin-filter-role" onchange="renderAdminUsers()">
-            <option value="">Todos os perfis</option>
-            <option value="pca">Presidente CA</option>
-            <option value="pe">Presidente Executivo</option>
-            <option value="df">Diretor Financeiro</option>
-            <option value="area_director">Diretor de Área</option>
-            <option value="worker">Colaborador</option>
-          </select>
-          <select class="flt" id="admin-filter-dept" onchange="renderAdminUsers()">
-            <option value="">Todos os departamentos</option>
+          <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="admin-search" placeholder="Pesquisar..." oninput="renderFJUtilizadores()"></div>
+          <select class="flt" id="admin-filter-equipa" onchange="renderFJUtilizadores()">
+            <option value="">Todas as equipas</option>
+            <option>CAdm</option>
             <option>Gestão</option>
-            <option>Op. Norte</option>
-            <option>Op. Sul</option>
+            <option>Op.Norte</option>
+            <option>Op.Sul</option>
             <option>Financeiro</option>
             <option>Impacto</option>
           </select>
-          <button class="btn" onclick="loadOrgUsers().then(()=>renderAdminUsers())">&#8635; Atualizar</button>
+          <select class="flt" id="admin-filter-cargo" onchange="renderFJUtilizadores()">
+            <option value="">Todos os cargos</option>
+            <option value="Presidente Executivo">Presidente Executivo</option>
+            <option value="Diretor">Diretor</option>
+            <option value="Membro">Membro</option>
+          </select>
+          <button class="btn btn-primary" onclick="openNovoUtilizador()">+ Novo Utilizador</button>
+          <button class="btn" onclick="loadFJUtilizadores().then(()=>renderFJUtilizadores())">&#8635; Atualizar</button>
         </div>
         <div class="table-wrap">
           <table>
-            <colgroup><col style="width:25%"><col style="width:25%"><col style="width:15%"><col style="width:15%"><col style="width:20%"></colgroup>
-            <thead><tr><th>Nome</th><th>Email</th><th>Departamento</th><th>Perfil Atual</th><th>Ações</th></tr></thead>
+            <colgroup><col style="width:20%"><col style="width:20%"><col style="width:20%"><col style="width:15%"><col style="width:25%"></colgroup>
+            <thead><tr><th>Nome</th><th>Email</th><th>Equipas</th><th>Cargo</th><th>Ações</th></tr></thead>
             <tbody id="tbody-admin"></tbody>
           </table>
         </div>
         <div id="admin-count" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
 
-        <!-- Modal editar permissões -->
-        <div class="overlay" id="admin-modal-ov" style="display:none">
-          <div class="panel" style="max-width:500px">
-            <div class="panel-title">Editar Permissões</div>
+        <!-- Modal editar/criar utilizador -->
+        <div class="overlay" id="admin-modal-ov">
+          <div class="panel" style="max-width:550px">
+            <div class="panel-title" id="admin-modal-title">Novo Utilizador</div>
+            <input type="hidden" id="admin-edit-id">
             <div class="fgrid">
-              <div class="fg" style="grid-column:1/-1">
-                <label>Utilizador</label>
-                <input type="text" id="admin-edit-name" disabled style="background:#f5f5f5">
+              <div class="fg">
+                <label>Nome *</label>
+                <input type="text" id="admin-edit-name" placeholder="Nome completo">
               </div>
               <div class="fg">
-                <label>Perfil de Acesso</label>
-                <select id="admin-edit-role">
-                  <option value="worker">Colaborador</option>
-                  <option value="area_director">Diretor de Área</option>
-                  <option value="df">Diretor Financeiro</option>
-                  <option value="pe">Presidente Executivo</option>
-                  <option value="pca">Presidente CA</option>
+                <label>Email *</label>
+                <input type="email" id="admin-edit-email" placeholder="email@fjuventude.pt">
+              </div>
+              <div class="fg">
+                <label>Cargo *</label>
+                <select id="admin-edit-cargo">
+                  <option value="Membro">Membro</option>
+                  <option value="Diretor">Diretor</option>
+                  <option value="Presidente Executivo">Presidente Executivo</option>
                 </select>
               </div>
               <div class="fg">
-                <label>Departamento</label>
-                <select id="admin-edit-dept">
-                  <option value="">— Selecionar —</option>
-                  <option>Gestão</option>
-                  <option>Op. Norte</option>
-                  <option>Op. Sul</option>
-                  <option>Financeiro</option>
-                  <option>Impacto</option>
-                </select>
+                <label>Equipas</label>
+                <div id="admin-edit-equipas" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:var(--bg);border-radius:6px">
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="CAdm"> CAdm</label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Gestão"> Gestão</label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Op.Norte"> Op.Norte</label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Op.Sul"> Op.Sul</label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Financeiro"> Financeiro</label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Impacto"> Impacto</label>
+                </div>
               </div>
               <div class="fg" style="grid-column:1/-1">
-                <label>Projetos com acesso (separados por vírgula)</label>
-                <input type="text" id="admin-edit-projects" placeholder="Deixar vazio para acesso a todos">
+                <label>Projetos Associados</label>
+                <select id="admin-edit-projetos" multiple style="height:100px">
+                  <!-- Populado dinamicamente -->
+                </select>
+                <div style="font-size:11px;color:var(--text3);margin-top:4px">Ctrl+Click para selecionar múltiplos</div>
               </div>
             </div>
             <div class="panel-footer">
               <button class="btn" onclick="closeAdminModal()">Cancelar</button>
-              <button class="btn btn-primary" onclick="saveUserPermissions()">Guardar</button>
+              <button class="btn btn-primary" onclick="saveUtilizador()">Guardar</button>
             </div>
           </div>
         </div>
@@ -1051,7 +1057,6 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
-          <select class="flt" id="ff-h-tipo" onchange="renderHier()"><option value="">Inovação + Recorrente</option><option value="INOV">Só Inovação</option><option value="Recorrente">Só Recorrente</option></select>
           <button class="btn btn-primary" onclick="openProjetoForm()">+ Novo projeto</button>
         </div>
         <div id="hier-container"></div>
@@ -1453,7 +1458,89 @@ async function loadUserGroups(){
 
 // ═══ SISTEMA DE UTILIZADORES ═══
 let orgUsers=[];
+let fjUtilizadores=[]; // Lista FJ_Utilizadores do SharePoint
 let userRoles={}; // {email: {role:'worker'|'area_director'|'df'|'pe'|'pca', dept:'', projects:[]}}
+let currentUserFJ=null; // Dados do utilizador atual da lista FJ_Utilizadores
+
+// Carregar utilizadores da lista FJ_Utilizadores
+async function loadFJUtilizadores(){
+  try{
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items?$select=*,Projetos/Id,Projetos/Title&$expand=Projetos&$top=500`);
+    fjUtilizadores=(d.d?.results||[]).map(u=>({
+      id:u.Id,
+      titulo:u.Title||'',
+      email:u.Email?.toLowerCase()||'',
+      equipa:u.Equipa?u.Equipa.results||[u.Equipa]:[],
+      cargo:u.Titulo||'Membro', // Presidente Executivo, Diretor, Membro
+      projetos:(u.Projetos?.results||[]).map(p=>p.Id)
+    }));
+    console.log('FJ_Utilizadores carregados:', fjUtilizadores);
+    
+    // Determinar dados do utilizador atual
+    const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
+    currentUserFJ=fjUtilizadores.find(u=>u.email===userEmail);
+    
+    if(currentUserFJ){
+      console.log('Utilizador atual:', currentUserFJ);
+      // Determinar _financeRole baseado no cargo e equipa
+      _financeRole=determinarFinanceRole(currentUserFJ);
+      console.log('Finance role:', _financeRole);
+    }else{
+      console.log('Utilizador não encontrado em FJ_Utilizadores');
+      _financeRole='worker';
+    }
+  }catch(e){
+    console.warn('Erro ao carregar FJ_Utilizadores:', e.message);
+    fjUtilizadores=[];
+  }
+}
+
+// Determinar o role financeiro baseado no cargo e equipa
+function determinarFinanceRole(u){
+  if(!u) return 'worker';
+  
+  const cargo=u.cargo||'';
+  const equipas=u.equipa||[];
+  
+  // Presidente Executivo (PE)
+  if(cargo==='Presidente Executivo') return 'pe';
+  
+  // Conselho de Administração (PCA)
+  if(equipas.includes('CAdm') && cargo==='Diretor') return 'pca';
+  
+  // Diretora Financeira (DF) = Diretor + Equipa Financeiro
+  if(cargo==='Diretor' && equipas.includes('Financeiro')) return 'df';
+  
+  // Diretor de Área (qualquer diretor)
+  if(cargo==='Diretor') return 'area_director';
+  
+  // Membro normal
+  return 'worker';
+}
+
+// Verificar se utilizador pode ver um item (baseado em equipa/departamento)
+function userCanView(departamento){
+  if(!currentUserFJ) return true; // Se não está na lista, vê tudo (fallback)
+  
+  const equipas=currentUserFJ.equipa||[];
+  const cargo=currentUserFJ.cargo||'';
+  
+  // PE, Diretores e Gestão vêem tudo
+  if(cargo==='Presidente Executivo') return true;
+  if(cargo==='Diretor') return true;
+  if(equipas.includes('Gestão')) return true;
+  if(equipas.includes('CAdm')) return true;
+  
+  // Outros só vêem do seu departamento
+  if(!departamento) return true;
+  return equipas.includes(departamento);
+}
+
+// Verificar se é admin (conselho.administracao@fjuventude.pt)
+function isAdmin(){
+  const email=(user?.username||user?.preferredUsername||'').toLowerCase();
+  return email==='conselho.administracao@fjuventude.pt';
+}
 
 // Carregar utilizadores da organização via Graph API
 async function loadOrgUsers(){
@@ -1535,15 +1622,18 @@ function showApp(){
   document.getElementById('dd-email').textContent=user.username;
   const groupNames=Object.entries(GROUPS).filter(([k,v])=>userGroups.includes(v)).map(([k])=>k).join(', ')||'Sem grupos';
   document.getElementById('dd-groups').textContent=groupNames;
-  _financeRole=getFinanceRole(userGroups);
   
-  // Mostrar menu de administração se for admin (CA ou Gestão)
-  if(isAdmin()){
-    document.getElementById('admin-section-label').style.display='block';
-    document.getElementById('nav-admin').style.display='flex';
-    // Carregar utilizadores da organização
-    loadOrgUsers();
-  }
+  // Carregar utilizadores do SharePoint e determinar permissões
+  loadFJUtilizadores().then(()=>{
+    // Atualizar UI baseado nas permissões
+    if(isAdmin()){
+      const adminLabel=document.getElementById('admin-section-label');
+      const adminNav=document.getElementById('nav-admin');
+      if(adminLabel) adminLabel.style.display='block';
+      if(adminNav) adminNav.style.display='flex';
+      loadOrgUsers();
+    }
+  });
   
   loadSharedProjetos();
   loadItems();loadExtItems();loadTarefas();loadHistReunioes();loadSavedSessions();
@@ -2551,85 +2641,117 @@ function showPage(p){
 const ROLE_LABELS={'pca':'Presidente CA','pe':'Presidente Executivo','df':'Diretor Financeiro','area_director':'Diretor de Área','worker':'Colaborador'};
 let _adminEditEmail=null;
 
-function renderAdminUsers(){
+function renderFJUtilizadores(){
   const search=(el('admin-search')?.value||'').toLowerCase();
-  const filterRole=el('admin-filter-role')?.value||'';
-  const filterDept=el('admin-filter-dept')?.value||'';
+  const filterEquipa=el('admin-filter-equipa')?.value||'';
+  const filterCargo=el('admin-filter-cargo')?.value||'';
   
-  let users=orgUsers.filter(u=>{
-    const role=userRoles[u.email]?.role||'worker';
-    const dept=userRoles[u.email]?.dept||u.dept||'';
-    if(search&&!u.name.toLowerCase().includes(search)&&!u.email.toLowerCase().includes(search))return false;
-    if(filterRole&&role!==filterRole)return false;
-    if(filterDept&&dept!==filterDept)return false;
+  let users=fjUtilizadores.filter(u=>{
+    if(search&&!u.titulo.toLowerCase().includes(search)&&!u.email.toLowerCase().includes(search))return false;
+    if(filterEquipa&&!(u.equipa||[]).includes(filterEquipa))return false;
+    if(filterCargo&&u.cargo!==filterCargo)return false;
     return true;
   });
   
   // Estatísticas
-  const stats={total:orgUsers.length,df:0,dir:0,colab:0};
-  orgUsers.forEach(u=>{
-    const role=userRoles[u.email]?.role||'worker';
-    if(role==='df')stats.df++;
-    else if(['pca','pe','area_director'].includes(role))stats.dir++;
-    else stats.colab++;
+  const stats={total:fjUtilizadores.length,pe:0,dir:0,membros:0};
+  fjUtilizadores.forEach(u=>{
+    if(u.cargo==='Presidente Executivo')stats.pe++;
+    else if(u.cargo==='Diretor')stats.dir++;
+    else stats.membros++;
   });
-  el('admin-total').textContent=stats.total;
-  el('admin-df').textContent=stats.df;
-  el('admin-dir').textContent=stats.dir;
-  el('admin-colab').textContent=stats.colab;
+  if(el('admin-total'))el('admin-total').textContent=stats.total;
+  if(el('admin-pe'))el('admin-pe').textContent=stats.pe;
+  if(el('admin-dir'))el('admin-dir').textContent=stats.dir;
+  if(el('admin-membros'))el('admin-membros').textContent=stats.membros;
   
   const tbody=el('tbody-admin');
   if(!tbody)return;
-  tbody.innerHTML=users.map(u=>{
-    const role=userRoles[u.email]?.role||'worker';
-    const dept=userRoles[u.email]?.dept||u.dept||'—';
-    const roleClass={'pca':'b-r','pe':'b-o','df':'b-b','area_director':'b-y','worker':'b-gray'}[role]||'b-gray';
+  tbody.innerHTML=users.length===0?`<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Sem utilizadores</td></tr>`:users.map(u=>{
+    const equipas=(u.equipa||[]).map(e=>`<span style="display:inline-block;padding:2px 6px;background:var(--bg3);border-radius:4px;font-size:11px;margin:1px">${e}</span>`).join('');
+    const cargoClass=u.cargo==='Presidente Executivo'?'b-r':u.cargo==='Diretor'?'b-b':'b-gray';
     return`<tr>
-      <td><strong>${u.name}</strong></td>
+      <td><strong>${u.titulo}</strong></td>
       <td style="color:#5a6278;font-size:13px">${u.email}</td>
-      <td>${dept}</td>
-      <td><span class="bdg ${roleClass}">${ROLE_LABELS[role]||role}</span></td>
+      <td>${equipas||'—'}</td>
+      <td><span class="bdg ${cargoClass}">${u.cargo}</span></td>
       <td>
-        <button class="btn btn-sm" onclick="openAdminEdit('${u.email}')">Editar</button>
+        <button class="btn btn-sm" onclick="openEditUtilizador(${u.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteUtilizador(${u.id})">✕</button>
       </td>
     </tr>`;
   }).join('');
   
-  el('admin-count').textContent=`A mostrar ${users.length} de ${orgUsers.length} utilizadores`;
+  if(el('admin-count'))el('admin-count').textContent=`A mostrar ${users.length} de ${fjUtilizadores.length} utilizadores`;
+  
+  // Preencher dropdown de projetos no modal
+  const projSelect=el('admin-edit-projetos');
+  if(projSelect){
+    projSelect.innerHTML=plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  }
 }
 
-function openAdminEdit(email){
-  _adminEditEmail=email;
-  const u=orgUsers.find(x=>x.email===email);
-  const r=userRoles[email]||{role:'worker',dept:u?.dept||'',projects:[]};
-  
-  el('admin-edit-name').value=u?.name||email;
-  el('admin-edit-role').value=r.role||'worker';
-  el('admin-edit-dept').value=r.dept||'';
-  el('admin-edit-projects').value=(r.projects||[]).join(', ');
-  
-  el('admin-modal-ov').style.display='flex';
+function openNovoUtilizador(){
+  el('admin-modal-title').textContent='Novo Utilizador';
+  el('admin-edit-id').value='';
+  el('admin-edit-name').value='';
+  el('admin-edit-name').disabled=false;
+  el('admin-edit-email').value='';
+  el('admin-edit-email').disabled=false;
+  el('admin-edit-cargo').value='Membro';
+  document.querySelectorAll('#admin-edit-equipas input[type=checkbox]').forEach(cb=>cb.checked=false);
+  if(el('admin-edit-projetos'))Array.from(el('admin-edit-projetos').options).forEach(o=>o.selected=false);
+  el('admin-modal-ov').classList.add('open');
+}
+
+function openEditUtilizador(id){
+  const u=fjUtilizadores.find(x=>x.id===id);
+  if(!u)return;
+  el('admin-modal-title').textContent='Editar Utilizador';
+  el('admin-edit-id').value=id;
+  el('admin-edit-name').value=u.titulo;
+  el('admin-edit-email').value=u.email;
+  el('admin-edit-cargo').value=u.cargo||'Membro';
+  document.querySelectorAll('#admin-edit-equipas input[type=checkbox]').forEach(cb=>{
+    cb.checked=(u.equipa||[]).includes(cb.value);
+  });
+  if(el('admin-edit-projetos'))Array.from(el('admin-edit-projetos').options).forEach(o=>{
+    o.selected=(u.projetos||[]).includes(parseInt(o.value));
+  });
+  el('admin-modal-ov').classList.add('open');
 }
 
 function closeAdminModal(){
-  el('admin-modal-ov').style.display='none';
-  _adminEditEmail=null;
+  el('admin-modal-ov').classList.remove('open');
 }
 
-function saveUserPermissions(){
-  if(!_adminEditEmail)return;
-  
-  const role=el('admin-edit-role').value;
-  const dept=el('admin-edit-dept').value;
-  const projectsStr=el('admin-edit-projects').value;
-  const projects=projectsStr?projectsStr.split(',').map(p=>p.trim()).filter(p=>p):[];
-  
-  userRoles[_adminEditEmail]={role,dept,projects};
-  saveUserRoles();
-  
-  showNotif('Permissões atualizadas com sucesso','success');
-  closeAdminModal();
-  renderAdminUsers();
+async function saveUtilizador(){
+  const id=el('admin-edit-id').value;
+  const titulo=el('admin-edit-name').value.trim();
+  const email=el('admin-edit-email').value.trim().toLowerCase();
+  const cargo=el('admin-edit-cargo').value;
+  if(!titulo||!email){showNotif('Nome e email são obrigatórios','error');return;}
+  const equipas=[];
+  document.querySelectorAll('#admin-edit-equipas input[type=checkbox]:checked').forEach(cb=>equipas.push(cb.value));
+  const projetos=[];
+  if(el('admin-edit-projetos'))Array.from(el('admin-edit-projetos').selectedOptions).forEach(o=>projetos.push(parseInt(o.value)));
+  try{
+    const body={__metadata:{type:'SP.Data.FJ_x005f_UtilizadoresListItem'},Title:titulo,Email:email,Titulo:cargo,Equipa:{results:equipas}};
+    if(projetos.length>0)body.ProjetosId={results:projetos};
+    if(id)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items(${id})`,body,'MERGE','*');
+    else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items`,body,'POST');
+    showNotif('Utilizador '+(id?'atualizado':'criado'),'success');
+    closeAdminModal();await loadFJUtilizadores();renderFJUtilizadores();
+  }catch(e){showNotif('Erro: '+e.message,'error');console.error(e);}
+}
+
+async function deleteUtilizador(id){
+  if(!confirm('Eliminar este utilizador?'))return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items(${id})`,null,'DELETE');
+    showNotif('Utilizador eliminado','success');
+    await loadFJUtilizadores();renderFJUtilizadores();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 function showNotif(msg,type='info'){
   const n=el('notif');n.textContent=msg;
@@ -2716,14 +2838,16 @@ async function loadDepartamentos(){
 }
 async function loadProjetos(){
   // Factorial_Projetos = plProjetos top-level (vindos do Factorial)
-  const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*&$orderby=Title asc&$top=1000`);
-  plProjetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:r.Departamento||'',estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',notas:r.Notas||'',tipoFJ:r.Tipo_FJ||(r.Title?.includes('(INOV)')?'INOV':'Recorrente')}));
+  const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*,Departamento/Title&$expand=Departamento&$orderby=Title asc&$top=1000`);
+  plProjetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:r.Departamento?.Title||'',estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',notas:r.Notas||'',responsavel:r.Responsavel?.Title||'',membros:r.Membros||[]}));
+  console.log('Projetos carregados:', plProjetos);
 }
 async function loadAcoes(){
   // Acoes = lista manual criada na plataforma, filho de Factorial_Projetos
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*,ProjetoId/Id&$expand=ProjetoId&$orderby=Title asc&$top=1000`);
-    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId?.Id||r.ProjetoIdId||null,dep:r.Departamento?.Title||r.Departamento||'',tipoFJ:r.TipoAcao||'Recorrente',responsavel:'',notas:r.Notas||''}));
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*,ProjetoId/Id,Departamento/Title&$expand=ProjetoId,Departamento&$orderby=Title asc&$top=1000`);
+    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId?.Id||r.ProjetoIdId||null,dep:r.Departamento?.Title||'',responsavel:'',notas:r.Notas||''}));
+    console.log('Ações carregadas:', plAcoes, 'Projetos IDs:', plProjetos.map(p=>p.id));
   }catch(e){console.warn('Acoes list error:',e.message);plAcoes=[];}
 }
 async function loadTarefas(){
@@ -2829,26 +2953,24 @@ function kpiEstado(k,pct){
 
 /* ===== HIERARQUIA ===== */
 function renderHier(){
-  const dep=gv('ff-h-dep'),tipo=gv('ff-h-tipo');
+  const dep=gv('ff-h-dep');
   const c=el('hier-container');
   const projs=plProjetos.filter(p=>!dep||p.dep===dep);
-  if(!projs.length){c.innerHTML='<div class="empty">Sem plProjetos carregados do Factorial.</div>';return;}
+  if(!projs.length){c.innerHTML='<div class="empty">Sem projetos carregados.</div>';return;}
   c.innerHTML=projs.map(p=>{
-    const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id)&&(!tipo||a.tipoFJ===tipo));
+    const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id));
     // Tarefas não afetas a nenhuma ação mas com projetoId deste projeto, OU sem ação e sem projeto (mostrar em todos)
     const tarSemAcao=plTarefas.filter(t=>!t.acaoId&&(String(t.projetoId)===String(p.id)));
     const tarTotal=plTarefas.filter(t=>String(t.projetoId)===String(p.id)||pAcoes.some(a=>String(t.acaoId)===String(a.id)));
     const concTotal=tarTotal.filter(t=>t.estado==='Concluída').length;
     const pct=tarTotal.length?Math.round((concTotal/tarTotal.length)*100):null;
     const rag=pAcoes.length?(['r','a','v'].reduce((best,r)=>pAcoes.some(a=>calcRag(a.id)===r)?r:best,'c')):'c';
-    const tipoFJ=p.tipoFJ||(p.nome.includes('(INOV)')?'INOV':'Recorrente');
     return`<div class="hier-proj">
       <div class="hier-proj-hdr" onclick="toggleHier(${p.id})">
         <span class="rag rag-${rag}"></span>
         <span style="font-size:14px;font-weight:700;color:var(--g1);flex:1">${p.nome}</span>
-        ${badgeHTML(tipoFJ==='INOV'?'b-inov':'b-rec',tipoFJ)}
         ${depB(p.dep)}
-        <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} plTarefas${pct!==null?' · '+pct+'% conc.':''}</span>
+        <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} tarefas${pct!==null?' · '+pct+'% conc.':''}</span>
         <button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>
         <svg id="hier-arrow-${p.id}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="transition:transform .2s"><path d="M4 6l4 4 4-4"/></svg>
       </div>
@@ -2860,9 +2982,8 @@ function renderHier(){
           return`<div class="hier-acao-row" onclick="toggleHierAcao(${a.id})">
             <span class="rag rag-${r}"></span>
             <span class="hier-acao-name">${a.nome}</span>
-            ${badgeHTML(a.tipoFJ==='INOV'?'b-inov':'b-rec',a.tipoFJ||'Rec')}
             ${a.dep?depB(a.dep):''}
-            <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} plTarefas</span>
+            <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} tarefas</span>
             <button class="btn btn-sm" onclick="event.stopPropagation();openAcaoForm(${p.id},${a.id})">Editar</button>
             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delAcao(${a.id})">✕</button>
             <button class="btn btn-sm btn-or" onclick="event.stopPropagation();openTarFormForAcao(${a.id})">+ Tarefa</button>
@@ -4026,7 +4147,6 @@ function gfRenderOrcamento() {
         ${[2024, 2025, 2026, 2027].map(y => `
           <button class="btn btn-sm ${y === GF.year ? '' : ''}" style="${y === GF.year ? 'background:var(--mod-financeiro);color:#fff;border-color:var(--mod-financeiro)' : ''}" onclick="GF.year=${y};gfRender()">${y}</button>
         `).join('')}
-        <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="openProjetoForm()">+ Novo projeto</button>
       </div>
     </div>
     
@@ -5531,7 +5651,7 @@ async function getCurrentUserId() {
 
 init();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ea352dd1adf8c92',t:'MTc3NTg0MDU5Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ea3a2900cff4899',t:'MTc3NTg0Mzg1Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
 </html>
 >
