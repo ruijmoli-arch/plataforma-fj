@@ -1312,6 +1312,41 @@ tr:hover td{background:var(--bg3)}
 
 </div><!-- /app-screen -->
 
+<!-- Modal Banco Global (Exclusivo Diretora Financeira) -->
+<div id="banco-global-modal" class="overlay">
+  <div class="panel" style="max-width:500px">
+    <div class="panel-title">💰 Adicionar Fundos ao Banco Global</div>
+    <div class="fgrid">
+      <div class="fg">
+        <label>Tipo de Movimento *</label>
+        <select id="bg-tipo">
+          <option value="Despesa">Despesa</option>
+          <option value="Receita">Receita</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Valor (€) *</label>
+        <input type="number" id="bg-valor" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="fg" style="grid-column:1/-1">
+        <label>Justificação *</label>
+        <textarea id="bg-justificacao" placeholder="Descreva a origem deste movimento..." rows="4"></textarea>
+      </div>
+    </div>
+    <div style="background:var(--amber-bg);border-left:3px solid var(--amber);padding:12px;border-radius:6px;margin-top:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:4px">ℹ️ Nota</div>
+      <div style="font-size:12px;color:var(--text2)">
+        Este movimento será registado automaticamente em <strong>Alterações Orçamentais</strong> como aprovado, 
+        com origem "${tipo} não orçamentada" e destino "Banco Global › Geral".
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn" onclick="closeBancoGlobalModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveBancoGlobal()">Adicionar Fundos</button>
+    </div>
+  </div>
+</div>
+
 <script>// v3
 
 // ═══ CONFIG + SHARED AUTH (from Gestão de Reuniões) ═══
@@ -1516,6 +1551,42 @@ function determinarFinanceRole(u){
   
   // Membro normal
   return 'worker';
+}
+
+// Verificar se utilizador pode ver um projeto financeiro
+function canViewFinanceProject(projetoId){
+  if(!currentUserFJ) return true; // Fallback: se não está na lista, vê tudo
+  
+  const equipas=currentUserFJ.equipa||[];
+  
+  // CAdm e Gestão vêem tudo
+  if(equipas.includes('CAdm')) return true;
+  if(equipas.includes('Gestão')) return true;
+  
+  // Verificar se está afeto ao projeto
+  const projetosAfetos=currentUserFJ.projetos||[];
+  return projetosAfetos.includes(projetoId);
+}
+
+// Filtrar projetos financeiros que o utilizador pode ver
+function filterFinanceProjects(projects){
+  if(!currentUserFJ) return projects;
+  
+  const equipas=currentUserFJ.equipa||[];
+  
+  // CAdm e Gestão vêem tudo
+  if(equipas.includes('CAdm')) return projects;
+  if(equipas.includes('Gestão')) return projects;
+  
+  // Filtrar apenas projetos afetos
+  const projetosAfetos=currentUserFJ.projetos||[];
+  return projects.filter(p=>projetosAfetos.includes(p.id));
+}
+
+// Gerar options HTML de projetos filtrados
+function gfProjetosOptions(selectedId = null){
+  const projs = filterFinanceProjects(GF_PROJETOS);
+  return projs.map(p => `<option value="${p.id}" ${selectedId === p.id ? 'selected' : ''}>${p.nome}</option>`).join('');
 }
 
 // Verificar se utilizador pode ver um item (baseado em equipa/departamento)
@@ -2736,7 +2807,10 @@ async function saveUtilizador(){
   const projetos=[];
   if(el('admin-edit-projetos'))Array.from(el('admin-edit-projetos').selectedOptions).forEach(o=>projetos.push(parseInt(o.value)));
   try{
-    const body={__metadata:{type:'SP.Data.FJ_x005f_UtilizadoresListItem'},Title:titulo,Email:email,Titulo:cargo,Equipa:{results:equipas}};
+    const body={__metadata:{type:'SP.Data.FJ_x005f_UtilizadoresListItem'},Title:titulo,Email:email,Titulo:cargo};
+    // Multi-choice field: Equipa
+    if(equipas.length>0)body.Equipa={__metadata:{type:'Collection(Edm.String)'},results:equipas};
+    // Lookup multi-value field: ProjetosId
     if(projetos.length>0)body.ProjetosId={results:projetos};
     if(id)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items(${id})`,body,'MERGE','*');
     else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items`,body,'POST');
@@ -2916,6 +2990,18 @@ function loadAcoesForProj(projId,targetId,currId=null){
   const e=el(targetId);if(!e)return;
   const list=projId?plAcoes.filter(a=>String(a.projetoId)===String(projId)):plAcoes;
   e.innerHTML='<option value="">Nenhuma</option>'+list.map(a=>`<option value="${a.id}"${String(a.id)===String(currId)?'selected':''}>${a.nome}</option>`).join('');
+}
+
+/* ===== RAG CALCULATION ===== */
+function calcRag(acaoId){
+  // Calcula o estado RAG (Red/Amber/Green) de uma ação baseado nas suas tarefas
+  const tarefas=plTarefas.filter(t=>String(t.acaoId)===String(acaoId));
+  if(tarefas.length===0)return'c'; // Cinza: sem tarefas
+  const concluidas=tarefas.filter(t=>t.estado==='Concluída').length;
+  const pct=Math.round((concluidas/tarefas.length)*100);
+  if(pct>=50)return'v'; // Verde: >50% concluído
+  if(pct>=20)return'a'; // Âmbar: 20-50% concluído
+  return'r'; // Vermelho: <20% concluído
 }
 
 /* ===== DASHBOARD ===== */
@@ -4079,7 +4165,9 @@ function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_
 // ORÇAMENTO - PROJETOS (MASTER)
 // ══════════════════════════════════════════════════════════════
 function gfRenderOrcamento() {
-  const projs = GF_PROJETOS.filter(p => !p.anoOrcamental || p.anoOrcamental === GF.year);
+  // FILTRAR projetos que o utilizador pode ver
+  let projs = GF_PROJETOS.filter(p => !p.anoOrcamental || p.anoOrcamental === GF.year);
+  projs = filterFinanceProjects(projs);
   
   // Calcular totais por projeto (valores dinâmicos)
   const projsWithTotals = projs.map(p => {
@@ -4144,6 +4232,7 @@ function gfRenderOrcamento() {
         <div style="font-size:13px;color:var(--text3)">${projs.length} projetos · ${GF_RUBRICAS.filter(r => r.ano === GF.year).length} rúbricas</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
+        ${_financeRole === 'df' ? `<button class="btn btn-primary" style="background:var(--fj-orange);border-color:var(--fj-orange)" onclick="openBancoGlobalModal()">💰 Adicionar Fundos ao Banco Global</button>` : ''}
         ${[2024, 2025, 2026, 2027].map(y => `
           <button class="btn btn-sm ${y === GF.year ? '' : ''}" style="${y === GF.year ? 'background:var(--mod-financeiro);color:#fff;border-color:var(--mod-financeiro)' : ''}" onclick="GF.year=${y};gfRender()">${y}</button>
         `).join('')}
@@ -4228,6 +4317,11 @@ function gfRenderOrcamento() {
 function gfRenderRubricas() {
   const proj = GF_PROJETOS.find(p => p.id === GF.project);
   if (!proj) return '<p style="padding:40px;text-align:center">Projeto não encontrado</p>';
+  
+  // VALIDAÇÃO: Verificar se utilizador pode ver este projeto
+  if (!canViewFinanceProject(proj.id)) {
+    return '<p style="padding:40px;text-align:center;color:var(--red)">⚠️ Não tem permissão para ver este projeto</p>';
+  }
   
   const rubs = GF_RUBRICAS.filter(r => r.projetoId === proj.id && r.ano === GF.year);
   
@@ -4644,7 +4738,10 @@ async function gfSaveRubrica(id) {
 // ══════════════════════════════════════════════════════════════
 function gfRenderSolicitacoes() {
   const tab = GF.tab.sol;
-  const lista = tab === 'minhas' ? GF_SOLICITACOES.filter(s => s.autorNome === user?.name) : GF_SOLICITACOES;
+  let lista = tab === 'minhas' ? GF_SOLICITACOES.filter(s => s.autorNome === user?.name) : GF_SOLICITACOES;
+  
+  // FILTRAR solicitações de projetos que o utilizador pode ver
+  lista = lista.filter(s => canViewFinanceProject(s.projetoId));
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
@@ -4740,7 +4837,7 @@ function gfRenderSolicitacaoForm() {
               <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Projeto <span style="color:#EF4444">*</span></label>
               <select id="gf-sol-projeto" onchange="gfSolProjetoChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
                 <option value="">Selecionar...</option>
-                ${GF_PROJETOS.map(p => `<option value="${p.id}" ${sol?.projetoId === p.id ? 'selected' : ''}>${p.nome}</option>`).join('')}
+                ${gfProjetosOptions(sol?.projetoId)}
               </select>
             </div>
             <div>
@@ -5037,6 +5134,38 @@ function gfWorkflowStep(label, done, who, when) {
 async function gfAprovarSolicitacao(id) {
   if (!confirm('Aprovar esta solicitação?')) return;
   try {
+    const sol = GF_SOLICITACOES.find(s => s.id === id);
+    if (!sol) throw new Error('Solicitação não encontrada');
+    
+    // VALIDAÇÃO: Diretor de Área só pode aprovar do seu departamento
+    if (_financeRole === 'area_director') {
+      const solProj = GF_PROJETOS.find(p => p.id === sol.projetoId);
+      const userEquipas = currentUserFJ?.equipa || [];
+      
+      if (solProj && !userEquipas.includes(solProj.departamento)) {
+        showNotif('Apenas pode aprovar solicitações do seu departamento', 'error');
+        return;
+      }
+      
+      // VALIDAÇÃO: Estado deve ser "Submetido"
+      if (sol.estado !== 'Submetido') {
+        showNotif('Esta solicitação não está no estado "Submetido"', 'error');
+        return;
+      }
+    }
+    
+    // VALIDAÇÃO: DF não pode aprovar sem aprovação do Diretor primeiro
+    if (_financeRole === 'df') {
+      if (sol.estado === 'Submetido') {
+        showNotif('Aguardando aprovação do Diretor de Área primeiro', 'error');
+        return;
+      }
+      if (sol.estado !== 'Aprovado Dir.') {
+        showNotif('Esta solicitação não está pronta para aprovação da DF', 'error');
+        return;
+      }
+    }
+    
     const novoEstado = _financeRole === 'area_director' ? 'Aprovado Dir.' : 'Aprovado DF';
     const body = {
       __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
@@ -5044,8 +5173,10 @@ async function gfAprovarSolicitacao(id) {
     };
     if (_financeRole === 'area_director') {
       body.DataAprovDir = new Date().toISOString();
+      body.AprovDirId = await getCurrentUserId();
     } else {
       body.DataAprovDF = new Date().toISOString();
+      body.AprovDFId = await getCurrentUserId();
     }
     await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${id})`, body, 'MERGE');
     showNotif('Solicitação aprovada!', 'success');
@@ -5079,8 +5210,10 @@ async function gfRejeitarSolicitacao(id) {
 // ══════════════════════════════════════════════════════════════
 function gfRenderAlteracoes() {
   const tab = GF.tab.alt;
-  const pendentes = GF_ALTERACOES.filter(a => a.estado === 'Pendente');
-  const historico = GF_ALTERACOES.filter(a => a.estado !== 'Pendente');
+  // FILTRAR alterações de projetos que o utilizador pode ver
+  const alteracoesFiltradas = GF_ALTERACOES.filter(a => canViewFinanceProject(a.destProjetoId));
+  const pendentes = alteracoesFiltradas.filter(a => a.estado === 'Pendente');
+  const historico = alteracoesFiltradas.filter(a => a.estado !== 'Pendente');
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
@@ -5094,11 +5227,11 @@ function gfRenderAlteracoes() {
     </div>
     
     <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-      <button onclick="GF.tab.alt='lista';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'lista' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'lista' ? 'var(--blue)' : 'transparent'}">Todas (${GF_ALTERACOES.length})</button>
+      <button onclick="GF.tab.alt='lista';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'lista' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'lista' ? 'var(--blue)' : 'transparent'}">Todas (${alteracoesFiltradas.length})</button>
       <button onclick="GF.tab.alt='pendentes';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'pendentes' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'pendentes' ? 'var(--blue)' : 'transparent'}">Pendentes (${pendentes.length})</button>
     </div>
     
-    ${gfRenderAltList(tab === 'pendentes' ? pendentes : GF_ALTERACOES)}
+    ${gfRenderAltList(tab === 'pendentes' ? pendentes : alteracoesFiltradas)}
   `;
 }
 
@@ -5234,7 +5367,7 @@ function gfRenderAlteracaoForm() {
             <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Projeto Destino <span style="color:#EF4444">*</span></label>
             <select id="gf-alt-dest-proj" onchange="gfAltDestProjChange()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
               <option value="">Selecionar projeto...</option>
-              ${GF_PROJETOS.map(p => `<option value="${p.id}">${p.nome}</option>`).join('')}
+              ${gfProjetosOptions()}
             </select>
           </div>
           
@@ -5274,7 +5407,7 @@ function gfOrigemRow(o, idx) {
         <label style="display:block;font-size:11px;color:var(--text3);margin-bottom:4px">Projeto</label>
         <select id="gf-orig-proj-${idx}" onchange="gfOrigProjChange(${idx})" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
           <option value="">Selecionar...</option>
-          ${GF_PROJETOS.map(p => `<option value="${p.id}" ${o.projetoId === p.id ? 'selected' : ''}>${p.nome}</option>`).join('')}
+          ${gfProjetosOptions(o.projetoId)}
         </select>
       </div>
       <div>
@@ -5643,6 +5776,126 @@ async function getCurrentUserId() {
   }
 }
 
+// ═══════════════ BANCO GLOBAL ═══════════════
+function openBancoGlobalModal() {
+  el('bg-tipo').value = 'Despesa';
+  el('bg-valor').value = '';
+  el('bg-justificacao').value = '';
+  el('banco-global-modal').classList.add('open');
+}
+
+function closeBancoGlobalModal() {
+  el('banco-global-modal').classList.remove('open');
+}
+
+async function saveBancoGlobal() {
+  const tipo = el('bg-tipo').value;
+  const valor = parseFloat(el('bg-valor').value);
+  const justificacao = el('bg-justificacao').value.trim();
+  
+  if (!valor || valor <= 0) {
+    showNotif('Valor inválido', 'error');
+    return;
+  }
+  
+  if (!justificacao) {
+    showNotif('Justificação obrigatória', 'error');
+    return;
+  }
+  
+  try {
+    // Procurar projeto "Banco Global" e rubrica "Geral"
+    let bancoProj = GF_PROJETOS.find(p => p.nome === 'Banco Global');
+    
+    // Se não existir, criar projeto Banco Global
+    if (!bancoProj) {
+      const projBody = {
+        __metadata: { type: 'SP.Data.Factorial_x005f_ProjetosListItem' },
+        Title: 'Banco Global',
+        Departamento: 'Financeiro',
+        Estado: 'active',
+        AnoOrcamental: new Date().getFullYear(),
+        Notas: 'Projeto virtual para gestão de tesouraria e fundos não orçamentados'
+      };
+      const projRes = await spWrite(`${SP}/_api/web/lists/getbytitle('Factorial_Projetos')/items`, projBody, 'POST');
+      const newProjId = projRes.d.Id;
+      bancoProj = { id: newProjId, nome: 'Banco Global' };
+      GF_PROJETOS.push(bancoProj);
+    }
+    
+    // Procurar rubrica "Geral" no Banco Global
+    let geralRubrica = GF_RUBRICAS.find(r => r.projetoId === bancoProj.id && r.nome === 'Geral');
+    
+    // Se não existir, criar rubrica Geral
+    if (!geralRubrica) {
+      const rubBody = {
+        __metadata: { type: 'SP.Data.FJ_x005f_RubricasListItem' },
+        Title: 'Geral',
+        ProjetoIdId: bancoProj.id,
+        Ano: new Date().getFullYear(),
+        DespOrcamentada: 0,
+        RecOrcamentada: 0
+      };
+      const rubRes = await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items`, rubBody, 'POST');
+      const newRubId = rubRes.d.Id;
+      geralRubrica = { id: newRubId, nome: 'Geral', projetoId: bancoProj.id };
+      GF_RUBRICAS.push(geralRubrica);
+    }
+    
+    // Criar Alteração Orçamental
+    const userId = await getCurrentUserId();
+    const altBody = {
+      __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' },
+      Title: `Banco Global - ${tipo} não orçamentada`,
+      Justificacao: justificacao,
+      ValorTotal: valor,
+      Estado: 'Aprovado',
+      NivelAprovacao: 'df',
+      DestProjetoIdId: bancoProj.id,
+      DestRubricaIdId: geralRubrica.id,
+      DataSubmissao: new Date().toISOString()
+    };
+    
+    if (userId) {
+      altBody.SolicitanteId = userId;
+      altBody.AprovDFId = userId;
+    }
+    
+    const altRes = await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items`, altBody, 'POST');
+    const altId = altRes.d.Id;
+    
+    // Criar origem virtual "${tipo} não orçamentada"
+    const origemBody = {
+      __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrigensListItem' },
+      Title: `${tipo} não orçamentada`,
+      AlteracaoIdId: altId,
+      Valor: valor,
+      OrigProjetoIdId: null,
+      OrigRubricaIdId: null
+    };
+    
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrigens')/items`, origemBody, 'POST');
+    
+    // Atualizar valor orçamentado na rubrica Geral
+    const campoAtualizar = tipo === 'Despesa' ? 'DespOrcamentada' : 'RecOrcamentada';
+    const valorAtual = tipo === 'Despesa' ? (geralRubrica.despOrc || 0) : (geralRubrica.recOrc || 0);
+    const novoValor = valorAtual + valor;
+    
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items(${geralRubrica.id})`, {
+      __metadata: { type: 'SP.Data.FJ_x005f_RubricasListItem' },
+      [campoAtualizar]: novoValor
+    }, 'MERGE');
+    
+    showNotif(`€${valor.toFixed(2)} adicionados ao Banco Global como ${tipo}`, 'success');
+    closeBancoGlobalModal();
+    await gfLoadAll();
+    gfRender();
+  } catch (e) {
+    showNotif('Erro: ' + e.message, 'error');
+    console.error('Erro Banco Global:', e);
+  }
+}
+
 // ═══════════════ INIT ═══════════════
 // gfRender() moved to gfInit() - called when user switches to GF tab
 // Auto-add primeira origem quando alterações carrega
@@ -5651,7 +5904,6 @@ async function getCurrentUserId() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ea3a2900cff4899',t:'MTc3NTg0Mzg1Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
 >
