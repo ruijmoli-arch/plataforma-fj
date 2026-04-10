@@ -1992,7 +1992,12 @@ function renderExtTable(){
 function openExtForm(id){
   editExtId=id||null;
   feInlineTarefas=[];renderInlineTarefas();
-  el('frm-ext-ov').classList.add('open');
+  const modal = el('frm-ext-ov');
+  if(!modal) {
+    console.error('Modal frm-ext-ov não encontrado!');
+    return;
+  }
+  modal.classList.add('open');
   el('fe-attachments').innerHTML='';el('fe-file').value='';
   if(id){
     const i=extItems.find(x=>x.id===id);if(!i)return;
@@ -3562,9 +3567,23 @@ async function toggleTar(compId,checked){
 /* Tarefa form */
 function checkOrigem(v){el('tar-warn').style.display=v==='Factorial'?'block':'none';}
 function openTarForm(){
-  plEditTarId=null;el('frm-pl-tar-ov').classList.add('open');
+  plEditTarId=null;
+  const modal = el('frm-pl-tar-ov');
+  if(!modal) {
+    console.error('Modal frm-pl-tar-ov não encontrado!');
+    return;
+  }
+  modal.classList.add('open');
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
+  
+  // Popular dropdown de ações
+  const acaoSelect = el('ftar-acao');
+  if(acaoSelect) {
+    acaoSelect.innerHTML = '<option value="">Nenhuma</option>' + 
+      plAcoes.map(a => `<option value="${a.id}">${a.titulo}</option>`).join('');
+  }
+  
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-acao','');
   sv2('ftar-resp','');sv2('ftar-email','');sv2('ftar-data','');
   sv2('ftar-prior','Média');sv2('ftar-estado','todo');
@@ -4183,9 +4202,21 @@ function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_
 // ORÇAMENTO - PROJETOS (MASTER)
 // ══════════════════════════════════════════════════════════════
 function gfRenderOrcamento() {
+  // DEBUG
+  console.log('=== DEBUG ORÇAMENTO ===');
+  console.log('GF_PROJETOS total:', GF_PROJETOS.length);
+  console.log('GF.year:', GF.year);
+  console.log('Finance Role:', _financeRole);
+  console.log('Current User:', currentUserFJ);
+  
   // FILTRAR projetos que o utilizador pode ver
   let projs = GF_PROJETOS.filter(p => !p.anoOrcamental || p.anoOrcamental === GF.year);
+  console.log('Após filtro de ano:', projs.length, 'projetos');
+  
   projs = filterFinanceProjects(projs);
+  console.log('Após filterFinanceProjects:', projs.length, 'projetos');
+  console.log('Projetos finais:', projs);
+  console.log('======================');
   
   // Calcular totais por projeto (valores dinâmicos)
   const projsWithTotals = projs.map(p => {
@@ -4261,6 +4292,19 @@ function gfRenderOrcamento() {
         `).join('')}
       </div>
     </div>
+    
+    ${projs.length === 0 ? `
+      <div class="card" style="padding:60px 40px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">📊</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text2)">Nenhum projeto visível</div>
+        <div style="font-size:14px;color:var(--text3);margin-bottom:20px">
+          ${_financeRole === 'worker' ? 'Não está afeto a nenhum projeto no ano ' + GF.year : 'Não existem projetos no ano ' + GF.year}
+        </div>
+        <div style="font-size:12px;color:var(--text3);background:var(--bg);padding:12px;border-radius:6px;max-width:500px;margin:0 auto">
+          💡 <strong>Dica:</strong> Verifique se está afeto a projetos na secção Admin ou se existem projetos criados para este ano.
+        </div>
+      </div>
+    ` : `
     
     <div class="card" style="padding:0;overflow-x:auto">
       <table style="width:100%;min-width:900px;border-collapse:collapse;font-size:13px;table-layout:fixed">
