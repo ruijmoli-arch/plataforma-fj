@@ -772,7 +772,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Data *</label><input type="date" id="fe-data"></div>
               <div class="fg"><label>Local</label><input type="text" id="fe-local" placeholder="Presencial ou Online"></div>
               <div class="fg"><label>Departamento</label>
-                <select id="fe-dep"><option>Gestão</option><option>Op. Norte</option><option>Op. Sul</option><option>Financeiro</option><option>Impacto</option><option>CA</option></select>
+                <select id="fe-dep"><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
               </div>
               <div class="fg"><label>Responsável FJ</label>
                 <div class="people-wrap">
@@ -807,7 +807,7 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qe" placeholder="Pesquisar entidade ou assunto..." oninput="renderExtTable()"></div>
-          <select class="flt" id="ffe-dep" onchange="renderExtTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op. Norte</option><option>Op. Sul</option><option>Financeiro</option><option>Impacto</option><option>CA</option></select>
+          <select class="flt" id="ffe-dep" onchange="renderExtTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
           <input type="date" class="flt" id="ffe-from" onchange="renderExtTable()" style="font-size:13px;padding:8px">
           <input type="date" class="flt" id="ffe-to" onchange="renderExtTable()" style="font-size:13px;padding:8px">
           <button class="btn" onclick="loadExtItems()">&#8635;</button>
@@ -857,7 +857,7 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qt" placeholder="Pesquisar..." oninput="renderTarefasTable()"></div>
-          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op. Norte</option><option>Op. Sul</option><option>Financeiro</option><option>Impacto</option><option>CA</option></select>
+          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
           <select class="flt" id="fft-est" onchange="renderTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
           <select class="flt" id="fft-prior" onchange="renderTarefasTable()"><option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
           <button class="btn" onclick="loadTarefas()">&#8635;</button>
@@ -891,7 +891,7 @@ tr:hover td{background:var(--bg3)}
             <option>Op.Norte</option>
             <option>Op.Sul</option>
             <option>Financeiro</option>
-            <option>Impacto</option>
+            <option>Impacto</option><option>INOV</option>
           </select>
           <select class="flt" id="admin-filter-cargo" onchange="renderFJUtilizadores()">
             <option value="">Todos os cargos</option>
@@ -942,6 +942,7 @@ tr:hover td{background:var(--bg3)}
                   <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Op.Sul"> Op.Sul</label>
                   <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Financeiro"> Financeiro</label>
                   <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Impacto"> Impacto</label>
+                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="INOV"> INOV</label>
                 </div>
               </div>
               <div class="fg" style="grid-column:1/-1">
@@ -1000,7 +1001,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg" style="grid-column:span 2"><label>Nome da ação *</label><input id="fa-nome" placeholder="Nome da ação"></div>
               <div class="fg"><label>Projeto (Factorial) *</label><select id="fa-proj"><option value="">Selecionar...</option></select></div>
               <div class="fg"><label>Tipo</label><select id="fa-tipo"><option value="Recorrente">Recorrente</option><option value="INOV">INOV</option></select></div>
-              <div class="fg"><label>Departamento</label><select id="fa-dep"><option value="">—</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select></div>
+              <div class="fg"><label>Departamento</label><select id="fa-dep"><option value="">—</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select></div>
               <div class="fg"><label>Estado</label><select id="fa-estado"><option>Ativo</option><option>Concluído</option><option>Pausado</option><option>Cancelado</option></select></div>
               <div class="fg"><label>Data de início</label><input id="fa-inicio" type="date"></div>
               <div class="fg"><label>Data de fim</label><input id="fa-fim" type="date"></div>
@@ -1029,7 +1030,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Departamento</label>
                 <select id="fp-dep">
                   <option value="">Selecionar...</option>
-                  <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option>
+                  <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
                 </select>
               </div>
               <div class="fg"><label>Data de início</label><input id="fp-inicio" type="date"></div>
@@ -1056,7 +1057,7 @@ tr:hover td{background:var(--bg3)}
           </div>
         </div>
         <div class="toolbar">
-          <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+          <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
           <button class="btn btn-primary" onclick="openProjetoForm()">+ Novo projeto</button>
         </div>
         <div id="hier-container"></div>
@@ -1066,7 +1067,8 @@ tr:hover td{background:var(--bg3)}
       <div id="pl-page-gantt" class="page">
         <div class="page-title">Gantt</div>
         <div class="toolbar">
-          <select class="flt" id="ff-g-dep" onchange="renderGantt()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+          <select class="flt" id="ff-g-dep" onchange="renderGantt()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>INOV</option></select>
+          <select class="flt" id="ff-g-proj" onchange="renderGantt()"><option value="">Todos os projetos</option></select>
           <select class="flt" id="ff-g-ano" onchange="renderGantt()"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option></select>
           <select class="flt" id="ff-g-modo" onchange="renderGantt()"><option value="mensal">Vista mensal</option><option value="trimestral">Vista trimestral</option><option value="semanal">Vista semanal</option><option value="diario">Vista diária</option></select>
         </div>
@@ -1085,7 +1087,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Ação</label><select id="ft-acao" onchange="genTrimTit()"><option value="">Nenhuma</option></select></div>
               <div class="fg"><label>Trimestre</label><select id="ft-trim" onchange="genTrimTit()"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
               <div class="fg"><label>Ano</label><select id="ft-ano" onchange="genTrimTit()"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select></div>
-              <div class="fg"><label>Departamento</label><select id="ft-dep"><option value="">—</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select></div>
+              <div class="fg"><label>Departamento</label><select id="ft-dep"><option value="">—</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select></div>
               <div class="fg"><label>Estado</label><select id="ft-est"><option>Previsto</option><option>Em curso</option><option>Concluído</option><option>Adiado</option></select></div>
               <div class="fg"><label>Tarefas previstas</label><input id="ft-tarprev" type="number" placeholder="0" min="0"></div>
               <div class="fg"><label>Título (auto)</label><input id="ft-titulo" readonly style="background:var(--bg3);color:var(--tx2)"></div>
@@ -1100,7 +1102,7 @@ tr:hover td{background:var(--bg3)}
         <div class="toolbar">
           <select class="flt" id="ff-t-q" onchange="renderTrim()"><option value="">Todos os trimestres</option><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
           <select class="flt" id="ff-t-ano" onchange="renderTrim()"><option value="">Todos os anos</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
-          <select class="flt" id="ff-t-dep" onchange="renderTrim()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+          <select class="flt" id="ff-t-dep" onchange="renderTrim()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
           <select class="flt" id="ff-t-aprov" onchange="renderTrim()"><option value="">Todos os estados</option><option value="Rascunho">Rascunho</option><option value="Submetido">Submetido</option><option value="Aprovado Dir.">Aprovado Dir.</option><option value="Aprovado Gestão">Aprovado Gestão</option></select>
           <button class="btn btn-primary" onclick="openTrimForm()">+ Novo</button>
         </div>
@@ -1117,7 +1119,7 @@ tr:hover td{background:var(--bg3)}
       <div id="pl-page-semanal" class="page">
         <div class="page-title">Plano Semanal</div>
         <!-- Tarefa form -->
-        <div id="frm-tar-ov" class="overlay">
+        <div id="frm-pl-tar-ov" class="overlay">
           <div class="panel">
             <div class="panel-title" id="frm-tar-title">Nova tarefa</div>
             <div id="tar-warn" class="warn-box">⚠️ As tarefas do <strong>Factorial</strong> são criadas directamente no Factorial — esta plataforma sincroniza automaticamente. Por favor cria a tarefa lá.</div>
@@ -1165,7 +1167,7 @@ tr:hover td{background:var(--bg3)}
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
-          <select class="flt" id="ff-s-dep" onchange="renderSem()" style="display:none"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+          <select class="flt" id="ff-s-dep" onchange="renderSem()" style="display:none"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
           <select class="flt" id="ff-s-est" onchange="renderSem()"><option value="">Todos os estados</option><option value="todo">Por fazer</option><option value="Em curso">Em curso</option><option value="Concluída">Concluída</option></select>
           <select class="flt" id="ff-s-orig" onchange="renderSem()"><option value="">Todas as origens</option><option value="Plano">Plano</option><option value="Ad-hoc">Ad-hoc</option><option value="Reunião">Reunião</option></select>
           <div class="search-wrap" style="max-width:200px">
@@ -1283,7 +1285,7 @@ tr:hover td{background:var(--bg3)}
       <div class="fg"><label>Departamento</label>
         <select id="fp-dep-g">
           <option value="">Selecionar...</option>
-          <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option>
+          <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
         </select>
       </div>
       <div class="fg"><label>Data de início</label><input id="fp-inicio-g" type="date"></div>
@@ -1441,7 +1443,7 @@ const msalI=new msal.PublicClientApplication(msalCfg);
 let user=null,spToken=null,graphToken=null;
 let userGroups=[];
 let items=[],extItems=[],rnTarefas=[];
-let editId=null,editExtId=null,editTarId=null;
+let editId=null,editExtId=null,editTarId=null,rnEditTarId=null;
 let T={conf:false,atras:false};
 let carrItems=[],carrIdx=0,carrDec={},fsOpen=false,currReuniao='';
 
@@ -1506,7 +1508,7 @@ async function loadFJUtilizadores(){
       titulo:u.Title||'',
       email:u.Email?.toLowerCase()||'',
       equipa:u.Equipa?u.Equipa.results||[u.Equipa]:[],
-      cargo:u.Titulo||'Membro', // Presidente Executivo, Diretor, Membro
+      cargo:typeof u.Cargo==='string'?u.Cargo:(u.Cargo?.Title||'Membro'), // Presidente Executivo, Diretor, Membro
       projetos:(u.Projetos?.results||[]).map(p=>p.Id)
     }));
     console.log('FJ_Utilizadores carregados:', fjUtilizadores);
@@ -1573,6 +1575,9 @@ function filterFinanceProjects(projects){
   if(!currentUserFJ) return projects;
   
   const equipas=currentUserFJ.equipa||[];
+  
+  // Presidente Executivo vê TUDO
+  if(_financeRole === 'pe') return projects;
   
   // CAdm e Gestão vêem tudo
   if(equipas.includes('CAdm')) return projects;
@@ -2807,13 +2812,13 @@ async function saveUtilizador(){
   const projetos=[];
   if(el('admin-edit-projetos'))Array.from(el('admin-edit-projetos').selectedOptions).forEach(o=>projetos.push(parseInt(o.value)));
   try{
-    const body={__metadata:{type:'SP.Data.FJ_x005f_UtilizadoresListItem'},Title:titulo,Email:email,Titulo:cargo};
+    const body={__metadata:{type:'SP.Data.FJ_x005f_UtilizadoresListItem'},Title:titulo,Email:email,Cargo:cargo};
     // Multi-choice field: Equipa
     if(equipas.length>0)body.Equipa={__metadata:{type:'Collection(Edm.String)'},results:equipas};
     // Lookup multi-value field: ProjetosId
     if(projetos.length>0)body.ProjetosId={results:projetos};
     if(id)await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items(${id})`,body,'MERGE','*');
-    else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items`,body,'POST');
+    else await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items`,body,'POST','*');
     showNotif('Utilizador '+(id?'atualizado':'criado'),'success');
     closeAdminModal();await loadFJUtilizadores();renderFJUtilizadores();
   }catch(e){showNotif('Erro: '+e.message,'error');console.error(e);}
@@ -3345,7 +3350,19 @@ function renderGantt(){
   const todayX=lblW+Math.max(0,Math.min(((today-rangeStart)/rangeMs)*(cols*colW),cols*colW));
 
   let rows=[];
-  projs.forEach((p,pi)=>{
+  
+  // Popular dropdown de projetos
+  const projId = gv('ff-g-proj');
+  const projOpts = projs.map(p => `<option value="${p.id}" ${projId == p.id ? 'selected' : ''}>${p.nome}</option>`).join('');
+  el('ff-g-proj').innerHTML = `<option value="">Todos os projetos</option>${projOpts}`;
+  
+  // Filtrar por projeto específico se selecionado
+  let filteredProjs = projs;
+  if (projId) {
+    filteredProjs = filteredProjs.filter(p => String(p.id) === String(projId));
+  }
+  
+  filteredProjs.forEach((p,pi)=>{
     const color=GANTT_COLORS[pi%GANTT_COLORS.length];
     // Calcular span do projeto a partir das ações
     const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id));
@@ -3545,7 +3562,7 @@ async function toggleTar(compId,checked){
 /* Tarefa form */
 function checkOrigem(v){el('tar-warn').style.display=v==='Factorial'?'block':'none';}
 function openTarForm(){
-  plEditTarId=null;el('frm-tar-ov').classList.add('open');
+  plEditTarId=null;el('frm-pl-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-acao','');
@@ -3555,7 +3572,7 @@ function openTarForm(){
 }
 function openTarFormEdit(compId){
   const t=plTarefas.find(x=>x.id===compId);if(!t)return;
-  plEditTarId=compId;el('frm-tar-ov').classList.add('open');
+  plEditTarId=compId;el('frm-pl-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Editar tarefa';
   el('tar-warn').style.display='none';
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');sv2('ftar-acao',t.acaoId||'');
@@ -3563,7 +3580,7 @@ function openTarFormEdit(compId){
   sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
-function closeTarForm(){el('frm-tar-ov').classList.remove('open');plEditTarId=null;}
+function closeTarForm(){el('frm-pl-tar-ov').classList.remove('open');plEditTarId=null;}
 async function plSaveTarefa(){
   if(gv('ftar-origem')==='Factorial'){showNotif('As plTarefas do Factorial devem ser criadas no Factorial.','warn');return;}
   const desc=gv('ftar-desc').trim();
@@ -3841,7 +3858,8 @@ let GF = {
   solicitacao: null,
   alteracao: null,
   tab: { orc: 'projetos', sol: 'lista', alt: 'lista', aprov: 'pendentes' },
-  origens: [] // Para alterações orçamentais
+  origens: [], // Para alterações orçamentais
+  bloqueado: false  // Novo: controla se edições de valores orçamentados estão bloqueadas pela DF
 };
 
 let GF_PROJETOS = [];
@@ -4232,7 +4250,12 @@ function gfRenderOrcamento() {
         <div style="font-size:13px;color:var(--text3)">${projs.length} projetos · ${GF_RUBRICAS.filter(r => r.ano === GF.year).length} rúbricas</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        ${_financeRole === 'df' ? `<button class="btn btn-primary" style="background:var(--fj-orange);border-color:var(--fj-orange)" onclick="openBancoGlobalModal()">💰 Adicionar Fundos ao Banco Global</button>` : ''}
+        ${_financeRole === 'df' ? `
+          <button class="btn" style="background:${GF.bloqueado ? 'var(--red)' : 'var(--green)'};color:#fff;border:none" onclick="toggleBloqueioOrcamento()">
+            ${GF.bloqueado ? '🔒 Edições Bloqueadas' : '🔓 Edições Permitidas'}
+          </button>
+          <button class="btn btn-primary" style="background:var(--fj-orange);border-color:var(--fj-orange)" onclick="openBancoGlobalModal()">💰 Adicionar Fundos</button>
+        ` : ''}
         ${[2024, 2025, 2026, 2027].map(y => `
           <button class="btn btn-sm ${y === GF.year ? '' : ''}" style="${y === GF.year ? 'background:var(--mod-financeiro);color:#fff;border-color:var(--mod-financeiro)' : ''}" onclick="GF.year=${y};gfRender()">${y}</button>
         `).join('')}
@@ -4704,9 +4727,25 @@ async function gfSaveRubrica(id) {
   const titulo = gfVal('gf-rub-titulo').trim();
   const ano = parseInt(gfVal('gf-rub-ano'));
   const estado = gfVal('gf-rub-estado');
+  const despOrc = gfValN('gf-rub-desp-orc');
+  const recOrc = gfValN('gf-rub-rec-orc');
   
   if (!titulo) { showNotif('Título obrigatório', 'error'); return; }
   if (!GF.project) { showNotif('Projeto não definido', 'error'); return; }
+  
+  // VALIDAÇÃO: Se orçamento está bloqueado, apenas DF pode editar valores orçamentados
+  if (GF.bloqueado && _financeRole !== 'df') {
+    if (id) {
+      const rubOriginal = GF_RUBRICAS.find(r => r.id === id);
+      if (rubOriginal && (despOrc !== rubOriginal.despOrc || recOrc !== rubOriginal.recOrc)) {
+        showNotif('⚠️ Orçamento bloqueado! Apenas a Diretora Financeira pode alterar valores orçamentados.', 'error');
+        return;
+      }
+    } else {
+      showNotif('⚠️ Orçamento bloqueado! Não é possível criar novas rúbricas.', 'error');
+      return;
+    }
+  }
   
   const body = {
     __metadata: { type: 'SP.Data.FJ_x005f_RubricasListItem' },
@@ -4714,8 +4753,8 @@ async function gfSaveRubrica(id) {
     ProjetoIdId: GF.project,
     AnoOrcamental: ano,
     Estado: estado,
-    DespOrcamentada: gfValN('gf-rub-desp-orc'),
-    RecOrcamentada: gfValN('gf-rub-rec-orc')
+    DespOrcamentada: despOrc,
+    RecOrcamentada: recOrc
   };
   
   try {
@@ -4741,7 +4780,10 @@ function gfRenderSolicitacoes() {
   let lista = tab === 'minhas' ? GF_SOLICITACOES.filter(s => s.autorNome === user?.name) : GF_SOLICITACOES;
   
   // FILTRAR solicitações de projetos que o utilizador pode ver
-  lista = lista.filter(s => canViewFinanceProject(s.projetoId));
+  // PE vê tudo, não aplica filtro
+  if (_financeRole !== 'pe') {
+    lista = lista.filter(s => canViewFinanceProject(s.projetoId));
+  }
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
@@ -5157,7 +5199,7 @@ async function gfAprovarSolicitacao(id) {
     // VALIDAÇÃO: DF não pode aprovar sem aprovação do Diretor primeiro
     if (_financeRole === 'df') {
       if (sol.estado === 'Submetido') {
-        showNotif('Aguardando aprovação do Diretor de Área primeiro', 'error');
+        showNotif('⏳ Aguardando aprovação do Diretor de Área primeiro', 'warn');
         return;
       }
       if (sol.estado !== 'Aprovado Dir.') {
@@ -5211,7 +5253,9 @@ async function gfRejeitarSolicitacao(id) {
 function gfRenderAlteracoes() {
   const tab = GF.tab.alt;
   // FILTRAR alterações de projetos que o utilizador pode ver
-  const alteracoesFiltradas = GF_ALTERACOES.filter(a => canViewFinanceProject(a.destProjetoId));
+  // PE vê tudo, não aplica filtro
+  let alteracoesFiltradas = _financeRole === 'pe' ? GF_ALTERACOES : GF_ALTERACOES.filter(a => canViewFinanceProject(a.destProjetoId));
+  
   const pendentes = alteracoesFiltradas.filter(a => a.estado === 'Pendente');
   const historico = alteracoesFiltradas.filter(a => a.estado !== 'Pendente');
   
@@ -5571,19 +5615,69 @@ async function gfSubmitAlteracao() {
 // APROVAÇÕES
 // ══════════════════════════════════════════════════════════════
 function gfRenderAprovacoes() {
-  const solsPend = GF_SOLICITACOES.filter(s => {
-    if (_financeRole === 'area_director') return s.estado === 'Submetido';
-    if (_financeRole === 'df') return ['Submetido', 'Aprovado Dir.'].includes(s.estado);
+  // DEBUG: Log para verificar role e dados
+  console.log('=== DEBUG APROVAÇÕES ===');
+  console.log('Finance Role:', _financeRole);
+  console.log('Current User FJ:', currentUserFJ);
+  console.log('Total Solicitações:', GF_SOLICITACOES.length);
+  console.log('Total Alterações:', GF_ALTERACOES.length);
+  
+  const userEquipas = currentUserFJ?.equipa || [];
+  
+  // SOLICITAÇÕES - Mostrar todas as pendentes, filtradas por departamento
+  let solsPend = GF_SOLICITACOES.filter(s => {
+    // Estados pendentes de aprovação completa
+    const estadosPendentes = ['Submetido', 'Aprovado Dir.'];
+    if (!estadosPendentes.includes(s.estado)) return false;
+    
+    if (_financeRole === 'pe') {
+      // Presidente Executivo: VÊ TUDO, SEMPRE
+      return true;
+    }
+    
+    if (_financeRole === 'area_director') {
+      // Diretor de Área: APENAS do seu departamento
+      const solProj = GF_PROJETOS.find(p => p.id === s.projetoId);
+      return solProj && userEquipas.includes(solProj.departamento);
+    }
+    
+    if (_financeRole === 'df') {
+      // DF: VÊ TODAS desde o início
+      return true;
+    }
+    
     return false;
   });
   
-  const altsPend = GF_ALTERACOES.filter(a => {
-    if (a.estado !== 'Pendente') return false;
-    if (_financeRole === 'df') return true;
-    if (_financeRole === 'pe' && ['df_pe', 'df_pe_pca'].includes(a.nivelAprovacao)) return !!a.aprovDFNome;
-    if (_financeRole === 'pca' && a.nivelAprovacao === 'df_pe_pca') return !!a.aprovPENome;
+  console.log('Solicitações pendentes filtradas:', solsPend.length, solsPend);
+  
+  // ALTERAÇÕES ORÇAMENTAIS - Mostrar todas as pendentes, filtradas por departamento
+  let altsPend = GF_ALTERACOES.filter(a => {
+    // Estados pendentes de aprovação completa
+    const estadosPendentes = ['Pendente', 'Aprovado Dir.'];
+    if (!estadosPendentes.includes(a.estado)) return false;
+    
+    if (_financeRole === 'pe') {
+      // Presidente Executivo: VÊ TUDO, SEMPRE
+      return true;
+    }
+    
+    if (_financeRole === 'area_director') {
+      // Diretor de Área: APENAS do seu departamento
+      const altProj = GF_PROJETOS.find(p => p.id === a.destProjetoId);
+      return altProj && userEquipas.includes(altProj.departamento);
+    }
+    
+    if (_financeRole === 'df') {
+      // DF: VÊ TODAS desde o início
+      return true;
+    }
+    
     return false;
   });
+  
+  console.log('Alterações pendentes filtradas:', altsPend.length, altsPend);
+  console.log('======================');
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
@@ -5594,41 +5688,91 @@ function gfRenderAprovacoes() {
     <div style="font-size:20px;font-weight:600;margin-bottom:20px">Aprovações Pendentes</div>
     
     ${solsPend.length > 0 ? `
-      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Solicitações de Despesa (${solsPend.length})</div>
-      ${solsPend.map(s => `
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">Solicitações de Despesa/Receita (${solsPend.length})</div>
+      ${solsPend.map(s => {
+        const aprovDir = s.estado === 'Aprovado Dir.' || s.aprovDirNome;
+        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir;
+        const podeAprovarDF = _financeRole === 'df' && aprovDir;
+        const isPE = _financeRole === 'pe';
+        
+        return `
         <div class="card" style="margin-bottom:10px">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <div>
+            <div style="flex:1">
               <div style="font-weight:500">${s.titulo}</div>
               <div style="font-size:12px;color:var(--text3)">${s.projetoNome} · ${s.autorNome} · ${gfDate(s.dataSubmissao)}</div>
+              <div style="display:flex;gap:12px;margin-top:8px;font-size:12px">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="width:16px;height:16px;border-radius:50%;background:${aprovDir ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
+                    ${aprovDir ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                  </span>
+                  <span style="color:${aprovDir ? '#10B981' : 'var(--text3)'}">Diretor Área ${aprovDir ? '✓' : ''}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="width:16px;height:16px;border-radius:50%;background:${s.aprovDFNome ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
+                    ${s.aprovDFNome ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                  </span>
+                  <span style="color:${s.aprovDFNome ? '#10B981' : 'var(--text3)'}">Dir. Financeira ${s.aprovDFNome ? '✓' : ''}</span>
+                </div>
+              </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px">
-              <span style="font-weight:600;color:var(--blue)">${gfFmt(s.valor)}</span>
-              <button class="btn btn-sm" style="background:#10B981;color:white" onclick="gfAprovarSolicitacao(${s.id})">Aprovar</button>
-              <button class="btn btn-sm" style="background:#EF4444;color:white" onclick="gfRejeitarSolicitacao(${s.id})">Rejeitar</button>
+              <span style="font-weight:600;color:var(--blue);white-space:nowrap">${gfFmt(s.valor)}</span>
+              ${podeAprovarDir ? `<button class="btn btn-sm" style="background:#10B981;color:white" onclick="gfAprovarSolicitacao(${s.id})">Aprovar</button>` : ''}
+              ${podeAprovarDF ? `<button class="btn btn-sm" style="background:#10B981;color:white" onclick="gfAprovarSolicitacao(${s.id})">Aprovar (Final)</button>` : ''}
+              ${isPE ? `<span style="font-size:12px;color:#8B5CF6;font-weight:500">👁️ Visualização PE</span>` : ''}
+              ${!podeAprovarDir && !podeAprovarDF && !isPE ? `<span style="font-size:12px;color:var(--text3)">Aguarda ${aprovDir ? 'DF' : 'Diretor'}</span>` : ''}
             </div>
           </div>
         </div>
-      `).join('')}
+        `;
+      }).join('')}
     ` : ''}
     
     ${altsPend.length > 0 ? `
       <div style="font-size:14px;font-weight:600;margin:20px 0 12px">Alterações Orçamentais (${altsPend.length})</div>
-      ${altsPend.map(a => `
+      ${altsPend.map(a => {
+        const aprovDir = a.estado === 'Aprovado Dir.' || a.aprovDirNome;
+        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir;
+        const podeAprovarDF = _financeRole === 'df' && aprovDir;
+        const isBancoGlobal = a.titulo?.includes('Banco Global');
+        const isPE = _financeRole === 'pe';
+        
+        return `
         <div class="card" style="margin-bottom:10px">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <div style="font-weight:500">${a.titulo}</div>
+            <div style="flex:1">
+              <div style="font-weight:500">${a.titulo} ${isBancoGlobal ? '<span style="background:var(--fj-orange);color:white;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">BANCO GLOBAL</span>' : ''}</div>
               <div style="font-size:12px;color:var(--text3)">${a.solicitanteNome} · ${gfDate(a.dataSubmissao)}</div>
+              ${!isBancoGlobal ? `
+              <div style="display:flex;gap:12px;margin-top:8px;font-size:12px">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="width:16px;height:16px;border-radius:50%;background:${aprovDir ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
+                    ${aprovDir ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                  </span>
+                  <span style="color:${aprovDir ? '#10B981' : 'var(--text3)'}">Diretor Área ${aprovDir ? '✓' : ''}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="width:16px;height:16px;border-radius:50%;background:${a.aprovDFNome ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
+                    ${a.aprovDFNome ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                  </span>
+                  <span style="color:${a.aprovDFNome ? '#10B981' : 'var(--text3)'}">Dir. Financeira ${a.aprovDFNome ? '✓' : ''}</span>
+                </div>
+              </div>
+              ` : ''}
             </div>
             <div style="display:flex;align-items:center;gap:12px">
-              <span style="font-weight:600;color:var(--blue)">${gfFmt(a.valorTotal)}</span>
-              <button class="btn btn-sm" style="background:#10B981;color:white" onclick="gfAprovarAlteracao(${a.id})">Aprovar</button>
-              <button class="btn btn-sm" style="background:#EF4444;color:white" onclick="gfRejeitarAlteracao(${a.id})">Rejeitar</button>
+              <span style="font-weight:600;color:var(--blue);white-space:nowrap">${gfFmt(a.valorTotal)}</span>
+              ${isBancoGlobal && _financeRole === 'df' ? `<span style="font-size:12px;color:#10B981">✓ Auto-aprovado</span>` : ''}
+              ${!isBancoGlobal && podeAprovarDir ? `<button class="btn btn-sm" style="background:#10B981;color:white" onclick="gfAprovarAlteracao(${a.id})">Aprovar</button>` : ''}
+              ${!isBancoGlobal && podeAprovarDF ? `<button class="btn btn-sm" style="background:#10B981;color:white" onclick="gfAprovarAlteracao(${a.id})">Aprovar (Final)</button>` : ''}
+              ${isPE && !isBancoGlobal ? `<span style="font-size:12px;color:#8B5CF6;font-weight:500">👁️ Visualização PE</span>` : ''}
+              ${!isBancoGlobal && !podeAprovarDir && !podeAprovarDF && !isPE ? `<span style="font-size:12px;color:var(--text3)">Aguarda ${aprovDir ? 'DF' : 'Diretor'}</span>` : ''}
             </div>
           </div>
         </div>
-      `).join('')}
+        `;
+      }).join('')}
     ` : ''}
     
     ${solsPend.length === 0 && altsPend.length === 0 ? 
@@ -5643,17 +5787,62 @@ async function gfAprovarAlteracao(id) {
     const alt = GF_ALTERACOES.find(a => a.id === id);
     if (!alt) throw new Error('Alteração não encontrada');
     
+    // VALIDAÇÃO: Diretor de Área só pode aprovar do seu departamento
+    if (_financeRole === 'area_director') {
+      const altProj = GF_PROJETOS.find(p => p.id === alt.destProjetoId);
+      const userEquipas = currentUserFJ?.equipa || [];
+      
+      if (altProj && !userEquipas.includes(altProj.departamento)) {
+        showNotif('Apenas pode aprovar alterações de projetos do seu departamento', 'error');
+        return;
+      }
+      
+      // VALIDAÇÃO: Estado deve ser "Pendente"
+      if (alt.estado !== 'Pendente') {
+        showNotif('Esta alteração não está no estado "Pendente"', 'error');
+        return;
+      }
+      
+      // Diretor de Área aprova e passa para DF
+      const body = {
+        __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' },
+        AprovDirId: await getCurrentUserId(),
+        DataAprovDir: new Date().toISOString(),
+        Estado: 'Aprovado Dir.',
+        NivelAprovacao: 'df'  // Próximo nível: DF
+      };
+      
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items(${id})`, body, 'MERGE');
+      showNotif('Alteração aprovada! Aguarda aprovação da DF.', 'success');
+      await gfLoadAll();
+      gfRender();
+      return;
+    }
+    
+    // VALIDAÇÃO: DF não pode aprovar sem aprovação do Diretor primeiro (exceto Banco Global)
+    if (_financeRole === 'df') {
+      // Banco Global não precisa de aprovação de Diretor
+      const isBancoGlobal = alt.titulo?.includes('Banco Global');
+      
+      if (!isBancoGlobal && alt.estado === 'Pendente') {
+        showNotif('⏳ Aguardando aprovação do Diretor de Área primeiro', 'warn');
+        return;
+      }
+      
+      if (!isBancoGlobal && alt.estado !== 'Aprovado Dir.') {
+        showNotif('Esta alteração não está pronta para aprovação da DF', 'error');
+        return;
+      }
+    }
+    
     const body = { __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' } };
     let isFullyApproved = false;
     
     if (_financeRole === 'df') {
       body.AprovDFId = await getCurrentUserId();
       body.DataAprovDF = new Date().toISOString();
-      // Se nível é só DF, aprovação completa
-      if (alt.nivel === 'df') {
-        body.Estado = 'Aprovado';
-        isFullyApproved = true;
-      }
+      body.Estado = 'Aprovado';
+      isFullyApproved = true;
     } else if (_financeRole === 'pe') {
       body.AprovPEId = await getCurrentUserId();
       // Se nível é df_pe, aprovação completa
@@ -5774,6 +5963,14 @@ async function getCurrentUserId() {
   } catch (e) {
     return null;
   }
+}
+
+// ═══════════════ BLOQUEIO ORÇAMENTO ═══════════════
+function toggleBloqueioOrcamento() {
+  GF.bloqueado = !GF.bloqueado;
+  const estado = GF.bloqueado ? 'bloqueado' : 'desbloqueado';
+  showNotif(`Orçamento ${estado} com sucesso! ${GF.bloqueado ? 'Apenas você pode editar valores orçamentados.' : 'Edições permitidas.'}`, 'success');
+  gfRender();
 }
 
 // ═══════════════ BANCO GLOBAL ═══════════════
