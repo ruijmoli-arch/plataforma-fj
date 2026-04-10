@@ -3697,11 +3697,24 @@ async function gfLoadAll() {
 // CÁLCULO DINÂMICO DE VALORES (baseado em solicitações)
 // ══════════════════════════════════════════════════════════════
 
+// Calcula valores bloqueados por alterações orçamentais pendentes
+function gfCalcBloqueioAlteracao(rubricaId) {
+  // Encontrar todas as origens de alterações pendentes que usam esta rúbrica
+  const altPendIds = GF_ALTERACOES.filter(a => a.estado === 'Pendente').map(a => a.id);
+  const origensPend = GF_ALTERACOES_ORIGENS.filter(o => o.rubricaId === rubricaId && altPendIds.includes(o.alteracaoId));
+  return origensPend.reduce((a, o) => a + (o.valor || 0), 0);
+}
+
 // Calcula valores de despesa para uma rúbrica
 function gfCalcDespesa(rubricaId) {
   const sols = GF_SOLICITACOES.filter(s => s.rubricaId === rubricaId && s.tipoSolicitacao === 'Despesa');
+  const bloqueio = gfCalcBloqueioAlteracao(rubricaId);
+  const solicitada = sols.filter(s => s.estado !== 'Rejeitado').reduce((a, s) => a + (s.valor || 0), 0);
+  
   return {
-    solicitada: sols.filter(s => s.estado !== 'Rejeitado').reduce((a, s) => a + (s.valor || 0), 0),
+    solicitada: solicitada + bloqueio, // Inclui bloqueio de alterações pendentes
+    solicitadaPura: solicitada, // Sem bloqueio (para exibição)
+    bloqueio: bloqueio, // Valor bloqueado por alterações
     aprovada: sols.filter(s => ['Aprovado Dir.', 'Aprovado DF', 'Aprovado', 'Processado'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
     processada: sols.filter(s => s.estado === 'Processado').reduce((a, s) => a + (s.valor || 0), 0)
   };
@@ -3720,6 +3733,14 @@ function gfCalcReceita(rubricaId) {
 // Obtém solicitações de uma rúbrica (para lista de faturas)
 function gfGetSolicitacoes(rubricaId, tipo = null) {
   return GF_SOLICITACOES.filter(s => s.rubricaId === rubricaId && (tipo === null || s.tipoSolicitacao === tipo));
+}
+
+// Calcula disponível real para alteração orçamental (descontando bloqueios)
+function gfCalcDisponivelParaAlteracao(rubricaId) {
+  const rub = GF_RUBRICAS.find(r => r.id === rubricaId);
+  if (!rub) return 0;
+  const desp = gfCalcDespesa(rubricaId);
+  return (rub.despOrc || 0) - desp.solicitada; // Já inclui bloqueio
 }
 
 // ── NAVIGATION ──
@@ -3913,7 +3934,7 @@ function gfRenderOrcamento() {
         ${[2024, 2025, 2026, 2027].map(y => `
           <button class="btn btn-sm ${y === GF.year ? '' : ''}" style="${y === GF.year ? 'background:var(--mod-financeiro);color:#fff;border-color:var(--mod-financeiro)' : ''}" onclick="GF.year=${y};gfRender()">${y}</button>
         `).join('')}
-        <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="gfNav('projeto-form')">+ Novo projeto</button>
+        <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="openProjetoForm()">+ Novo projeto</button>
       </div>
     </div>
     
@@ -3950,10 +3971,10 @@ function gfRenderOrcamento() {
                     </div>
                   </td>
                   <td style="padding:14px 16px">
-                    ${progressBar(0, 0, p.recOrc, '#10B981')}
+                    ${progressBar(p.recProc, p.recSol, p.recOrc, '#F97316')}
                     <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--text3)">
-                      <span>Sub: €0</span>
-                      <span>Proc: €0</span>
+                      <span>Sol: ${gfFmt(p.recSol)}</span>
+                      <span>Proc: ${gfFmt(p.recProc)}</span>
                       <span style="font-weight:600;color:var(--text)">Total: ${gfFmt(p.recOrc)}</span>
                     </div>
                   </td>
@@ -4408,39 +4429,43 @@ function gfRenderSolicitacoes() {
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
-      <a onclick="gfNav('home')" style="color:var(--blue);cursor:pointer">Início</a>
+      <a onclick="gfNav('home')" style="color:var(--mod-financeiro);cursor:pointer">Início</a>
       <span>›</span><span>Solicitações</span>
     </div>
     
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div style="font-size:20px;font-weight:600">Solicitações de Despesa</div>
-      <button class="btn btn-primary" onclick="GF.solicitacao=null;gfNav('solicitacao-form')">+ Nova Solicitação</button>
+      <div style="font-size:20px;font-weight:600">Solicitações</div>
+      <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="GF.solicitacao=null;gfNav('solicitacao-form')">+ Nova Solicitação</button>
     </div>
     
     <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)">
-      <button onclick="GF.tab.sol='lista';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'lista' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'lista' ? 'var(--blue)' : 'transparent'}">Todas</button>
-      <button onclick="GF.tab.sol='minhas';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'minhas' ? 'var(--blue)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'minhas' ? 'var(--blue)' : 'transparent'}">Minhas</button>
+      <button onclick="GF.tab.sol='lista';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'lista' ? 'var(--mod-financeiro)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'lista' ? 'var(--mod-financeiro)' : 'transparent'}">Todas</button>
+      <button onclick="GF.tab.sol='minhas';gfRender()" style="padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:${tab === 'minhas' ? 'var(--mod-financeiro)' : 'var(--text3)'};border-bottom:2px solid ${tab === 'minhas' ? 'var(--mod-financeiro)' : 'transparent'}">Minhas</button>
     </div>
     
     <div class="card" style="padding:0;overflow:hidden">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead>
-          <tr style="background:var(--bg)">
-            <th style="padding:12px 16px;text-align:left;font-weight:500">Código</th>
-            <th style="padding:12px 16px;text-align:left;font-weight:500">Título</th>
-            <th style="padding:12px 16px;text-align:left;font-weight:500">Projeto</th>
-            <th style="padding:12px 16px;text-align:right;font-weight:500">Valor</th>
-            <th style="padding:12px 16px;text-align:center;font-weight:500">Estado</th>
-            <th style="padding:12px 16px;text-align:center;font-weight:500">Data</th>
-            <th style="padding:12px 16px;text-align:center;font-weight:500">Ações</th>
+          <tr style="background:var(--mod-financeiro-bg)">
+            <th style="padding:12px 16px;text-align:left;font-weight:500;color:var(--mod-financeiro)">Código</th>
+            <th style="padding:12px 16px;text-align:left;font-weight:500;color:var(--mod-financeiro)">Título</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Tipo</th>
+            <th style="padding:12px 16px;text-align:left;font-weight:500;color:var(--mod-financeiro)">Projeto</th>
+            <th style="padding:12px 16px;text-align:right;font-weight:500;color:var(--mod-financeiro)">Valor</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Estado</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Data</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Ações</th>
           </tr>
         </thead>
         <tbody>
-          ${lista.length === 0 ? `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text3)">Sem solicitações</td></tr>` :
+          ${lista.length === 0 ? `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text3)">Sem solicitações</td></tr>` :
             lista.map(s => `
               <tr style="border-bottom:1px solid var(--border)">
                 <td style="padding:14px 16px;font-family:monospace;font-size:12px">${s.codigo || '—'}</td>
                 <td style="padding:14px 16px;font-weight:500">${s.titulo}</td>
+                <td style="padding:14px 16px;text-align:center">
+                  <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;background:${s.tipoSolicitacao === 'Receita' ? '#FFF7ED' : '#EFF6FF'};color:${s.tipoSolicitacao === 'Receita' ? '#F97316' : '#2563EB'}">${s.tipoSolicitacao || 'Despesa'}</span>
+                </td>
                 <td style="padding:14px 16px;font-size:12px;color:var(--text3)">${s.projetoNome || '—'}</td>
                 <td style="padding:14px 16px;text-align:right;font-weight:500">${gfFmt(s.valor)}</td>
                 <td style="padding:14px 16px;text-align:center">${GF_BADGES[s.estado] || s.estado}</td>
@@ -4575,10 +4600,7 @@ function gfSolProjetoChange() {
   
   const rubs = GF_RUBRICAS.filter(r => r.projetoId === projId && r.estado === 'Ativo');
   rubSel.innerHTML = '<option value="">Selecionar rúbrica...</option>' + 
-    rubs.map(r => {
-      const disp = (r.despOrc || 0) - (r.despSol || 0);
-      return `<option value="${r.id}" ${sol?.rubricaId === r.id ? 'selected' : ''}>${r.titulo} (Disp: ${gfFmt(disp)})</option>`;
-    }).join('');
+    rubs.map(r => `<option value="${r.id}" ${sol?.rubricaId === r.id ? 'selected' : ''}>${r.titulo}</option>`).join('');
   
   // Trigger rubrica change to show info
   if (sol?.rubricaId) gfSolRubricaInfo(sol.rubricaId);
@@ -5024,7 +5046,7 @@ function gfRenderAlteracaoForm() {
 
 function gfOrigemRow(o, idx) {
   const rub = o.rubricaId ? GF_RUBRICAS.find(r => r.id === o.rubricaId) : null;
-  const saldoDisp = rub ? (rub.despOrc || 0) - (rub.despSol || 0) : 0;
+  const saldoDisp = rub ? gfCalcDisponivelParaAlteracao(rub.id) : 0;
   const excede = o.valor && o.valor > saldoDisp;
   
   return `
@@ -5067,8 +5089,8 @@ function gfOrigRubOptions(projId, selectedId) {
   const rubs = GF_RUBRICAS.filter(r => r.projetoId === projId && r.tipo !== 'Receita');
   return '<option value="">Selecionar...</option>' + 
     rubs.map(r => {
-      const disp = (r.despOrc || 0) - (r.despSol || 0);
-      return `<option value="${r.id}" ${selectedId === r.id ? 'selected' : ''}>${r.titulo} (${gfFmt(disp)})</option>`;
+      const disp = gfCalcDisponivelParaAlteracao(r.id);
+      return `<option value="${r.id}" ${selectedId === r.id ? 'selected' : ''} ${disp <= 0 ? 'disabled' : ''}>${r.titulo} (Disp: ${gfFmt(disp)})</option>`;
     }).join('');
 }
 
@@ -5106,7 +5128,7 @@ function gfOrigValorChange(idx) {
   // Validar se excede disponível
   const rub = GF.origens[idx].rubricaId ? GF_RUBRICAS.find(r => r.id === GF.origens[idx].rubricaId) : null;
   if (rub) {
-    const disp = (rub.despOrc || 0) - (rub.despSol || 0);
+    const disp = gfCalcDisponivelParaAlteracao(rub.id);
     if (GF.origens[idx].valor > disp) {
       showNotif(`Valor excede o disponível na rúbrica (${gfFmt(disp)})`, 'error');
     }
@@ -5140,13 +5162,11 @@ async function gfSubmitAlteracao() {
   
   // Validar que nenhuma origem excede o disponível
   for (const o of GF.origens) {
-    const rub = GF_RUBRICAS.find(r => r.id === o.rubricaId);
-    if (rub) {
-      const disp = (rub.despOrc || 0) - (rub.despSol || 0);
-      if (o.valor > disp) {
-        showNotif(`Uma origem excede o saldo disponível. Corrija antes de submeter.`, 'error');
-        return;
-      }
+    const disp = gfCalcDisponivelParaAlteracao(o.rubricaId);
+    if (o.valor > disp) {
+      const rub = GF_RUBRICAS.find(r => r.id === o.rubricaId);
+      showNotif(`Rúbrica "${rub?.titulo}" só tem ${gfFmt(disp)} disponível. Reduza o valor.`, 'error');
+      return;
     }
   }
   
@@ -5268,21 +5288,71 @@ function gfRenderAprovacoes() {
 async function gfAprovarAlteracao(id) {
   if (!confirm('Aprovar esta alteração?')) return;
   try {
+    const alt = GF_ALTERACOES.find(a => a.id === id);
+    if (!alt) throw new Error('Alteração não encontrada');
+    
     const body = { __metadata: { type: 'SP.Data.FJ_x005f_AlteracoesOrcamentaisListItem' } };
+    let isFullyApproved = false;
+    
     if (_financeRole === 'df') {
       body.AprovDFId = await getCurrentUserId();
       body.DataAprovDF = new Date().toISOString();
+      // Se nível é só DF, aprovação completa
+      if (alt.nivel === 'df') {
+        body.Estado = 'Aprovado';
+        isFullyApproved = true;
+      }
     } else if (_financeRole === 'pe') {
       body.AprovPEId = await getCurrentUserId();
+      // Se nível é df_pe, aprovação completa
+      if (alt.nivel === 'df_pe') {
+        body.Estado = 'Aprovado';
+        isFullyApproved = true;
+      }
     } else if (_financeRole === 'pca') {
       body.AprovPCAId = await getCurrentUserId();
       body.Estado = 'Aprovado';
+      isFullyApproved = true;
     }
+    
     await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_AlteracoesOrcamentais')/items(${id})`, body, 'MERGE');
+    
+    // Se aprovação completa, atualizar valores orçamentados nas rubricas
+    if (isFullyApproved) {
+      await gfAplicarAlteracaoOrcamental(alt);
+    }
+    
     showNotif('Alteração aprovada!', 'success');
     await gfLoadAll();
   } catch (e) {
     showNotif('Erro: ' + e.message, 'error');
+  }
+}
+
+// Aplica a alteração orçamental - diminui origem, aumenta destino
+async function gfAplicarAlteracaoOrcamental(alt) {
+  const origens = GF_ALTERACOES_ORIGENS.filter(o => o.alteracaoId === alt.id);
+  
+  // Diminuir valores nas origens
+  for (const o of origens) {
+    const rub = GF_RUBRICAS.find(r => r.id === o.rubricaId);
+    if (rub) {
+      const novoValor = Math.max(0, (rub.despOrc || 0) - o.valor);
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items(${o.rubricaId})`, {
+        __metadata: { type: 'SP.Data.FJ_x005f_RubricasListItem' },
+        DespOrcamentada: novoValor
+      }, 'MERGE');
+    }
+  }
+  
+  // Aumentar valor no destino
+  const destRub = GF_RUBRICAS.find(r => r.id === alt.destRubricaId);
+  if (destRub) {
+    const novoValor = (destRub.despOrc || 0) + alt.valorTotal;
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items(${alt.destRubricaId})`, {
+      __metadata: { type: 'SP.Data.FJ_x005f_RubricasListItem' },
+      DespOrcamentada: novoValor
+    }, 'MERGE');
   }
 }
 
@@ -5362,7 +5432,7 @@ async function getCurrentUserId() {
 
 init();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9d5e537b510c00',t:'MTc3NTc3ODE0OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9d8b5178406936',t:'MTc3NTc3OTk5MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
 </html>
 >
