@@ -1437,8 +1437,22 @@ function getFinanceRole(groups){
 }
 let _financeRole='worker';
 
-const msalCfg={auth:{clientId:CLIENT_ID,authority:`https://login.microsoftonline.com/${TENANT_ID}`,redirectUri:REDIRECT}};
+const msalCfg={
+  auth:{
+    clientId:CLIENT_ID,
+    authority:`https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri:REDIRECT
+  },
+  cache:{cacheLocation:'sessionStorage',storeAuthStateInCookie:false}
+};
+
+console.log('=== INICIANDO MSAL ===');
+console.log('MSAL Config:', msalCfg);
+console.log('Client ID:', CLIENT_ID);
+console.log('Redirect URI:', REDIRECT);
+
 const msalI=new msal.PublicClientApplication(msalCfg);
+console.log('MSAL Instance criada com sucesso');
 
 let user=null,spToken=null,graphToken=null;
 let userGroups=[];
@@ -1454,9 +1468,28 @@ async function init(){
   else{const a=msalI.getAllAccounts();if(a.length){user=a[0];await getSPToken();await loadUserGroups();showApp();}}
 }
 async function doLogin(){
-  document.getElementById('login-msg').textContent='A autenticar...';
-  try{await msalI.loginRedirect({scopes:[...SCOPES,...GRAPH_SCOPES]});}
-  catch(e){document.getElementById('login-msg').textContent='Erro: '+e.message;}
+  console.log('=== TENTATIVA DE LOGIN ===');
+  const loginMsg = document.getElementById('login-msg');
+  if(!loginMsg) {
+    console.error('Elemento login-msg não encontrado!');
+    alert('Erro: Elemento de mensagem não encontrado. Recarregue a página (F5).');
+    return;
+  }
+  
+  loginMsg.textContent='A autenticar...';
+  console.log('MSAL Instance:', msalI);
+  console.log('Scopes:', [...SCOPES,...GRAPH_SCOPES]);
+  
+  try{
+    console.log('Chamando loginRedirect...');
+    await msalI.loginRedirect({scopes:[...SCOPES,...GRAPH_SCOPES]});
+    console.log('loginRedirect completou (não deve chegar aqui devido ao redirect)');
+  }
+  catch(e){
+    console.error('Erro no login:', e);
+    loginMsg.textContent='Erro: '+e.message;
+    alert('Erro de login: ' + e.message + '\n\nVerifique o console (F12) para mais detalhes.');
+  }
 }
 function doLogout(){msalI.logoutRedirect();}
 async function getSPToken(){
