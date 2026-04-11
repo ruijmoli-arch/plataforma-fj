@@ -1608,15 +1608,19 @@ function filterFinanceProjects(projects){
   if(!currentUserFJ) return projects;
   
   const equipas=currentUserFJ.equipa||[];
+  const cargo=currentUserFJ.cargo||'';
   
   // Presidente Executivo vê TUDO
   if(_financeRole === 'pe') return projects;
+  
+  // TODOS os Diretores vêem TUDO (incluindo Diretores de Área)
+  if(cargo === 'Diretor') return projects;
   
   // CAdm e Gestão vêem tudo
   if(equipas.includes('CAdm')) return projects;
   if(equipas.includes('Gestão')) return projects;
   
-  // Filtrar apenas projetos afetos
+  // Membros: apenas projetos afetos
   const projetosAfetos=currentUserFJ.projetos||[];
   return projects.filter(p=>projetosAfetos.includes(p.id));
 }
@@ -2104,6 +2108,10 @@ function removeInlineTarefa(idx){
 }
 function renderInlineTarefas(){
   const list=document.getElementById('fe-rnTarefas-list');
+  if(!list) {
+    console.warn('Elemento fe-rnTarefas-list não encontrado');
+    return;
+  }
   if(!feInlineTarefas.length){list.innerHTML='';return;}
   list.innerHTML=feInlineTarefas.map((t,i)=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:4px">
@@ -3346,6 +3354,20 @@ async function saveProjeto(){
     closeProjetoForm();await loadProjetos();renderHier();populateDrops();showNotif('Projeto guardado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
+}
+
+// Helper: obter nome da ação por ID
+function an(acaoId){
+  if(!acaoId) return '—';
+  const acao=plAcoes.find(a=>String(a.id)===String(acaoId));
+  return acao?acao.titulo:'—';
+}
+
+// Helper: obter nome do projeto por ID  
+function pn(projetoId){
+  if(!projetoId) return '—';
+  const proj=plProjetos.find(p=>String(p.id)===String(projetoId));
+  return proj?proj.nome:'—';
 }
 
 /* ===== GANTT ===== */
