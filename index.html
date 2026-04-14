@@ -58,6 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;fo
 .layout{display:flex;min-height:calc(100vh - 56px)}
 .sidebar{width:210px;background:var(--fj-blue);padding:1rem 0;flex-shrink:0}
 .sidebar-label{font-size:10px;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;padding:.5rem .75rem .25rem}
+.sidebar-lbl{font-size:10px;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;padding:.5rem .75rem .25rem}
 .nav-item{display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border-radius:7px;cursor:pointer;color:rgba(255,255,255,.75);font-size:13px;margin:1px .5rem;transition:background .12s}
 .nav-item:hover{background:rgba(255,255,255,.1);color:#fff}
 .nav-item.active{background:var(--fj-orange);color:#fff}
@@ -104,6 +105,18 @@ tr:hover td{background:var(--bg3)}
 .b-delib{background:var(--purple-bg);color:var(--purple)}.b-info{background:var(--gray-bg);color:var(--gray)}
 .b-aprov{background:var(--green-bg);color:var(--green)}.b-nap{background:var(--red-bg);color:var(--red)}
 .b-pend{background:var(--amber-bg);color:var(--amber)}.b-na{background:var(--gray-bg);color:var(--gray)}
+.warn-box{background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--r);padding:10px 14px;margin-bottom:1rem;font-size:13px;color:#92400E;display:none}
+.warn-box.show{display:block}
+/* KPI hierarchy */
+.kpi-proj-block{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);margin-bottom:10px;overflow:hidden}
+.kpi-proj-hdr{padding:12px 16px;background:var(--bg3);display:flex;align-items:center;gap:10px;cursor:pointer;border-bottom:0.5px solid var(--border)}
+.kpi-proj-hdr:hover{background:var(--border)}
+.kpi-acao-block{border-top:0.5px solid var(--border);padding:10px 16px}
+.kpi-acao-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.kpi-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:8px;align-items:center;padding:8px 10px;border-radius:var(--r);background:var(--bg);margin-bottom:4px;font-size:13px}
+.kpi-row:hover{background:var(--bg3)}
+.kpi-prog{height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.kpi-prog-fill{height:100%;border-radius:3px;transition:width .3s}
 .b-aberto{background:var(--gray-bg);color:var(--gray)}.b-processo{background:var(--blue-l);color:var(--blue-d)}
 .b-concluido{background:var(--green-bg);color:var(--green)}.b-cancelado{background:var(--red-bg);color:var(--red)}
 .b-pe{background:var(--purple-bg);color:var(--purple)}.b-segca{background:var(--blue-l);color:var(--blue-d)}
@@ -851,7 +864,7 @@ tr:hover td{background:var(--bg3)}
 
             </div>
             <div class="panel-footer">
-              <button class="btn" onclick="closeTarForm()">Cancelar</button>
+              <button class="btn" onclick="closeRnTarForm()">Cancelar</button>
               <button class="btn btn-primary" id="save-tar-btn" onclick="saveTarefa()">Guardar</button>
             </div>
           </div>
@@ -861,8 +874,8 @@ tr:hover td{background:var(--bg3)}
           <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
           <select class="flt" id="fft-est" onchange="renderTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
           <select class="flt" id="fft-prior" onchange="renderTarefasTable()"><option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
-          <button class="btn" onclick="loadTarefas()">&#8635;</button>
-          <button class="btn btn-primary" onclick="openTarForm()">+ Nova tarefa</button>
+          <button class="btn" onclick="loadRnTarefas()">&#8635;</button>
+          <button class="btn btn-primary" onclick="openRnTarForm()">+ Nova tarefa</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -1232,12 +1245,8 @@ tr:hover td{background:var(--bg3)}
             <select class="flt" id="ff-kd-tipo" onchange="renderKdefs()"><option value="">Todos os tipos</option><option>Manual</option><option>Automático</option></select>
             <button class="btn btn-primary" onclick="openKdefForm()">+ Novo KPI</button>
           </div>
-          <div class="table-wrap">
-            <table>
-              <colgroup><col style="width:20%"><col style="width:18%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:10%"><col style="width:11%"><col style="width:7%"></colgroup>
-              <thead><tr><th>Nome</th><th>Ação</th><th>Tipo</th><th>Direção</th><th>Objetivo</th><th>Unidade</th><th>Frequência</th><th>Responsável</th><th>Ações</th></tr></thead>
-              <tbody id="tbody-kdef"></tbody>
-            </table>
+          <div id="kpi-defs-container" class="table-wrap" style="padding:0">
+            <div class="empty" style="padding:2rem;text-align:center">A carregar KPIs...</div>
           </div>
         </div>
         <div id="kp-reg" class="tab-panel">
@@ -1407,7 +1416,7 @@ function switchModule(mod){
   });
   if(mod==='pl'){
     if(!_plLoaded){_plLoaded=true;plInit();}
-    plShowPage('dash');
+    plShowPage('dashboard');
   }
   if(mod==='gf'&&!_gfLoaded){_gfLoaded=true;gfInit();}
   if(mod==='rn')showPage('assuntos');
@@ -1751,7 +1760,7 @@ function showApp(){
   });
   
   loadSharedProjetos();
-  loadItems();loadExtItems();loadTarefas();loadHistReunioes();loadSavedSessions();
+  loadItems();loadExtItems();loadRnTarefas();loadHistReunioes();loadSavedSessions();
 }
 
 
@@ -2012,14 +2021,14 @@ async function deleteItem(id){
 // REUNIÕES EXTERNAS
 async function loadExtItems(){
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items?$select=*,AttachmentFiles&$expand=AttachmentFiles&$orderby=DataReuniao desc&$top=500`);
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items?$select=*,AttachmentFiles,Departamento/Title,Responsavel/Title&$expand=AttachmentFiles,Departamento,Responsavel&$orderby=DataReuniao desc&$top=500`);
     extItems=d.d.results.map(r=>({
       id:r.Id,etag:r.__metadata?.etag||'*',
       titulo:r.Title||'',entidade:r.Entidade||'',
       data:r.DataReuniao?r.DataReuniao.split('T')[0]:'',
       local:r.Local||'',participantes:r.Participantes||'',
       resumo:r.Resumo||'',proximosPassos:r.ProximosPassos||'',
-      departamento:r.Departamento||'',responsavel:r.Responsavel?.Title||'',
+      departamento:r.Departamento?.Title||r.Departamento||'',responsavel:r.Responsavel?.Title||'',
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     renderExtTable();
@@ -2059,7 +2068,7 @@ function openExtForm(id){
     console.error('Modal frm-ext-ov não encontrado!');
     return;
   }
-  modal.classList.add('open');
+  modal.style.display='flex';
   el('fe-attachments').innerHTML='';el('fe-file').value='';
   if(id){
     const i=extItems.find(x=>x.id===id);if(!i)return;
@@ -2090,10 +2099,16 @@ async function saveExt(){
       Participantes:gv2t('fe-part'),Resumo:gv2t('fe-resumo'),ProximosPassos:gv2t('fe-passos')
     };
     if(gv('fe-data'))body.DataReuniao=gv('fe-data')+'T00:00:00Z';
-    // Departamento (campo Choice — texto simples)
+    // Departamento (campo Lookup para FJ_Departamentos)
     const depVal=gv('fe-dep');
     if(depVal){
-      body.Departamento=depVal;
+      // Garantir que os departamentos estão carregados
+      if(!plDepartamentos?.length){
+        try{await loadDepartamentos();}catch(e){console.warn('loadDepartamentos fallback failed',e);}
+      }
+      const depItem=plDepartamentos?.find(d=>d.Title===depVal||d.nome===depVal);
+      if(depItem) body.DepartamentoId=depItem.id||depItem.ID;
+      // Se não encontrou ID, não inclui o campo — evita HTTP 400 com Lookup
     }
     // Responsável FJ (Person lookup via email)
     const respEmail=gv('fe-resp-email');
@@ -2110,7 +2125,7 @@ async function saveExt(){
     const files=el('fe-file').files;
     for(const f of files)await uploadAttachment('FJ_ReunioesExternas',itemId,f);
     if(feInlineTarefas.length)await saveInlineTarefas(itemId,titulo);
-    closeExtForm();await loadExtItems();await loadTarefas();showNotif('Reunião externa guardada!','success');
+    closeExtForm();await loadExtItems();await loadRnTarefas();showNotif('Reunião externa guardada!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
@@ -2170,7 +2185,7 @@ async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
 }
 
 // TAREFAS
-async function loadTarefas(){
+async function loadRnTarefas(){
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*&$orderby=DataLimite asc&$top=500`);
     rnTarefas=d.d.results.map(r=>({
@@ -2179,8 +2194,8 @@ async function loadTarefas(){
       responsavel:r.Responsavel||'',
       data:r.DataLimite?r.DataLimite.split('T')[0]:'',
       estado:r.Estado||'Por fazer',prioridade:r.Prioridade||'Média',
-      departamento:r.Departamento||'',projetoId:r.ProjetoId||null,
-      acaoId:r.AcaoId||null
+      departamento:r.Departamento||'',projetoId:r.ProjetoIdId||null,
+      acaoId:r.AcaoIdId||null
     }));
     renderTarefasTable();renderTarefasStats();
   }catch(e){console.warn('Tarefas error',e);}
@@ -2225,7 +2240,7 @@ function renderTarefasTable(){
   }).join('');
   el('tcount-tar').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
 }
-function openTarForm(id){
+function openRnTarForm(id){
   rnEditTarId=id||null;
   el('frm-tar-ov').classList.add('open');
   if(id){
@@ -2241,8 +2256,8 @@ function openTarForm(id){
     sv2('ft-data','');sv2('ft-estado','Por fazer');sv2('ft-prior','Média');sv2('ft-dep','Gestão');sv2('ft-origem','Reunião Externa');
   }
 }
-function editTar(id){openTarForm(id);}
-function closeTarForm(){el('frm-tar-ov').classList.remove('open');rnEditTarId=null;}
+function editTar(id){openRnTarForm(id);}
+function closeRnTarForm(){el('frm-tar-ov').classList.remove('open');rnEditTarId=null;}
 async function saveTarefa(){
   const titulo=el('ft-titulo').value.trim();
   if(!titulo){alert('Por favor indique o título.');return;}
@@ -2259,7 +2274,7 @@ async function saveTarefa(){
     }else{
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
     }
-    closeTarForm();await loadTarefas();showNotif('Tarefa guardada!','success');
+    closeRnTarForm();await loadRnTarefas();showNotif('Tarefa guardada!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
@@ -2268,7 +2283,7 @@ async function deleteTar(id){
   try{
     await getSPToken();const digest=await getDigest();
     await fetch(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items(${id})`,{method:'DELETE',headers:{Authorization:`Bearer ${spToken}`,'X-RequestDigest':digest,'IF-MATCH':'*'}});
-    await loadTarefas();showNotif('Eliminado.','success');
+    await loadRnTarefas();showNotif('Eliminado.','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
@@ -2922,14 +2937,7 @@ function isoWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.ge
 function weekLabel(w,y){const jan4=new Date(y,0,4);const day=jan4.getDay()||7;const mon=new Date(jan4);mon.setDate(jan4.getDate()-day+1+(w-1)*7);const sun=new Date(mon);sun.setDate(mon.getDate()+6);const fmt=d=>d.toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});return`Semana ${w} · ${fmt(mon)} — ${sun.toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'})}`;}
 function weekRange(w,y){const jan4=new Date(y,0,4);const day=jan4.getDay()||7;const mon=new Date(jan4);mon.setDate(jan4.getDate()-day+1+(w-1)*7);const sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59);return{start:mon,end:sun};}
 
-// ── plShowPage alias ──
-function plShowPage(p){
-  document.querySelectorAll('#module-pl .page').forEach(e=>e.classList.remove('active'));
-  document.querySelectorAll('#sidebar-pl .nav-item').forEach(e=>e.classList.remove('active'));
-  document.getElementById('pl-page-'+p)?.classList.add('active');
-  document.getElementById('pl-nav-'+p)?.classList.add('active');
-  if(p==='gantt')renderGantt?.();
-}
+// ── plShowPage ──
 
 // ── pendingAprovCount (GF) ──
 function pendingAprovCount(){
@@ -3022,8 +3030,8 @@ async function loadTarefas(){
       anoFJ:r.AnoFJ||null,
       notas:r.Notas||'',
       prioridade:r.Prioridade||'Média',
-      projetoId:r.ProjetoId||null,
-      acaoId:r.AcaoId||null,
+      projetoId:r.ProjetoIdId||null,
+      acaoId:r.AcaoIdId||null,
       responsavel:r.Responsavel||'',
       dep:r.Departamento||'',
       lista:'FJ_Tarefas',
@@ -3053,7 +3061,7 @@ async function loadKPIRegs(){
 }
 async function loadPlanoTrim(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items?$select=*&$orderby=AnoFJ desc,Trimestre asc&$top=500`);
-  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,trim:r.Trimestre||'',ano:r.AnoFJ||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
+  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoIdId||null,acaoId:r.AcaoIdId||null,trim:r.Trimestre||'',ano:r.AnoFJ||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
 }
 
 /* ===== DROPDOWNS ===== */
@@ -3120,6 +3128,12 @@ function kpiEstado(k,pct){
   if(pct===null)return'—';
   if(k.dir==='limite'){return pct<=100?'✓ Atingido':pct<=120?'⚠ Em risco':'✗ Excedido';}
   return pct>=100?'✓ Atingido':pct>=80?'⚠ Em risco':'✗ Não atingido';
+}
+// KPI name by ID
+function kn(kpiId){
+  if(!kpiId)return'—';
+  const k=plKpdefs.find(x=>String(x.id)===String(kpiId));
+  return k?k.nome:'—';
 }
 
 /* ===== HIERARQUIA ===== */
@@ -3241,8 +3255,7 @@ function toggleHierAcao(acaoId){
     `;
   }
 }
-function openTarFormForAcao(acaoId){openTarForm();sv2('ftar-acao',acaoId);}
-function openTarFormForProj(projId){openTarForm();/* projeto fica vazio, ação vazia — tarefa vai aparecer na secção sem ação */}
+
 
 /* ===== AÇÕES CRUD ===== */
 let editAcaoId=null;
@@ -3819,21 +3832,114 @@ function setKTab(t){
   if(elKpReg)elKpReg.classList.toggle('active',t==='reg');
 }
 function renderKdefs(){
-  const tbody=el('tbody-kdef');
-  if(!tbody)return;
-  const proj=gv('ff-kd-proj'),tipo=gv('ff-kd-tipo');
-  const list=plKpdefs.filter(k=>{if(proj&&String(k.projetoId)!==proj)return false;if(tipo&&k.tipo!==tipo)return false;return true;});
-  tbody.innerHTML=list.map(k=>`<tr>
-    <td style="font-weight:500" title="${k.nome}">${k.nome}</td>
-    <td style="font-size:12px" title="${an(k.acaoId)}">${an(k.acaoId)}</td>
-    <td>${estB(k.tipo)}</td>
-    <td>${badgeHTML(k.dir==='limite'?'b-limite':'b-meta',k.dir==='limite'?'↓ Limite':'↑ Meta')}</td>
-    <td style="font-weight:700">${k.meta||0}</td>
-    <td>${k.uni||'—'}</td>
-    <td style="font-size:12px">${k.freq||'—'}</td>
-    <td style="font-size:12px">${k.resp||'—'}</td>
-    <td><div class="actions"><button class="btn btn-sm" onclick="editKdef(${k.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delKdef(${k.id})">✕</button></div></td>
-  </tr>`).join('')||`<tr><td colspan="9"><div class="empty">Sem KPIs.</div></td></tr>`;
+  const container=el('tbody-kdef')?.closest('.table-wrap');
+  if(!container)return;
+  const projFlt=gv('ff-kd-proj'),tipoFlt=gv('ff-kd-tipo');
+
+  let kpis=plKpdefs.filter(k=>{
+    if(projFlt&&String(k.projetoId)!==projFlt)return false;
+    if(tipoFlt&&k.tipo!==tipoFlt)return false;
+    return true;
+  });
+
+  // Calcular taxa de cumprimento de um KPI (último registo vs meta)
+  function kpiCumprimento(k){
+    const regs=plKpregs.filter(r=>String(r.kpiId)===String(k.id)).sort((a,b)=>b.id-a.id);
+    if(!regs.length||!k.meta)return null;
+    const pct=Math.round((regs[0].valor/k.meta)*100);
+    return{valor:regs[0].valor,pct,cor:k.dir==='limite'?(pct<=100?'var(--green-mid)':pct<=120?'var(--amber)':'var(--red)'):(pct>=100?'var(--green-mid)':pct>=80?'var(--amber)':'var(--red)')};
+  }
+
+  // Agrupar: sem projeto → por projeto → por ação
+  const semProjeto=kpis.filter(k=>!k.projetoId);
+  const comProjeto=plProjetos.filter(p=>kpis.some(k=>String(k.projetoId)===String(p.id)));
+
+  let html='';
+
+  // KPIs sem projeto
+  if(semProjeto.length){
+    html+=`<div class="kpi-proj-block">
+      <div class="kpi-proj-hdr" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <span style="font-size:13px;font-weight:600;color:var(--text2)">Sem projeto associado</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:auto">${semProjeto.length} KPI${semProjeto.length!==1?'s':''}</span>
+      </div>
+      <div class="kpi-acao-block">
+        ${semProjeto.map(k=>{const c=kpiCumprimento(k);return kpiRow(k,c);}).join('')}
+      </div>
+    </div>`;
+  }
+
+  // KPIs por projeto
+  comProjeto.forEach(p=>{
+    const projKpis=kpis.filter(k=>String(k.projetoId)===String(p.id));
+    const acoes=[...new Set(projKpis.map(k=>k.acaoId))];
+    const semAcao=projKpis.filter(k=>!k.acaoId);
+    const cumprMedio=projKpis.reduce((sum,k)=>{const c=kpiCumprimento(k);return c?sum+Math.min(c.pct,100):sum;},0)/(projKpis.filter(k=>kpiCumprimento(k)).length||1);
+    const cor=cumprMedio>=80?'var(--green-mid)':cumprMedio>=50?'var(--amber)':'var(--red)';
+    html+=`<div class="kpi-proj-block">
+      <div class="kpi-proj-hdr" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <span style="font-size:14px;font-weight:600">${p.nome}</span>
+        ${p.dep?`<span class="badge b-info" style="font-size:10px">${p.dep}</span>`:''}
+        <span style="margin-left:auto;font-size:12px;font-weight:700;color:${cor}">${Math.round(cumprMedio)}% cumprimento</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:8px">${projKpis.length} KPI${projKpis.length!==1?'s':''}</span>
+        <button class="btn btn-sm" style="font-size:11px;margin-left:8px" onclick="event.stopPropagation();openKdefFormForProj(${p.id})">+ KPI</button>
+      </div>
+      <div>
+        ${semAcao.length?`<div class="kpi-acao-block">
+          <div class="kpi-acao-title">📋 KPIs do projeto (sem ação específica)</div>
+          ${semAcao.map(k=>{const c=kpiCumprimento(k);return kpiRow(k,c);}).join('')}
+        </div>`:''}
+        ${acoes.filter(Boolean).map(acaoId=>{
+          const a=plAcoes.find(x=>String(x.id)===String(acaoId));
+          const acaoKpis=projKpis.filter(k=>String(k.acaoId)===String(acaoId));
+          return`<div class="kpi-acao-block">
+            <div class="kpi-acao-title">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,8 7,11 12,5"/></svg>
+              ${a?a.nome||a.titulo:'Ação #'+acaoId}
+            </div>
+            ${acaoKpis.map(k=>{const c=kpiCumprimento(k);return kpiRow(k,c);}).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  if(!html)html=`<div class="empty" style="padding:2rem;text-align:center">Sem KPIs definidos. Clique em "+ Novo KPI" para começar.</div>`;
+
+  // Substituir o table-wrap por blocos de projeto
+  container.innerHTML=html;
+}
+
+function kpiRow(k,c){
+  const barW=c?Math.min(c.pct,100):0;
+  const barCor=c?c.cor:'var(--border2)';
+  return`<div class="kpi-row">
+    <div>
+      <div style="font-weight:500">${k.nome}</div>
+      <div style="font-size:11px;color:var(--text3)">${k.freq||'—'} · ${k.dir==='limite'?'↓ Limite':'↑ Meta'} · ${k.uni||'—'}</div>
+    </div>
+    <div style="text-align:center">
+      ${c?`<span style="font-weight:700;font-size:14px;color:${c.cor}">${c.valor} ${k.uni||''}</span><br><span style="font-size:10px;color:var(--text3)">atual</span>`:'<span style="color:var(--text3);font-size:12px">sem registo</span>'}
+    </div>
+    <div style="text-align:center">
+      <span style="font-size:13px">${k.meta||0} ${k.uni||''}</span><br>
+      <span style="font-size:10px;color:var(--text3)">objetivo</span>
+    </div>
+    <div>
+      <div class="kpi-prog"><div class="kpi-prog-fill" style="width:${barW}%;background:${barCor}"></div></div>
+      <div style="font-size:11px;font-weight:700;color:${barCor};margin-top:2px">${c?c.pct+'%':'—'}</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-sm" onclick="editKdef(${k.id})">Editar</button>
+      <button class="btn btn-sm btn-danger" onclick="delKdef(${k.id})">✕</button>
+    </div>
+  </div>`;
+}
+
+function openKdefFormForProj(projId){
+  openKdefForm();
+  const projSel=el('fk-proj');
+  if(projSel){sv2('fk-proj',String(projId));loadAcoesForProj(projId,'fk-acao');}
 }
 function openKdefForm(id){
   plEditKdefId=id||null;el('frm-kdef-ov').classList.add('open');
@@ -4002,7 +4108,7 @@ function gerarRelT(){
 async function plSearchPeople(q,sugId,inputId,emailId){
   if(q.length<2){el(sugId)?.classList.remove('open');return;}
   try{
-    await getGrTok();
+    await getGraphToken();
     const r=await fetch(`https://graph.microsoft.com/v1.0/users?$filter=startswith(displayName,'${encodeURIComponent(q)}') or startswith(mail,'${encodeURIComponent(q)}')&$select=displayName,mail&$top=8`,{headers:{Authorization:`Bearer ${graphToken}`}});
     const d=await r.json();const s=el(sugId);if(!s)return;
     if(!d.value?.length){s.classList.remove('open');return;}
@@ -4022,7 +4128,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.people-wrap'))docum
 
 /* ===== CLOSE OVERLAYS ON BACKDROP ===== */
 document.addEventListener('click',e=>{
-  if(e.target===el('frm-tar-ov'))closeTarForm();
+  if(e.target===el('frm-tar-ov'))closeRnTarForm();
   if(e.target===el('frm-trim-ov'))closeTrimForm();
   if(e.target===el('frm-kdef-ov'))closeKdefForm();
   if(e.target===el('frm-kreg-ov'))closeKregForm();
@@ -5400,26 +5506,7 @@ function gfRenderSolicitacaoView() {
           <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Documentos</div>
           <div style="color:var(--text3);font-size:13px">A carregar...</div>
         </div>
-        <script>
-        (function(){
-          const listId=${sol.id};
-          spRead('${SP}/_api/web/lists/getbytitle(\'FJ_Solicitacoes\')/items('+listId+')/AttachmentFiles')
-            .then(d=>{
-              const files=d.d?.results||[];
-              const orc=files.filter(f=>f.FileName.startsWith('ORC_'));
-              const adj=files.filter(f=>f.FileName.startsWith('ADJ_'));
-              const other=files.filter(f=>!f.FileName.startsWith('ORC_')&&!f.FileName.startsWith('ADJ_'));
-              const link=f=>'<a href="${SP}'+f.ServerRelativeUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--blue-l);color:var(--blue-d);border-radius:4px;font-size:12px;text-decoration:none;margin:2px">📎 '+f.FileName.replace(/^(ORC_|ADJ_)/,'')+'</a>';
-              const wrap=document.getElementById('gf-sol-view-attachments-${sol.id}');
-              if(!wrap)return;
-              wrap.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Documentos</div>'
-                +(orc.length?'<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:4px">📋 Orçamentos recebidos</div><div>'+orc.map(link).join('')+'</div></div>':'')
-                +(adj.length?'<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#059669;margin-bottom:4px">✅ Proposta de adjudicação</div><div>'+adj.map(link).join('')+'</div></div>':'')
-                +(other.length?'<div><div style="font-size:12px;font-weight:600;margin-bottom:4px">📁 Outros</div><div>'+other.map(link).join('')+'</div></div>':'')
-                +(!files.length?'<div style="color:var(--text3);font-size:13px">Sem documentos</div>':'');
-            }).catch(()=>{});
-        })();
-        </script>
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="gfLoadSolicitacaoAttachments(${sol.id})" style="display:none" alt="">
         </div>
         
         ${(canApproveDir || canApproveDF) ? `
@@ -5467,6 +5554,29 @@ function gfWorkflowStep(label, done, who, when) {
       </div>
     </div>
   `;
+}
+
+// Carrega e exibe os anexos da solicitação agrupados por tipo
+function gfLoadSolicitacaoAttachments(solId) {
+  const wrap = document.getElementById('gf-sol-view-attachments-'+solId);
+  if (!wrap) return;
+  spRead(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${solId})/AttachmentFiles`)
+    .then(d => {
+      const files = d.d?.results || [];
+      const orc = files.filter(f => f.FileName.startsWith('ORC_'));
+      const adj = files.filter(f => f.FileName.startsWith('ADJ_'));
+      const other = files.filter(f => !f.FileName.startsWith('ORC_') && !f.FileName.startsWith('ADJ_'));
+      const link = f => `<a href="${SP}${f.ServerRelativeUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--blue-l);color:var(--blue-d);border-radius:4px;font-size:12px;text-decoration:none;margin:2px">📎 ${f.FileName.replace(/^(ORC_|ADJ_)/,'')}</a>`;
+      if (!files.length) {
+        wrap.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Documentos</div><div style="color:var(--text3);font-size:13px">Sem documentos anexados</div>';
+        return;
+      }
+      wrap.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Documentos</div>'
+        + (orc.length ? `<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">📋 Orçamentos recebidos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${orc.map(link).join('')}</div></div>` : '')
+        + (adj.length ? `<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#059669;margin-bottom:6px">✅ Proposta de adjudicação</div><div style="display:flex;flex-wrap:wrap;gap:4px">${adj.map(link).join('')}</div></div>` : '')
+        + (other.length ? `<div><div style="font-size:12px;font-weight:600;margin-bottom:6px">📁 Outros</div><div style="display:flex;flex-wrap:wrap;gap:4px">${other.map(link).join('')}</div></div>` : '');
+    })
+    .catch(e => { wrap.innerHTML = `<div style="color:var(--red);font-size:13px">Erro ao carregar documentos: ${e.message}</div>`; });
 }
 
 async function gfAprovarSolicitacao(id) {
@@ -6399,3 +6509,4 @@ init();
 </script>
 </body>
 </html>
+>
