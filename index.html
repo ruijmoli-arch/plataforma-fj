@@ -776,7 +776,8 @@ tr:hover td{background:var(--bg3)}
               </div>
               <div class="fg"><label>Responsável FJ</label>
                 <div class="people-wrap">
-                  <input type="text" id="fe-resp" placeholder="Pesquisar pessoa..." autocomplete="off" oninput="searchPeople(this.value,'fe-resp-suggestions','fe-resp')">
+                  <input type="text" id="fe-resp" placeholder="Pesquisar pessoa..." autocomplete="off" oninput="searchPeople(this.value,'fe-resp-suggestions','fe-resp','fe-resp-email')">
+                  <input type="hidden" id="fe-resp-email">
                   <div class="people-suggestions" id="fe-resp-suggestions"></div>
                 </div>
               </div>
@@ -1101,15 +1102,14 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <select class="flt" id="ff-t-q" onchange="renderTrim()"><option value="">Todos os trimestres</option><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
-          <select class="flt" id="ff-t-ano" onchange="renderTrim()"><option value="">Todos os anos</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select>
+          <select class="flt" id="ff-t-ano" onchange="renderTrim()"><option value="">Ano atual</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option></select>
           <select class="flt" id="ff-t-dep" onchange="renderTrim()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
-          <select class="flt" id="ff-t-aprov" onchange="renderTrim()"><option value="">Todos os estados</option><option value="Rascunho">Rascunho</option><option value="Submetido">Submetido</option><option value="Aprovado Dir.">Aprovado Dir.</option><option value="Aprovado Gestão">Aprovado Gestão</option></select>
-          <button class="btn btn-primary" onclick="openTrimForm()">+ Novo</button>
+          <select class="flt" id="ff-t-aprov" onchange="renderTrim()"><option value="">Todos os tipos</option><option value="Recorrente">Recorrente</option><option value="INOV">Inovação</option></select>
         </div>
         <div class="table-wrap">
           <table>
-            <colgroup><col style="width:18%"><col style="width:18%"><col style="width:7%"><col style="width:6%"><col style="width:11%"><col style="width:9%"><col style="width:8%"><col style="width:14%"><col style="width:9%"></colgroup>
-            <thead><tr><th>Projeto</th><th>Ação</th><th>Trim.</th><th>Ano</th><th>Departamento</th><th>Estado</th><th>Tar.Prev.</th><th>Aprovação</th><th>Ações</th></tr></thead>
+            <colgroup><col style="width:3%"><col style="width:22%"><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:8%"></colgroup>
+            <thead><tr><th></th><th>Ação / Projeto</th><th>Departamento</th><th>Tipo</th><th>Início</th><th>Fim</th><th>Tarefas</th><th>Concluídas</th><th>%</th></tr></thead>
             <tbody id="tbody-trim"></tbody>
           </table>
         </div>
@@ -1126,6 +1126,7 @@ tr:hover td{background:var(--bg3)}
             <div class="fgrid">
               <div class="fg" style="grid-column:span 2"><label>Descrição *</label><input id="ftar-desc" placeholder="Descrição da tarefa"></div>
               <div class="fg"><label>Origem *</label><select id="ftar-origem" onchange="checkOrigem(this.value)"><option value="Ad-hoc">Ad-hoc</option><option value="Reunião">Reunião externa</option><option value="Factorial">Factorial (só leitura)</option></select></div>
+              <div class="fg"><label>Projeto</label><select id="ftar-proj" onchange="loadAcoesForProj(this.value,'ftar-acao')"><option value="">Nenhum</option></select></div>
               <div class="fg"><label>Ação (Factorial)</label><select id="ftar-acao"><option value="">Nenhuma</option></select></div>
               <div class="fg people-wrap">
                 <label>Responsável</label>
@@ -1781,7 +1782,7 @@ async function uploadAttachment(list,itemId,file){
 }
 
 // PEOPLE PICKER
-async function searchPeople(q,suggestId,inputId){
+async function searchPeople(q,suggestId,inputId,emailId){
   if(q.length<2){document.getElementById(suggestId).classList.remove('open');return;}
   try{
     await getGraphToken();
@@ -1789,15 +1790,16 @@ async function searchPeople(q,suggestId,inputId){
     const d=await r.json();
     const s=document.getElementById(suggestId);
     if(!d.value?.length){s.classList.remove('open');return;}
-    s.innerHTML=d.value.map(p=>`<div class="people-item" onclick="selectPerson('${inputId}','${suggestId}','${p.displayName.replace(/'/g,"\\'")}')">
+    s.innerHTML=d.value.map(p=>`<div class="people-item" onclick="selectPerson('${inputId}','${suggestId}','${p.displayName.replace(/'/g,"\\'")}','${emailId||''}','${(p.mail||'').replace(/'/g,"\\'")}')">
       <div class="people-avatar">${p.displayName.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
       <div><div style="font-weight:500">${p.displayName}</div><div style="font-size:11px;color:var(--text3)">${p.mail||''}</div></div>
     </div>`).join('');
     s.classList.add('open');
   }catch(e){console.warn(e);}
 }
-function selectPerson(inputId,suggestId,name){
+function selectPerson(inputId,suggestId,name,emailId,email){
   document.getElementById(inputId).value=name;
+  if(emailId&&email){const ef=document.getElementById(emailId);if(ef)ef.value=email;}
   document.getElementById(suggestId).classList.remove('open');
 }
 
@@ -2049,7 +2051,7 @@ function openExtForm(id){
     }
   }else{
     el('frm-ext-title').textContent='Nova reunião externa';
-    ['fe-titulo','fe-entidade','fe-local','fe-resp','fe-part','fe-resumo','fe-passos'].forEach(id=>sv2(id,''));
+    ['fe-titulo','fe-entidade','fe-local','fe-resp','fe-resp-email','fe-part','fe-resumo','fe-passos'].forEach(id=>sv2(id,''));
     sv2('fe-data',today());sv2('fe-dep','Gestão');
   }
 }
@@ -2066,6 +2068,11 @@ async function saveExt(){
       Departamento:gv('fe-dep')
     };
     if(gv('fe-data'))body.DataReuniao=gv('fe-data')+'T00:00:00Z';
+    // Responsável FJ (Person lookup via email)
+    const respEmail=gv('fe-resp-email');
+    if(respEmail){
+      try{const uid=await getSpUID(respEmail);if(uid)body.ResponsavelId=uid;}catch(e){console.warn('Responsavel lookup failed',e);}
+    }
     let itemId=editExtId;
     if(editExtId){
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items(${editExtId})`,body,'MERGE','*');
@@ -2107,9 +2114,9 @@ function removeInlineTarefa(idx){
   renderInlineTarefas();
 }
 function renderInlineTarefas(){
-  const list=document.getElementById('fe-rnTarefas-list');
+  const list=document.getElementById('fe-tarefas-list');
   if(!list) {
-    console.warn('Elemento fe-rnTarefas-list não encontrado');
+    console.warn('Elemento fe-tarefas-list não encontrado');
     return;
   }
   if(!feInlineTarefas.length){list.innerHTML='';return;}
@@ -2756,7 +2763,7 @@ function showPage(p){
   el('page-'+p).classList.add('active');
   el('nav-'+p).classList.add('active');
   if(p==='reuniao')loadSavedSessions();
-  if(p==='admin')renderAdminUsers();
+  if(p==='admin')renderFJUtilizadores();
 }
 
 // ═══ ADMINISTRAÇÃO DE UTILIZADORES ═══
@@ -3011,7 +3018,7 @@ async function loadTarefas(){
 }
 async function loadKPIDefs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Definicoes')/items?$select=*&$orderby=Title asc&$top=500`);
-  plKpdefs=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',projetoId:r.ProjetoId||null,acaoId:r.AcaoId||null,tipo:r.TipoKPI||'Manual',dir:r.Direcao||'meta',uni:r.Unidade||'',meta:r.Meta||0,freq:r.Frequencia||'Mensal',resp:r.Responsavel||'',ativo:r.Ativo!==false,desc:r.Descricao||''}));
+  plKpdefs=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',projetoId:r.ProjetoIdId||null,acaoId:r.AcaoIdId||null,tipo:r.TipoKPI||'Manual',dir:r.Direcao||'meta',uni:r.Unidade||'',meta:r.Meta||0,freq:r.Frequencia||'Mensal',resp:r.Responsavel||'',ativo:r.Ativo!==false,desc:r.Descricao||''}));
 }
 async function loadKPIRegs(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_KPI_Registos')/items?$select=*,InseridoPor/Title&$expand=InseridoPor&$orderby=Created desc&$top=500`);
@@ -3476,30 +3483,84 @@ function genTrimTit(){
 function renderTrim(){
   const tbody=el('tbody-trim');
   if(!tbody)return;
-  const q=gv('ff-t-q'),ano=gv('ff-t-ano'),dep=gv('ff-t-dep'),aprov=gv('ff-t-aprov');
-  const list=plPlanoTrim.filter(t=>{
-    if(q&&t.trim!==q)return false;if(ano&&String(t.ano)!==ano)return false;
-    if(dep&&t.dep!==dep)return false;if(aprov&&t.aprovacao!==aprov)return false;return true;
+
+  const qSel=gv('ff-t-q'), anoSel=gv('ff-t-ano'), depSel=gv('ff-t-dep'), tipoSel=gv('ff-t-aprov');
+
+  // Determinar trimestre e ano activos
+  const now=new Date();
+  const anoAtivo=anoSel?parseInt(anoSel):now.getFullYear();
+  const trimAtivo=qSel||('Q'+Math.ceil((now.getMonth()+1)/3));
+
+  // Mapear trimestre para meses
+  const trimMeses={Q1:[0,1,2],Q2:[3,4,5],Q3:[6,7,8],Q4:[9,10,11]};
+  const meses=trimMeses[trimAtivo]||[0,1,2];
+  const trimStart=new Date(anoAtivo,meses[0],1);
+  const trimEnd=new Date(anoAtivo,meses[2]+1,0,23,59,59);
+
+  // Filtrar ações que estão ativas no trimestre selecionado
+  let acoesFiltradas=plAcoes.filter(a=>{
+    if(!a.dataInicio&&!a.dataFim)return false;
+    const s=a.dataInicio?new Date(a.dataInicio+'T00:00:00'):null;
+    const e=a.dataFim?new Date(a.dataFim+'T23:59:59'):null;
+    // Sobrepõe com o trimestre?
+    const inicioOk=!s||(s<=trimEnd);
+    const fimOk=!e||(e>=trimStart);
+    return inicioOk&&fimOk;
   });
-  tbody.innerHTML=list.map(t=>{
-    const aprovCls={'Rascunho':'b-rascunho','Submetido':'b-submetido','Aprovado Dir.':'b-aprov-dir','Aprovado Gestão':'b-aprov-gest'}[t.aprovacao]||'b-pfazer';
-    const canAprovDir=t.aprovacao==='Submetido'&&isDirOf(t.dep);
-    const canAprovGest=t.aprovacao==='Aprovado Dir.'&&isGestao();
-    const canSubmit=t.aprovacao==='Rascunho';
-    return`<tr>
-      <td style="font-weight:500" title="${pn(t.projetoId)}">${pn(t.projetoId)}</td>
-      <td title="${an(t.acaoId)}">${an(t.acaoId)}</td>
-      <td>${badgeHTML('b-emcurso',t.trim)}</td><td>${t.ano||'—'}</td>
-      <td>${depB(t.dep)}</td><td>${estB(t.estado)}</td>
-      <td style="text-align:center;font-weight:700">${t.tarPrev||0}</td>
-      <td>${badgeHTML(aprovCls,t.aprovacao||'Rascunho')}
-        ${canSubmit?`<button class="btn btn-sm" style="margin-left:4px" onclick="aprovTrim(${t.id},'Submetido')">Submeter</button>`:''}
-        ${canAprovDir?`<button class="btn btn-sm btn-aprov" onclick="aprovTrim(${t.id},'Aprovado Dir.')">Aprovar</button>`:''}
-        ${canAprovGest?`<button class="btn btn-sm btn-aprov" onclick="aprovTrim(${t.id},'Aprovado Gestão')">Aprovar Gestão</button>`:''}
+
+  if(depSel)acoesFiltradas=acoesFiltradas.filter(a=>a.dep===depSel);
+  if(tipoSel)acoesFiltradas=acoesFiltradas.filter(a=>(a.tipoFJ||'Recorrente')===tipoSel);
+
+  // Agrupar por projeto
+  const projIds=[...new Set(acoesFiltradas.map(a=>a.projetoId).filter(Boolean))];
+  const projFiltrados=plProjetos.filter(p=>projIds.includes(p.id)||acoesFiltradas.some(a=>String(a.projetoId)===String(p.id)));
+
+  if(!projFiltrados.length&&!acoesFiltradas.length){
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty">Sem projetos ou ações activos em ${trimAtivo} ${anoAtivo}.</div></td></tr>`;
+    return;
+  }
+
+  const rows=[];
+  projFiltrados.forEach(p=>{
+    const pAcoes=acoesFiltradas.filter(a=>String(a.projetoId)===String(p.id));
+    const tarTotal=plTarefas.filter(t=>pAcoes.some(a=>String(t.acaoId)===String(a.id)));
+    const tarConc=tarTotal.filter(t=>t.estado==='Concluída').length;
+    const pct=tarTotal.length?Math.round(tarConc/tarTotal.length*100):null;
+    const rag=pAcoes.length?calcRag(pAcoes[0].id):'c';
+    // Linha do projeto
+    rows.push(`<tr style="background:var(--bg3);font-weight:600">
+      <td colspan="2" style="padding:9px 11px">
+        <span class="rag rag-${rag}" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle"></span>
+        ${p.nome}
       </td>
-      <td><div class="actions"><button class="btn btn-sm" onclick="editTrim(${t.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delTrim(${t.id})">✕</button></div></td>
-    </tr>`;
-  }).join('')||`<tr><td colspan="9"><div class="empty">Sem plano trimestral.</div></td></tr>`;
+      <td style="padding:9px 11px">${p.dep||'—'}</td>
+      <td colspan="6" style="padding:9px 11px;font-size:12px;color:var(--text2)">
+        ${pAcoes.length} ações · ${tarTotal.length} tarefas${pct!==null?' · '+pct+'% concluídas':''}
+      </td>
+    </tr>`);
+    // Linhas das ações
+    pAcoes.forEach(a=>{
+      const ts=plTarefas.filter(t=>String(t.acaoId)===String(a.id));
+      const conc=ts.filter(t=>t.estado==='Concluída').length;
+      const pctA=ts.length?Math.round(conc/ts.length*100):null;
+      const ragA=calcRag(a.id);
+      const tipo=a.tipoFJ||'Recorrente';
+      const tipoCls=tipo==='INOV'?'b-fin':'b-info';
+      rows.push(`<tr>
+        <td style="padding:8px 11px 8px 28px;width:4%"><span class="rag rag-${ragA}" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span></td>
+        <td style="padding:8px 4px;font-weight:500;font-size:13px">${a.nome||a.titulo}</td>
+        <td style="padding:8px 4px">${a.dep?`<span class="badge b-info" style="font-size:10px">${a.dep}</span>`:''}</td>
+        <td style="padding:8px 4px"><span class="badge ${tipoCls}" style="font-size:10px">${tipo}</span></td>
+        <td style="padding:8px 4px;font-size:12px;color:var(--text2)">${a.dataInicio?fd(a.dataInicio):'—'}</td>
+        <td style="padding:8px 4px;font-size:12px;color:var(--text2)">${a.dataFim?fd(a.dataFim):'—'}</td>
+        <td style="padding:8px 4px;text-align:center;font-weight:600">${ts.length}</td>
+        <td style="padding:8px 4px;text-align:center;color:var(--green-mid);font-weight:600">${conc}</td>
+        <td style="padding:8px 4px;text-align:center;font-weight:700;color:${pctA!==null?(pctA>=80?'var(--green-mid)':pctA>=40?'var(--amber)':'var(--red)'):'var(--text3)'}">${pctA!==null?pctA+'%':'—'}</td>
+      </tr>`);
+    });
+  });
+
+  tbody.innerHTML=rows.join('');
 }
 async function aprovTrim(id,novoEstado){
   try{
@@ -3632,14 +3693,18 @@ function openTarForm(){
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
   
+  // Popular dropdown de projetos
+  const projSelect = el('ftar-proj');
+  if(projSelect) projSelect.innerHTML = '<option value="">Nenhum</option>' + plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  
   // Popular dropdown de ações
   const acaoSelect = el('ftar-acao');
   if(acaoSelect) {
     acaoSelect.innerHTML = '<option value="">Nenhuma</option>' + 
-      plAcoes.map(a => `<option value="${a.id}">${a.titulo}</option>`).join('');
+      plAcoes.map(a => `<option value="${a.id}">${a.titulo||a.nome}</option>`).join('');
   }
   
-  sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-acao','');
+  sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-proj','');sv2('ftar-acao','');
   sv2('ftar-resp','');sv2('ftar-email','');sv2('ftar-data','');
   sv2('ftar-prior','Média');sv2('ftar-estado','todo');
   el('ftar-existing-attach').innerHTML='';
@@ -3649,12 +3714,47 @@ function openTarFormEdit(compId){
   plEditTarId=compId;el('frm-pl-tar-ov').classList.add('open');
   el('frm-tar-title').textContent='Editar tarefa';
   el('tar-warn').style.display='none';
-  sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');sv2('ftar-acao',t.acaoId||'');
+  // Popular projetos
+  const projSelect=el('ftar-proj');
+  if(projSelect) projSelect.innerHTML='<option value="">Nenhum</option>'+plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  sv2('ftar-proj',t.projetoId?String(t.projetoId):'');
+  if(t.projetoId) loadAcoesForProj(t.projetoId,'ftar-acao',t.acaoId);
+  else { const acaoSelect=el('ftar-acao'); if(acaoSelect) acaoSelect.innerHTML='<option value="">Nenhuma</option>'+plAcoes.map(a=>`<option value="${a.id}"${String(a.id)===String(t.acaoId)?'selected':''}>${a.titulo||a.nome}</option>`).join(''); }
+  sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');
   sv2('ftar-resp',t.responsavel||'');sv2('ftar-email',t.responsavelEmail||'');
   sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
 function closeTarForm(){el('frm-pl-tar-ov').classList.remove('open');plEditTarId=null;}
+
+// Abre o form de nova tarefa pré-preenchido com a ação
+function openTarFormForAcao(acaoId){
+  openTarForm();
+  const a=plAcoes.find(x=>x.id===acaoId);
+  if(a){
+    // Selecionar ação no dropdown
+    const acaoSel=el('ftar-acao');
+    if(acaoSel) sv2('ftar-acao', String(acaoId));
+    // Selecionar projeto se existir
+    const projSel=el('ftar-proj');
+    if(projSel&&a.projetoId){
+      sv2('ftar-proj', String(a.projetoId));
+      // Filtrar ações por projeto
+      loadAcoesForProj(a.projetoId,'ftar-acao');
+      sv2('ftar-acao', String(acaoId));
+    }
+  }
+}
+
+// Abre o form de nova tarefa pré-preenchido com o projeto
+function openTarFormForProj(projId){
+  openTarForm();
+  const projSel=el('ftar-proj');
+  if(projSel){
+    sv2('ftar-proj', String(projId));
+    loadAcoesForProj(projId,'ftar-acao');
+  }
+}
 async function plSaveTarefa(){
   if(gv('ftar-origem')==='Factorial'){showNotif('As plTarefas do Factorial devem ser criadas no Factorial.','warn');return;}
   const desc=gv('ftar-desc').trim();
@@ -3670,10 +3770,14 @@ async function plSaveTarefa(){
       Prioridade:gv('ftar-prior'),
       Semana:semana,
       AnoFJ:anoFJ,
-      Estado:gv('ftar-estado'),
-      Departamento:gv('ftar-dep')||''
+      Estado:gv('ftar-estado')
     };
+    // Departamento apenas se preenchido
+    const dep=gv('ftar-dep');if(dep)body.Departamento=dep;
+    // Responsável (texto)
+    const resp=gv('ftar-resp');if(resp)body.Responsavel=resp;
     if(data)body.DataLimite=data+'T00:00:00Z';
+    const pid=gv('ftar-proj');if(pid)body.ProjetoIdId=parseInt(pid);
     const aid=gv('ftar-acao');if(aid)body.AcaoIdId=parseInt(aid);
     let itemId=null;
     if(plEditTarId){
@@ -3992,7 +4096,7 @@ async function gfLoadAll() {
     }));
 
     // Rubricas com expand
-    const dr = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items?$select=*,ProjetoId/Title,ProjetoId/Id&$expand=ProjetoId&$top=2000`);
+    const dr = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items?$select=Id,Title,ProjetoIdId,TipoRubrica,DespOrcamentada,RecOrcamentada,AnoOrcamental,Estado,ProjetoId/Title,ProjetoId/Id&$expand=ProjetoId&$top=2000`);
     GF_RUBRICAS = (dr.d?.results || []).map(r => ({
       id: r.Id,
       titulo: r.Title || '',
