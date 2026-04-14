@@ -1115,19 +1115,17 @@ tr:hover td{background:var(--bg3)}
         </div>
       </div>
 
-      <!-- PLANO SEMANAL -->
-      <div id="pl-page-semanal" class="page">
-        <div class="page-title">Plano Semanal</div>
-        <!-- Tarefa form -->
-        <div id="frm-pl-tar-ov" class="overlay">
-          <div class="panel">
+      <!-- MODAL DE TAREFA (fixo, acessível de qualquer página do módulo PL) -->
+      <div id="frm-pl-tar-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:500;background:rgba(0,0,0,.35);overflow-y:auto">
+        <div style="max-width:660px;margin:60px auto;padding:0 1rem">
+          <div class="panel" style="box-shadow:0 8px 32px rgba(0,0,0,.18)">
             <div class="panel-title" id="frm-tar-title">Nova tarefa</div>
             <div id="tar-warn" class="warn-box">⚠️ As tarefas do <strong>Factorial</strong> são criadas directamente no Factorial — esta plataforma sincroniza automaticamente. Por favor cria a tarefa lá.</div>
             <div class="fgrid">
               <div class="fg" style="grid-column:span 2"><label>Descrição *</label><input id="ftar-desc" placeholder="Descrição da tarefa"></div>
               <div class="fg"><label>Origem *</label><select id="ftar-origem" onchange="checkOrigem(this.value)"><option value="Ad-hoc">Ad-hoc</option><option value="Reunião">Reunião externa</option><option value="Factorial">Factorial (só leitura)</option></select></div>
               <div class="fg"><label>Projeto</label><select id="ftar-proj" onchange="loadAcoesForProj(this.value,'ftar-acao')"><option value="">Nenhum</option></select></div>
-              <div class="fg"><label>Ação (Factorial)</label><select id="ftar-acao"><option value="">Nenhuma</option></select></div>
+              <div class="fg"><label>Ação</label><select id="ftar-acao"><option value="">Nenhuma</option></select></div>
               <div class="fg people-wrap">
                 <label>Responsável</label>
                 <input id="ftar-resp" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'ftar-sug','ftar-resp','ftar-email')">
@@ -1146,8 +1144,11 @@ tr:hover td{background:var(--bg3)}
             </div>
           </div>
         </div>
+      </div>
 
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+      <!-- PLANO SEMANAL -->
+      <div id="pl-page-semanal" class="page">
+        <div class="page-title">Plano Semanal</div>
           <div class="week-nav">
             <button class="btn btn-sm" onclick="chgWeek(-1)">← Anterior</button>
             <span class="week-nav-title" id="week-label">—</span>
@@ -1770,8 +1771,30 @@ async function spWrite(url,body,method,etag){
   const h={'Content-Type':'application/json;odata=verbose','Accept':'application/json;odata=verbose','Authorization':`Bearer ${spToken}`,'X-RequestDigest':digest};
   if(method==='MERGE'||method==='DELETE'){h['X-HTTP-Method']=method;h['IF-MATCH']=etag||'*';}
   const r=await fetch(url,{method:'POST',headers:h,body:body?JSON.stringify(body):undefined});
-  if(!r.ok){const t=await r.text();throw new Error(`HTTP ${r.status}: ${t.slice(0,200)}`);}
+  if(!r.ok){const t=await r.text();throw new Error(`HTTP ${r.status}: ${t.slice(0,500)}`);}
   return r;
+}
+
+// Helper: obter ID de utilizador SP a partir de email
+async function getSpUID(email){
+  if(!email)return null;
+  try{
+    await getSPToken();
+    // Tentar via siteusers/getbyemail
+    const r=await fetch(`${SP}/_api/web/siteusers/getbyemail('${encodeURIComponent(email)}')`,
+      {headers:{Accept:'application/json;odata=verbose',Authorization:`Bearer ${spToken}`}});
+    if(r.ok){const d=await r.json();return d.d?.Id||null;}
+    // Fallback: ensureuser
+    const digest=await getDigest();
+    const r2=await fetch(`${SP}/_api/web/ensureuser`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json;odata=verbose','Accept':'application/json;odata=verbose',
+        'Authorization':`Bearer ${spToken}`,'X-RequestDigest':digest},
+      body:JSON.stringify({logonName:email})
+    });
+    if(r2.ok){const d2=await r2.json();return d2.d?.Id||null;}
+  }catch(e){console.warn('getSpUID failed:',email,e.message);}
+  return null;
 }
 async function uploadAttachment(list,itemId,file){
   await getSPToken();const digest=await getDigest();
@@ -2064,10 +2087,20 @@ async function saveExt(){
   try{
     const body={__metadata:{type:'SP.Data.FJ_x005f_ReunioesExternasListItem'},
       Title:titulo,Entidade:gv('fe-entidade'),Local:gv('fe-local'),
-      Participantes:gv2t('fe-part'),Resumo:gv2t('fe-resumo'),ProximosPassos:gv2t('fe-passos'),
-      Departamento:gv('fe-dep')
+      Participantes:gv2t('fe-part'),Resumo:gv2t('fe-resumo'),ProximosPassos:gv2t('fe-passos')
     };
     if(gv('fe-data'))body.DataReuniao=gv('fe-data')+'T00:00:00Z';
+    // Departamento (campo Lookup para FJ_Departamentos)
+    const depVal=gv('fe-dep');
+    if(depVal){
+      // Garantir que os departamentos estão carregados
+      if(!plDepartamentos?.length){
+        try{await loadDepartamentos();}catch(e){console.warn('loadDepartamentos fallback failed',e);}
+      }
+      const depItem=plDepartamentos?.find(d=>d.Title===depVal||d.nome===depVal);
+      if(depItem) body.DepartamentoId=depItem.id||depItem.ID;
+      // Se não encontrou ID, não inclui o campo — evita HTTP 400 com Lookup
+    }
     // Responsável FJ (Person lookup via email)
     const respEmail=gv('fe-resp-email');
     if(respEmail){
@@ -3685,33 +3718,25 @@ function checkOrigem(v){el('tar-warn').style.display=v==='Factorial'?'block':'no
 function openTarForm(){
   plEditTarId=null;
   const modal = el('frm-pl-tar-ov');
-  if(!modal) {
-    console.error('Modal frm-pl-tar-ov não encontrado!');
-    return;
-  }
-  modal.classList.add('open');
+  if(!modal) { console.error('Modal frm-pl-tar-ov não encontrado!'); return; }
+  modal.style.display='block';
   el('frm-tar-title').textContent='Nova tarefa';
   el('tar-warn').style.display='none';
-  
   // Popular dropdown de projetos
   const projSelect = el('ftar-proj');
   if(projSelect) projSelect.innerHTML = '<option value="">Nenhum</option>' + plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
-  
   // Popular dropdown de ações
   const acaoSelect = el('ftar-acao');
-  if(acaoSelect) {
-    acaoSelect.innerHTML = '<option value="">Nenhuma</option>' + 
-      plAcoes.map(a => `<option value="${a.id}">${a.titulo||a.nome}</option>`).join('');
-  }
-  
+  if(acaoSelect) acaoSelect.innerHTML = '<option value="">Nenhuma</option>' + plAcoes.map(a => `<option value="${a.id}">${a.titulo||a.nome}</option>`).join('');
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-proj','');sv2('ftar-acao','');
   sv2('ftar-resp','');sv2('ftar-email','');sv2('ftar-data','');
   sv2('ftar-prior','Média');sv2('ftar-estado','todo');
   el('ftar-existing-attach').innerHTML='';
 }
+}
 function openTarFormEdit(compId){
   const t=plTarefas.find(x=>x.id===compId);if(!t)return;
-  plEditTarId=compId;el('frm-pl-tar-ov').classList.add('open');
+  plEditTarId=compId;el('frm-pl-tar-ov').style.display='block';
   el('frm-tar-title').textContent='Editar tarefa';
   el('tar-warn').style.display='none';
   // Popular projetos
@@ -3725,7 +3750,7 @@ function openTarFormEdit(compId){
   sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
-function closeTarForm(){el('frm-pl-tar-ov').classList.remove('open');plEditTarId=null;}
+function closeTarForm(){el('frm-pl-tar-ov').style.display='none';plEditTarId=null;}
 
 // Abre o form de nova tarefa pré-preenchido com a ação
 function openTarFormForAcao(acaoId){
@@ -4753,6 +4778,7 @@ function gfRenderRubricas() {
                     <thead>
                       <tr style="background:var(--bg)">
                         <th style="padding:8px 12px;text-align:left;font-weight:500;color:#2563EB">Cód. encomenda</th>
+                        <th style="padding:8px 12px;text-align:left;font-weight:500">Título</th>
                         <th style="padding:8px 12px;text-align:left;font-weight:500">Fornecedor</th>
                         <th style="padding:8px 12px;text-align:left;font-weight:500">Data</th>
                         <th style="padding:8px 12px;text-align:right;font-weight:500">Valor</th>
@@ -4763,6 +4789,7 @@ function gfRenderRubricas() {
                       ${solicitacoes.slice(0, 5).map(s => `
                         <tr style="border-top:1px solid var(--border)">
                           <td style="padding:8px 12px;color:#2563EB">${s.codigo || '—'}</td>
+                          <td style="padding:8px 12px;font-weight:500">${s.titulo || '—'}</td>
                           <td style="padding:8px 12px">${s.fornecedor || '—'}</td>
                           <td style="padding:8px 12px">${s.dataSubmissao ? new Date(s.dataSubmissao).toLocaleDateString('pt-PT') : '—'}</td>
                           <td style="padding:8px 12px;text-align:right;font-weight:500">${gfFmt(s.valor)}</td>
@@ -5133,6 +5160,36 @@ function gfRenderSolicitacaoForm() {
           </div>
         </div>
         
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">Documentos</div>
+          
+          <div style="margin-bottom:16px">
+            <label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px">
+              📋 Orçamentos recebidos
+              <span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:6px">Todos os orçamentos/propostas pedidos</span>
+            </label>
+            <input type="file" id="gf-sol-file-orc" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
+              style="width:100%;padding:8px;border:1px dashed var(--border2);border-radius:6px;font-size:13px;background:var(--bg3)">
+            <div id="gf-sol-orc-list" style="margin-top:6px"></div>
+          </div>
+          
+          <div>
+            <label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px">
+              ✅ Proposta de adjudicação
+              <span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:6px">O orçamento escolhido / proposta de adjudicação</span>
+            </label>
+            <input type="file" id="gf-sol-file-adj" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"
+              style="width:100%;padding:8px;border:1px dashed #10B981;border-radius:6px;font-size:13px;background:#F0FDF4">
+            <div id="gf-sol-adj-list" style="margin-top:6px"></div>
+          </div>
+          
+          ${sol ? `
+          <div id="gf-sol-existing-attach" style="margin-top:12px">
+            <!-- Ficheiros existentes carregados dinamicamente -->
+          </div>
+          ` : ''}
+        </div>
+        
         <div style="display:flex;gap:10px;justify-content:flex-end">
           <button class="btn" onclick="gfNav('solicitacoes')">Cancelar</button>
           <button class="btn" onclick="gfSaveSolicitacao(${isEdit ? sol.id : 'null'}, 'Rascunho')">Guardar Rascunho</button>
@@ -5258,12 +5315,27 @@ async function gfSaveSolicitacao(id, estado) {
   }
   
   try {
+    let itemId = id;
     if (id) {
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${id})`, body, 'MERGE');
       showNotif('Solicitação atualizada', 'success');
     } else {
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items`, body, 'POST');
+      const r = await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items`, body, 'POST');
+      const d = await r.json(); itemId = d.d?.Id;
       showNotif('Solicitação ' + (estado === 'Submetido' ? 'submetida' : 'guardada'), 'success');
+    }
+    // Upload dos dois grupos de anexos
+    if(itemId){
+      const filesOrc = document.getElementById('gf-sol-file-orc')?.files || [];
+      const filesAdj = document.getElementById('gf-sol-file-adj')?.files || [];
+      for(const f of filesOrc){
+        const renamed = new File([f], 'ORC_'+f.name, {type:f.type});
+        await uploadAttachment('FJ_Solicitacoes', itemId, renamed);
+      }
+      for(const f of filesAdj){
+        const renamed = new File([f], 'ADJ_'+f.name, {type:f.type});
+        await uploadAttachment('FJ_Solicitacoes', itemId, renamed);
+      }
     }
     await gfLoadAll();
     gfNav('solicitacoes');
@@ -5328,6 +5400,33 @@ function gfRenderSolicitacaoView() {
               <div style="font-size:13px">${sol.justificacao}</div>
             </div>
           ` : ''}
+        </div>
+        
+        <!-- Documentos em duas secções -->
+        <div id="gf-sol-view-attachments-${sol.id}" class="card" style="margin-bottom:16px">
+          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Documentos</div>
+          <div style="color:var(--text3);font-size:13px">A carregar...</div>
+        </div>
+        <script>
+        (function(){
+          const listId=${sol.id};
+          spRead('${SP}/_api/web/lists/getbytitle(\'FJ_Solicitacoes\')/items('+listId+')/AttachmentFiles')
+            .then(d=>{
+              const files=d.d?.results||[];
+              const orc=files.filter(f=>f.FileName.startsWith('ORC_'));
+              const adj=files.filter(f=>f.FileName.startsWith('ADJ_'));
+              const other=files.filter(f=>!f.FileName.startsWith('ORC_')&&!f.FileName.startsWith('ADJ_'));
+              const link=f=>'<a href="${SP}'+f.ServerRelativeUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--blue-l);color:var(--blue-d);border-radius:4px;font-size:12px;text-decoration:none;margin:2px">📎 '+f.FileName.replace(/^(ORC_|ADJ_)/,'')+'</a>';
+              const wrap=document.getElementById('gf-sol-view-attachments-${sol.id}');
+              if(!wrap)return;
+              wrap.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:12px">Documentos</div>'
+                +(orc.length?'<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;margin-bottom:4px">📋 Orçamentos recebidos</div><div>'+orc.map(link).join('')+'</div></div>':'')
+                +(adj.length?'<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#059669;margin-bottom:4px">✅ Proposta de adjudicação</div><div>'+adj.map(link).join('')+'</div></div>':'')
+                +(other.length?'<div><div style="font-size:12px;font-weight:600;margin-bottom:4px">📁 Outros</div><div>'+other.map(link).join('')+'</div></div>':'')
+                +(!files.length?'<div style="color:var(--text3);font-size:13px">Sem documentos</div>':'');
+            }).catch(()=>{});
+        })();
+        </script>
         </div>
         
         ${(canApproveDir || canApproveDF) ? `
