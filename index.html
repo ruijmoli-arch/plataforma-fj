@@ -2090,16 +2090,10 @@ async function saveExt(){
       Participantes:gv2t('fe-part'),Resumo:gv2t('fe-resumo'),ProximosPassos:gv2t('fe-passos')
     };
     if(gv('fe-data'))body.DataReuniao=gv('fe-data')+'T00:00:00Z';
-    // Departamento (campo Lookup para FJ_Departamentos)
+    // Departamento (campo Choice — texto simples)
     const depVal=gv('fe-dep');
     if(depVal){
-      // Garantir que os departamentos estão carregados
-      if(!plDepartamentos?.length){
-        try{await loadDepartamentos();}catch(e){console.warn('loadDepartamentos fallback failed',e);}
-      }
-      const depItem=plDepartamentos?.find(d=>d.Title===depVal||d.nome===depVal);
-      if(depItem) body.DepartamentoId=depItem.id||depItem.ID;
-      // Se não encontrou ID, não inclui o campo — evita HTTP 400 com Lookup
+      body.Departamento=depVal;
     }
     // Responsável FJ (Person lookup via email)
     const respEmail=gv('fe-resp-email');
@@ -3732,7 +3726,6 @@ function openTarForm(){
   sv2('ftar-resp','');sv2('ftar-email','');sv2('ftar-data','');
   sv2('ftar-prior','Média');sv2('ftar-estado','todo');
   el('ftar-existing-attach').innerHTML='';
-}
 }
 function openTarFormEdit(compId){
   const t=plTarefas.find(x=>x.id===compId);if(!t)return;
@@ -6406,4 +6399,3 @@ init();
 </script>
 </body>
 </html>
->
