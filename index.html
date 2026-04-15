@@ -2481,18 +2481,17 @@ function renderContentHTML(it){
     <div class="content-box ${it.notas?'':'empty'}">${it.notas?(it.notas.replace(/\n/g,'<br>')):'Sem contextualização.'}</div>
     ${isD?`<div class="sec-label">Proposta de Decisão</div>
     <div class="proposta-box ${it.proposta?'':'empty'}">${it.proposta?(it.proposta.replace(/\n/g,'<br>')):'Sem proposta definida.'}</div>`:''}
+    ${it.historicoDecisoes?`
+    <div class="sec-label" style="margin-top:1.25rem">Histórico de Decisões</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${it.historicoDecisoes.split('\n---\n').filter(Boolean).map(e=>`<div style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--text2);line-height:1.6">${e.replace(/\n/g,'<br>')}</div>`).join('')}
+    </div>`:''}
   `;
 }
 
 function renderSideHTML(it){
   const dec=carrDec[it.id]||{decisao:'',encaminhamento:'—',notas:''};
   const isConcluido=it.estado==='Concluído';
-  const histHTML=it.historicoDecisoes?`
-    <hr style="border:none;border-top:0.5px solid var(--border);margin:.5rem 0">
-    <div class="dec-label">Histórico de decisões</div>
-    <div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto">
-      ${it.historicoDecisoes.split('\n---\n').filter(Boolean).map(e=>`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--text2);line-height:1.5">${e.replace(/\n/g,'<br>')}</div>`).join('')}
-    </div>`:'';
   return `
     <div class="dec-label">Decisão</div>
     <button class="dec-btn ${dec.decisao==='Aprovado'?'sel-aprov':''}" onclick="selDec('Aprovado',this)">&#10003; Aprovado</button>
@@ -2512,7 +2511,6 @@ function renderSideHTML(it){
     <textarea class="notas-dec" id="notas-dec-input" placeholder="Registe as observações...">${dec.notas}</textarea>
     <button class="guardar-dec-btn" onclick="guardarDec()">&#10003; Guardar decisão</button>
     <div class="dec-saved-msg" id="dec-saved-msg"></div>
-    ${histHTML}
   `;
 }
 
@@ -2736,6 +2734,11 @@ function renderFS(){
     <div class="fs-content-box ${it.notas?'':'empty'}">${it.notas?(it.notas.replace(/\n/g,'<br>')):'Sem contextualização.'}</div>
     ${isD?`<div class="fs-sec-label">Proposta de Decisão</div>
     <div class="fs-proposta-box ${it.proposta?'':'empty'}">${it.proposta?(it.proposta.replace(/\n/g,'<br>')):'Sem proposta definida.'}</div>`:''}
+    ${it.historicoDecisoes?`
+    <div class="fs-sec-label" style="margin-top:1.5rem">Histórico de Decisões</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${it.historicoDecisoes.split('\n---\n').filter(Boolean).map(e=>`<div style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:14px;color:var(--text2);line-height:1.6">${e.replace(/\n/g,'<br>')}</div>`).join('')}
+    </div>`:''}
   `;
   el('fs-side').innerHTML=renderSideHTML(it).replace('notas-dec-input','fs-notas-input').replace("id='dec-saved-msg'","id='fs-dec-saved-msg'");
 }
