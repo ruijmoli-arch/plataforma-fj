@@ -1447,6 +1447,7 @@ function getFinanceRole(groups){
   return'worker';
 }
 let _financeRole='worker';
+let _financeDepts=[]; // departamentos onde o utilizador pode aprovar como Diretor de Área
 
 const msalCfg={
   auth:{
@@ -1576,26 +1577,29 @@ async function loadFJUtilizadores(){
   }
 }
 
-// Determinar o role financeiro baseado no cargo e equipa
+// Determina o role principal e os departamentos onde pode aprovar como Diretor de Área.
+// Chama esta função e depois acede a _financeRole (role principal) e _financeDepts (depts de aprovação).
 function determinarFinanceRole(u){
   if(!u) return 'worker';
   
-  const cargo=u.cargo||'';
-  const equipas=u.equipa||[];
+  const cargo = u.cargo || '';
+  const equipas = u.equipa || [];
   
-  // Presidente Executivo (PE)
-  if(cargo==='Presidente Executivo') return 'pe';
+  // Calcular departamentos operacionais onde é Diretor de Área
+  const DEPTS_OPERACIONAIS = ['Op. Norte', 'Op. Sul', 'Impacto', 'INOV', 'Financeiro'];
+  _financeDepts = [];
   
-  // Conselho de Administração (PCA)
-  if(equipas.includes('CAdm') && cargo==='Diretor') return 'pca';
+  if(cargo === 'Diretor'){
+    for(const dept of DEPTS_OPERACIONAIS){
+      if(equipas.includes(dept)) _financeDepts.push(dept);
+    }
+  }
   
-  // Diretora Financeira (DF) = Diretor + Equipa Financeiro
-  if(cargo==='Diretor' && equipas.includes('Financeiro')) return 'df';
-  
-  // Diretor de Área (qualquer diretor)
-  if(cargo==='Diretor') return 'area_director';
-  
-  // Membro normal
+  // Role principal (por ordem de prioridade)
+  if(cargo === 'Presidente Executivo') return 'pe';
+  if(equipas.includes('CAdm') && cargo === 'Diretor') return 'pca';
+  if(cargo === 'Diretor' && equipas.includes('Financeiro')) return 'df';
+  if(cargo === 'Diretor') return 'area_director';
   return 'worker';
 }
 
@@ -4409,8 +4413,9 @@ function gfRender() {
 // HOME
 // ══════════════════════════════════════════════════════════════
 function gfRenderHome() {
+  const isAreaApprover = _financeDepts.length > 0 || _financeRole === 'pe';
   const pendAprov = GF_SOLICITACOES.filter(s => 
-    (_financeRole === 'area_director' && s.estado === 'Submetido') ||
+    (isAreaApprover && s.estado === 'Submetido' && gfIsMyDepartamento((GF_PROJETOS.find(p=>p.id===s.projetoId)?.dep||''))) ||
     (_financeRole === 'df' && ['Submetido', 'Aprovado Dir.'].includes(s.estado))
   ).length;
   
@@ -4497,15 +4502,13 @@ function gfGetDiretorArea(departamento) {
   ) || null;
 }
 
-// Verifica se o utilizador atual é o Diretor de Área de um dado departamento.
-// A DF (role 'df') é também Diretora de Área do Financeiro.
+// Verifica se o utilizador pode aprovar como Diretor de Área neste departamento.
+// Usa _financeDepts calculado em determinarFinanceRole (suporta múltiplos departamentos).
+// PE pode aprovar em todos os departamentos.
 function gfIsMyDepartamento(departamento) {
-  if (!currentUserFJ) return false;
-  const equipas = currentUserFJ.equipa || [];
-  if (_financeRole === 'df' || _financeRole === 'area_director') {
-    return equipas.includes(departamento);
-  }
-  return false;
+  if (!departamento) return false;
+  if (_financeRole === 'pe') return true;
+  return _financeDepts.includes(departamento);
 }
 
 // Verifica se o projeto pertence ao departamento Financeiro
@@ -5559,7 +5562,7 @@ function gfRenderSolicitacaoView() {
   
   const isFinanceiro = projDep === 'Financeiro';
 
-  const canApproveDir = _financeRole === 'area_director' && sol.estado === 'Submetido' && gfIsMyDepartamento(projDep);
+  const canApproveDir = (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe' || _financeRole === 'pe') && sol.estado === 'Submetido' && gfIsMyDepartamento(projDep);
   const canApproveDF = _financeRole === 'df' && (isFinanceiro ? ['Submetido', 'Aprovado Dir.'].includes(sol.estado) : sol.estado === 'Aprovado Dir.');
   
   return `
@@ -5698,7 +5701,7 @@ async function gfAprovarSolicitacao(id) {
     if (!sol) throw new Error('Solicitação não encontrada');
     
     // VALIDAÇÃO: Diretor de Área só pode aprovar do seu departamento
-    if (_financeRole === 'area_director') {
+    if (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe') {
       const solProj = GF_PROJETOS.find(p => p.id === sol.projetoId);
       const projDep = solProj?.dep || solProj?.departamento || '';
       
@@ -5729,12 +5732,12 @@ async function gfAprovarSolicitacao(id) {
       }
     }
     
-    const novoEstado = _financeRole === 'area_director' ? 'Aprovado Dir.' : 'Aprovado DF';
+    const novoEstado = (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe') ? 'Aprovado Dir.' : 'Aprovado DF';
     const body = {
       __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
       Estado: novoEstado
     };
-    if (_financeRole === 'area_director') {
+    if (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe') {
       body.DataAprovDir = new Date().toISOString();
       body.AprovDirId = await getCurrentUserId();
     } else {
@@ -6155,54 +6158,23 @@ function gfRenderAprovacoes() {
   
   // SOLICITAÇÕES - Mostrar todas as pendentes, filtradas por departamento
   let solsPend = GF_SOLICITACOES.filter(s => {
-    // Estados pendentes de aprovação completa
     const estadosPendentes = ['Submetido', 'Aprovado Dir.'];
     if (!estadosPendentes.includes(s.estado)) return false;
-    
-    if (_financeRole === 'pe') {
-      // Presidente Executivo: VÊ TUDO, SEMPRE
-      return true;
-    }
-    
-    if (_financeRole === 'area_director') {
-      // Diretor de Área: APENAS do seu departamento
-      const solProj = GF_PROJETOS.find(p => p.id === s.projetoId);
-      return solProj && userEquipas.includes(solProj.departamento);
-    }
-    
-    if (_financeRole === 'df') {
-      // DF: VÊ TODAS desde o início
-      return true;
-    }
-    
-    return false;
+    if (_financeRole === 'df') return true;
+    const solProj = GF_PROJETOS.find(p => p.id === s.projetoId);
+    const projDep = solProj?.dep || solProj?.departamento || '';
+    return gfIsMyDepartamento(projDep); // pe→true, pca/area_director→verifica _financeDepts
   });
   
   console.log('Solicitações pendentes filtradas:', solsPend.length, solsPend);
   
-  // ALTERAÇÕES ORÇAMENTAIS - Mostrar todas as pendentes, filtradas por departamento
   let altsPend = GF_ALTERACOES.filter(a => {
-    // Estados pendentes de aprovação completa
     const estadosPendentes = ['Pendente', 'Aprovado Dir.'];
     if (!estadosPendentes.includes(a.estado)) return false;
-    
-    if (_financeRole === 'pe') {
-      // Presidente Executivo: VÊ TUDO, SEMPRE
-      return true;
-    }
-    
-    if (_financeRole === 'area_director') {
-      // Diretor de Área: APENAS do seu departamento
-      const altProj = GF_PROJETOS.find(p => p.id === a.destProjetoId);
-      return altProj && userEquipas.includes(altProj.departamento);
-    }
-    
-    if (_financeRole === 'df') {
-      // DF: VÊ TODAS desde o início
-      return true;
-    }
-    
-    return false;
+    if (_financeRole === 'df') return true;
+    const altProj = GF_PROJETOS.find(p => p.id === a.destProjetoId);
+    const altDep = altProj?.dep || altProj?.departamento || '';
+    return gfIsMyDepartamento(altDep);
   });
   
   console.log('Alterações pendentes filtradas:', altsPend.length, altsPend);
@@ -6225,7 +6197,7 @@ function gfRenderAprovacoes() {
         const isFinanceiro = projDep === 'Financeiro';
         const diretorArea = gfGetDiretorArea(projDep);
         const diretorAreaNome = s.aprovDirNome || diretorArea?.titulo || 'Diretor de Área';
-        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir && gfIsMyDepartamento(projDep);
+        const podeAprovarDir = (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe' || _financeRole === 'pe') && !aprovDir && gfIsMyDepartamento(projDep);
         // DF aprova diretamente em projetos Financeiros (nível único); caso contrário, precisa de aprovação prévia do Dir. Área
         const podeAprovarDF = _financeRole === 'df' && (isFinanceiro ? true : aprovDir);
         const isPE = _financeRole === 'pe';
@@ -6275,7 +6247,7 @@ function gfRenderAprovacoes() {
         const isAltFinanceiro = altDep === 'Financeiro';
         const diretorAltArea = gfGetDiretorArea(altDep);
         const diretorAltNome = a.aprovDirNome || diretorAltArea?.titulo || 'Diretor de Área';
-        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir && gfIsMyDepartamento(altDep);
+        const podeAprovarDir = (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe' || _financeRole === 'pe') && !aprovDir && gfIsMyDepartamento(altDep);
         const podeAprovarDF = _financeRole === 'df' && (isAltFinanceiro || isBancoGlobal ? true : aprovDir);
         const isBancoGlobal = a.titulo?.includes('Banco Global');
         const isPE = _financeRole === 'pe';
@@ -6334,8 +6306,8 @@ async function gfAprovarAlteracao(id) {
     const alt = GF_ALTERACOES.find(a => a.id === id);
     if (!alt) throw new Error('Alteração não encontrada');
     
-    // VALIDAÇÃO: Diretor de Área só pode aprovar do seu departamento
-    if (_financeRole === 'area_director') {
+    // VALIDAÇÃO: Diretor de Área (ou PCA com dept operacional) só pode aprovar do seu departamento
+    if (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe') {
       const altProj = GF_PROJETOS.find(p => p.id === alt.destProjetoId);
       const altDep = altProj?.dep || altProj?.departamento || '';
       
