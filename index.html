@@ -1427,9 +1427,10 @@ let _plLoaded=false,_gfLoaded=false;
 let sharedProjetos=[];
 async function loadSharedProjetos(){
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*&$orderby=Title asc&$top=500`);
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*,Departamento/Title&$expand=Departamento&$orderby=Title asc&$top=500`);
     sharedProjetos=d.d.results.map(r=>({
-      id:r.Id,nome:r.Title||'',codigo:r.Codigo||'',dep:r.Departamento||'',
+      id:r.Id,nome:r.Title||'',codigo:r.Codigo||'',
+      dep:r.Departamento?.Title||r.Departamento||'',
       estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
       dataFim:r.DataFim?r.DataFim.split('T')[0]:'',
       anoOrcamental:r.AnoOrcamental||new Date().getFullYear(),
@@ -1552,28 +1553,30 @@ async function loadFJUtilizadores(){
       id:u.Id,
       titulo:u.Title||'',
       email:u.Email?.toLowerCase()||'',
-      equipa:u.Equipa?u.Equipa.results||[u.Equipa]:[],
-      cargo:typeof u.Cargo==='string'?u.Cargo:(u.Cargo?.Title||'Membro'), // Presidente Executivo, Diretor, Membro
+      // Equipa pode ser multi-choice (strings) ou multi-lookup (objetos com Title)
+      equipa:(u.Equipa?.results||[]).map(e=>typeof e==='string'?e:(e.Title||'')).filter(Boolean),
+      cargo:typeof u.Cargo==='string'?u.Cargo:(u.Cargo?.Title||'Membro'),
       projetos:(u.Projetos?.results||[]).map(p=>p.Id)
     }));
     console.log('FJ_Utilizadores carregados:', fjUtilizadores);
     
-    // Determinar dados do utilizador atual
     const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
     currentUserFJ=fjUtilizadores.find(u=>u.email===userEmail);
     
     if(currentUserFJ){
       console.log('Utilizador atual:', currentUserFJ);
-      // Determinar _financeRole baseado no cargo e equipa
       _financeRole=determinarFinanceRole(currentUserFJ);
-      console.log('Finance role:', _financeRole);
+      console.log('Finance role:', _financeRole, '| Depts:', _financeDepts);
     }else{
       console.log('Utilizador não encontrado em FJ_Utilizadores');
       _financeRole='worker';
+      _financeDepts=[];
     }
   }catch(e){
     console.warn('Erro ao carregar FJ_Utilizadores:', e.message);
     fjUtilizadores=[];
+  }
+}
   }
 }
 
