@@ -4273,9 +4273,9 @@ async function gfLoadAll() {
       valorTotal: r.ValorTotal || 0,
       estado: r.Estado || 'Pendente',
       nivelAprovacao: r.NivelAprovacao || 'df',
-      destProjetoId: r.DestProjetoId?.Id || null,
+      destProjetoId: r.DestProjetoId?.Id || r.DestProjetoIdId || null,
       destProjetoNome: r.DestProjetoId?.Title || '',
-      destRubricaId: r.DestRubricaId?.Id || null,
+      destRubricaId: r.DestRubricaId?.Id || r.DestRubricaIdId || null,
       destRubricaNome: r.DestRubricaId?.Title || '',
       solicitanteNome: r.Solicitante?.Title || '',
       dataSubmissao: r.DataSubmissao || null,
@@ -4293,9 +4293,9 @@ async function gfLoadAll() {
     GF_ALTERACOES_ORIGENS = (dao.d?.results || []).map(r => ({
       id: r.Id,
       alteracaoId: r.AlteracaoId?.Id || r.AlteracaoIdId || null,
-      origProjetoId: r.OrigProjetoId?.Id || null,
+      origProjetoId: r.OrigProjetoId?.Id || r.OrigProjetoIdId || null,
       origProjetoNome: r.OrigProjetoId?.Title || '',
-      origRubricaId: r.OrigRubricaId?.Id || null,
+      origRubricaId: r.OrigRubricaId?.Id || r.OrigRubricaIdId || null,
       origRubricaNome: r.OrigRubricaId?.Title || '',
       valor: r.Valor || 0
     }));
