@@ -4481,21 +4481,35 @@ function gfRenderHome() {
 
 function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_financeRole); }
 
-// Encontra o Diretor de Área de um departamento (cargo=Diretor + equipa inclui o departamento, excluindo Financeiro)
+// Encontra o Diretor de Área de um departamento dinamicamente:
+// = utilizador com cargo 'Diretor' cuja equipa inclui esse departamento (excluindo CAdm)
+// A DF conta como Diretora de Área do Financeiro
 function gfGetDiretorArea(departamento) {
   if (!departamento || !fjUtilizadores.length) return null;
   return fjUtilizadores.find(u =>
     u.cargo === 'Diretor' &&
     (u.equipa || []).includes(departamento) &&
-    !(u.equipa || []).includes('Financeiro') &&
     !(u.equipa || []).includes('CAdm')
   ) || null;
 }
 
-// Verifica se o utilizador atual é o Diretor de Área de um departamento
+// Verifica se o utilizador atual é o Diretor de Área de um dado departamento.
+// A DF (role 'df') é também Diretora de Área do Financeiro.
 function gfIsMyDepartamento(departamento) {
-  if (!currentUserFJ || _financeRole !== 'area_director') return false;
-  return (currentUserFJ.equipa || []).includes(departamento);
+  if (!currentUserFJ) return false;
+  const equipas = currentUserFJ.equipa || [];
+  if (_financeRole === 'df' || _financeRole === 'area_director') {
+    return equipas.includes(departamento);
+  }
+  return false;
+}
+
+// Verifica se o projeto pertence ao departamento Financeiro
+// (nesse caso a DF é a única aprovadora — fluxo de nível único)
+function gfIsProjetoFinanceiro(projetoId) {
+  const proj = GF_PROJETOS.find(p => p.id === projetoId);
+  const dep = proj?.dep || proj?.departamento || '';
+  return dep === 'Financeiro';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -5496,8 +5510,10 @@ function gfRenderSolicitacaoView() {
   const diretorArea = gfGetDiretorArea(projDep);
   const diretorAreaNome = sol.aprovDirNome || diretorArea?.titulo || 'Diretor de Área';
   
+  const isFinanceiro = projDep === 'Financeiro';
+
   const canApproveDir = _financeRole === 'area_director' && sol.estado === 'Submetido' && gfIsMyDepartamento(projDep);
-  const canApproveDF = _financeRole === 'df' && ['Submetido', 'Aprovado Dir.'].includes(sol.estado);
+  const canApproveDF = _financeRole === 'df' && (isFinanceiro ? ['Submetido', 'Aprovado Dir.'].includes(sol.estado) : sol.estado === 'Aprovado Dir.');
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
@@ -5578,8 +5594,11 @@ function gfRenderSolicitacaoView() {
           <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:14px">Fluxo de Aprovação</div>
           <div style="display:flex;flex-direction:column;gap:12px">
             ${gfWorkflowStep('Submissão', true, sol.autorNome, sol.dataSubmissao)}
-            ${gfWorkflowStep(diretorAreaNome, !!sol.aprovDirNome || sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDirNome, sol.dataAprovDir)}
-            ${gfWorkflowStep('Dir. Financeira', sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDFNome, sol.dataAprovDF)}
+            ${isFinanceiro
+              ? gfWorkflowStep('Dir. Financeira (Aprovação)', sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDFNome, sol.dataAprovDF)
+              : gfWorkflowStep(diretorAreaNome, !!sol.aprovDirNome || sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDirNome, sol.dataAprovDir)
+                + gfWorkflowStep('Dir. Financeira', sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDFNome, sol.dataAprovDF)
+            }
             ${gfWorkflowStep('Processado', sol.estado === 'Processado', null, null)}
           </div>
         </div>
@@ -5649,12 +5668,15 @@ async function gfAprovarSolicitacao(id) {
     }
     
     // VALIDAÇÃO: DF não pode aprovar sem aprovação do Diretor primeiro
+    // EXCEÇÃO: projetos do departamento Financeiro (DF é a própria Diretora de Área)
     if (_financeRole === 'df') {
-      if (sol.estado === 'Submetido') {
+      const isFinanceiro = gfIsProjetoFinanceiro(sol.projetoId);
+      if (isFinanceiro) {
+        // Fluxo de nível único: DF aprova diretamente
+      } else if (sol.estado === 'Submetido') {
         showNotif('⏳ Aguardando aprovação do Diretor de Área primeiro', 'warn');
         return;
-      }
-      if (sol.estado !== 'Aprovado Dir.') {
+      } else if (sol.estado !== 'Aprovado Dir.') {
         showNotif('Esta solicitação não está pronta para aprovação da DF', 'error');
         return;
       }
@@ -6145,10 +6167,12 @@ function gfRenderAprovacoes() {
         const aprovDir = s.estado === 'Aprovado Dir.' || s.aprovDirNome;
         const solProj = GF_PROJETOS.find(p => p.id === s.projetoId);
         const projDep = solProj?.dep || solProj?.departamento || '';
+        const isFinanceiro = projDep === 'Financeiro';
         const diretorArea = gfGetDiretorArea(projDep);
         const diretorAreaNome = s.aprovDirNome || diretorArea?.titulo || 'Diretor de Área';
         const podeAprovarDir = _financeRole === 'area_director' && !aprovDir && gfIsMyDepartamento(projDep);
-        const podeAprovarDF = _financeRole === 'df' && aprovDir;
+        // DF aprova diretamente em projetos Financeiros (nível único); caso contrário, precisa de aprovação prévia do Dir. Área
+        const podeAprovarDF = _financeRole === 'df' && (isFinanceiro ? true : aprovDir);
         const isPE = _financeRole === 'pe';
         
         return `
@@ -6193,10 +6217,11 @@ function gfRenderAprovacoes() {
         const aprovDir = a.estado === 'Aprovado Dir.' || a.aprovDirNome;
         const altProj = GF_PROJETOS.find(p => p.id === a.destProjetoId);
         const altDep = altProj?.dep || altProj?.departamento || '';
+        const isAltFinanceiro = altDep === 'Financeiro';
         const diretorAltArea = gfGetDiretorArea(altDep);
         const diretorAltNome = a.aprovDirNome || diretorAltArea?.titulo || 'Diretor de Área';
         const podeAprovarDir = _financeRole === 'area_director' && !aprovDir && gfIsMyDepartamento(altDep);
-        const podeAprovarDF = _financeRole === 'df' && aprovDir;
+        const podeAprovarDF = _financeRole === 'df' && (isAltFinanceiro || isBancoGlobal ? true : aprovDir);
         const isBancoGlobal = a.titulo?.includes('Banco Global');
         const isPE = _financeRole === 'pe';
         
@@ -6283,17 +6308,17 @@ async function gfAprovarAlteracao(id) {
       return;
     }
     
-    // VALIDAÇÃO: DF não pode aprovar sem aprovação do Diretor primeiro (exceto Banco Global)
+    // VALIDAÇÃO: DF não pode aprovar sem aprovação do Diretor primeiro
+    // EXCEÇÃO: projetos do Financeiro (DF é a própria Diretora de Área) e Banco Global
     if (_financeRole === 'df') {
-      // Banco Global não precisa de aprovação de Diretor
       const isBancoGlobal = alt.titulo?.includes('Banco Global');
-      
-      if (!isBancoGlobal && alt.estado === 'Pendente') {
+      const isFinanceiro = gfIsProjetoFinanceiro(alt.destProjetoId);
+
+      if (!isBancoGlobal && !isFinanceiro && alt.estado === 'Pendente') {
         showNotif('⏳ Aguardando aprovação do Diretor de Área primeiro', 'warn');
         return;
       }
-      
-      if (!isBancoGlobal && alt.estado !== 'Aprovado Dir.') {
+      if (!isBancoGlobal && !isFinanceiro && alt.estado !== 'Aprovado Dir.') {
         showNotif('Esta alteração não está pronta para aprovação da DF', 'error');
         return;
       }
