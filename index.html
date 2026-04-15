@@ -4481,6 +4481,23 @@ function gfRenderHome() {
 
 function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_financeRole); }
 
+// Encontra o Diretor de Área de um departamento (cargo=Diretor + equipa inclui o departamento, excluindo Financeiro)
+function gfGetDiretorArea(departamento) {
+  if (!departamento || !fjUtilizadores.length) return null;
+  return fjUtilizadores.find(u =>
+    u.cargo === 'Diretor' &&
+    (u.equipa || []).includes(departamento) &&
+    !(u.equipa || []).includes('Financeiro') &&
+    !(u.equipa || []).includes('CAdm')
+  ) || null;
+}
+
+// Verifica se o utilizador atual é o Diretor de Área de um departamento
+function gfIsMyDepartamento(departamento) {
+  if (!currentUserFJ || _financeRole !== 'area_director') return false;
+  return (currentUserFJ.equipa || []).includes(departamento);
+}
+
 // ══════════════════════════════════════════════════════════════
 // ORÇAMENTO - PROJETOS (MASTER)
 // ══════════════════════════════════════════════════════════════
@@ -4747,7 +4764,16 @@ function gfRenderRubricas() {
           ${proj.dataInicio || proj.dataFim ? `<span style="font-size:12px;color:var(--text3)">${proj.dataInicio || '?'} → ${proj.dataFim || '?'}</span>` : ''}
         </div>
       </div>
-      <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="GF.rubrica=null;gfNav('orcamento-rubrica-form')">+ Nova rúbrica</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${_financeRole === 'df' ? `
+          <button class="btn" style="background:${GF.bloqueado ? 'var(--red)' : 'var(--green-mid)'};color:#fff;border:none;font-size:12px" onclick="toggleBloqueioOrcamento()">
+            ${GF.bloqueado ? '🔒 Edições Bloqueadas' : '🔓 Edições Permitidas'}
+          </button>
+        ` : GF.bloqueado ? `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#FEE2E2;color:#991B1B;border-radius:var(--r);font-size:12px;font-weight:500">🔒 Edições bloqueadas pela DF</span>` : ''}
+        ${!GF.bloqueado || _financeRole === 'df' ? `
+          <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="GF.rubrica=null;gfNav('orcamento-rubrica-form')">+ Nova rúbrica</button>
+        ` : ''}
+      </div>
     </div>
     
     <!-- KPIs -->
@@ -4913,8 +4939,8 @@ function gfRenderRubricas() {
                   </span>
                 </div>
                 <div style="display:flex;gap:8px">
-                  <button class="btn btn-sm" style="border-color:var(--mod-financeiro);color:var(--mod-financeiro)" onclick="event.stopPropagation();GF.rubrica=${r.id};gfNav('orcamento-rubrica-form')">Editar</button>
-                  ${canClose ? `<button class="btn btn-sm" onclick="event.stopPropagation();gfSolicitarFecho(${r.id})">Solicitar encerramento</button>` : ''}
+                  ${!GF.bloqueado || _financeRole === 'df' ? `<button class="btn btn-sm" style="border-color:var(--mod-financeiro);color:var(--mod-financeiro)" onclick="event.stopPropagation();GF.rubrica=${r.id};gfNav('orcamento-rubrica-form')">Editar</button>` : ''}
+                  ${canClose && (!GF.bloqueado || _financeRole === 'df') ? `<button class="btn btn-sm" onclick="event.stopPropagation();gfSolicitarFecho(${r.id})">Solicitar encerramento</button>` : ''}
                 </div>
               </div>
             </div>
@@ -5008,6 +5034,16 @@ function gfRenderRubricaForm() {
       <span>›</span><span>${isEdit ? 'Editar' : 'Nova'} Rúbrica</span>
     </div>
     
+    ${GF.bloqueado && _financeRole !== 'df' ? `
+      <div style="background:#FEE2E2;border:1px solid #FECACA;border-radius:var(--r);padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">🔒</span>
+        <div>
+          <div style="font-weight:600;color:#991B1B;font-size:13px">Edições bloqueadas pela Diretora Financeira</div>
+          <div style="font-size:12px;color:#B91C1C;margin-top:2px">Não é possível criar ou editar rúbricas enquanto as edições estiverem bloqueadas.</div>
+        </div>
+      </div>
+    ` : ''}
+    
     <div style="font-size:20px;font-weight:600;margin-bottom:20px">${isEdit ? 'Editar' : 'Nova'} Rúbrica</div>
     
     <div class="card" style="max-width:600px">
@@ -5054,6 +5090,11 @@ function gfRenderRubricaForm() {
 }
 
 async function gfSaveRubrica(id) {
+  // Verificar bloqueio da DF
+  if (GF.bloqueado && _financeRole !== 'df') {
+    showNotif('🔒 Edições bloqueadas pela Diretora Financeira', 'error');
+    return;
+  }
   const titulo = gfVal('gf-rub-titulo').trim();
   const ano = parseInt(gfVal('gf-rub-ano'));
   const estado = gfVal('gf-rub-estado');
@@ -5450,7 +5491,12 @@ function gfRenderSolicitacaoView() {
   const sol = GF_SOLICITACOES.find(s => s.id === GF.solicitacao);
   if (!sol) return '<p style="padding:40px;text-align:center">Solicitação não encontrada</p>';
   
-  const canApproveDir = _financeRole === 'area_director' && sol.estado === 'Submetido';
+  const solProj = GF_PROJETOS.find(p => p.id === sol.projetoId);
+  const projDep = solProj?.dep || solProj?.departamento || '';
+  const diretorArea = gfGetDiretorArea(projDep);
+  const diretorAreaNome = sol.aprovDirNome || diretorArea?.titulo || 'Diretor de Área';
+  
+  const canApproveDir = _financeRole === 'area_director' && sol.estado === 'Submetido' && gfIsMyDepartamento(projDep);
   const canApproveDF = _financeRole === 'df' && ['Submetido', 'Aprovado Dir.'].includes(sol.estado);
   
   return `
@@ -5532,8 +5578,8 @@ function gfRenderSolicitacaoView() {
           <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:14px">Fluxo de Aprovação</div>
           <div style="display:flex;flex-direction:column;gap:12px">
             ${gfWorkflowStep('Submissão', true, sol.autorNome, sol.dataSubmissao)}
-            ${gfWorkflowStep('Aprovação Dir. Área', !!sol.aprovDirNome || sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDirNome, sol.dataAprovDir)}
-            ${gfWorkflowStep('Aprovação DF', sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDFNome, sol.dataAprovDF)}
+            ${gfWorkflowStep(diretorAreaNome, !!sol.aprovDirNome || sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDirNome, sol.dataAprovDir)}
+            ${gfWorkflowStep('Dir. Financeira', sol.estado === 'Aprovado DF' || sol.estado === 'Processado', sol.aprovDFNome, sol.dataAprovDF)}
             ${gfWorkflowStep('Processado', sol.estado === 'Processado', null, null)}
           </div>
         </div>
@@ -5588,10 +5634,10 @@ async function gfAprovarSolicitacao(id) {
     // VALIDAÇÃO: Diretor de Área só pode aprovar do seu departamento
     if (_financeRole === 'area_director') {
       const solProj = GF_PROJETOS.find(p => p.id === sol.projetoId);
-      const userEquipas = currentUserFJ?.equipa || [];
+      const projDep = solProj?.dep || solProj?.departamento || '';
       
-      if (solProj && !userEquipas.includes(solProj.departamento)) {
-        showNotif('Apenas pode aprovar solicitações do seu departamento', 'error');
+      if (!gfIsMyDepartamento(projDep)) {
+        showNotif('Apenas pode aprovar solicitações do departamento da sua equipa', 'error');
         return;
       }
       
@@ -6097,7 +6143,11 @@ function gfRenderAprovacoes() {
       <div style="font-size:14px;font-weight:600;margin-bottom:12px">Solicitações de Despesa/Receita (${solsPend.length})</div>
       ${solsPend.map(s => {
         const aprovDir = s.estado === 'Aprovado Dir.' || s.aprovDirNome;
-        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir;
+        const solProj = GF_PROJETOS.find(p => p.id === s.projetoId);
+        const projDep = solProj?.dep || solProj?.departamento || '';
+        const diretorArea = gfGetDiretorArea(projDep);
+        const diretorAreaNome = s.aprovDirNome || diretorArea?.titulo || 'Diretor de Área';
+        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir && gfIsMyDepartamento(projDep);
         const podeAprovarDF = _financeRole === 'df' && aprovDir;
         const isPE = _financeRole === 'pe';
         
@@ -6112,7 +6162,9 @@ function gfRenderAprovacoes() {
                   <span style="width:16px;height:16px;border-radius:50%;background:${aprovDir ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
                     ${aprovDir ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                   </span>
-                  <span style="color:${aprovDir ? '#10B981' : 'var(--text3)'}">Diretor Área ${aprovDir ? '✓' : ''}</span>
+                  <span style="color:${aprovDir ? '#10B981' : 'var(--text3)'}">
+                    ${aprovDir ? (s.aprovDirNome || diretorAreaNome) : diretorAreaNome} ${aprovDir ? '✓' : '(pendente)'}
+                  </span>
                 </div>
                 <div style="display:flex;align-items:center;gap:4px">
                   <span style="width:16px;height:16px;border-radius:50%;background:${s.aprovDFNome ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
@@ -6139,7 +6191,11 @@ function gfRenderAprovacoes() {
       <div style="font-size:14px;font-weight:600;margin:20px 0 12px">Alterações Orçamentais (${altsPend.length})</div>
       ${altsPend.map(a => {
         const aprovDir = a.estado === 'Aprovado Dir.' || a.aprovDirNome;
-        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir;
+        const altProj = GF_PROJETOS.find(p => p.id === a.destProjetoId);
+        const altDep = altProj?.dep || altProj?.departamento || '';
+        const diretorAltArea = gfGetDiretorArea(altDep);
+        const diretorAltNome = a.aprovDirNome || diretorAltArea?.titulo || 'Diretor de Área';
+        const podeAprovarDir = _financeRole === 'area_director' && !aprovDir && gfIsMyDepartamento(altDep);
         const podeAprovarDF = _financeRole === 'df' && aprovDir;
         const isBancoGlobal = a.titulo?.includes('Banco Global');
         const isPE = _financeRole === 'pe';
@@ -6156,7 +6212,9 @@ function gfRenderAprovacoes() {
                   <span style="width:16px;height:16px;border-radius:50%;background:${aprovDir ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
                     ${aprovDir ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
                   </span>
-                  <span style="color:${aprovDir ? '#10B981' : 'var(--text3)'}">Diretor Área ${aprovDir ? '✓' : ''}</span>
+                  <span style="color:${aprovDir ? '#10B981' : 'var(--text3)'}">
+                    ${aprovDir ? (a.aprovDirNome || diretorAltNome) : diretorAltNome} ${aprovDir ? '✓' : '(pendente)'}
+                  </span>
                 </div>
                 <div style="display:flex;align-items:center;gap:4px">
                   <span style="width:16px;height:16px;border-radius:50%;background:${a.aprovDFNome ? '#10B981' : '#E5E7EB'};display:flex;align-items:center;justify-content:center">
@@ -6196,9 +6254,9 @@ async function gfAprovarAlteracao(id) {
     // VALIDAÇÃO: Diretor de Área só pode aprovar do seu departamento
     if (_financeRole === 'area_director') {
       const altProj = GF_PROJETOS.find(p => p.id === alt.destProjetoId);
-      const userEquipas = currentUserFJ?.equipa || [];
+      const altDep = altProj?.dep || altProj?.departamento || '';
       
-      if (altProj && !userEquipas.includes(altProj.departamento)) {
+      if (!gfIsMyDepartamento(altDep)) {
         showNotif('Apenas pode aprovar alterações de projetos do seu departamento', 'error');
         return;
       }
