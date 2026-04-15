@@ -688,7 +688,7 @@ tr:hover td{background:var(--bg3)}
           <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="q" placeholder="Pesquisar..." oninput="renderTable()"></div>
           <select class="flt" id="ff-r" onchange="renderTable()"><option value="">Reunião: todas</option><option>Reunião com CAdm</option><option>Reunião Gestão</option><option>Reunião O.Norte</option><option>Reunião O.Sul</option><option>Reunião Financeiro</option><option>Reunião Impacto</option></select>
           <select class="flt" id="ff-t" onchange="renderTable()"><option value="">Tipo: todos</option><option>Deliberativo</option><option>Informativo</option></select>
-          <select class="flt" id="ff-e" onchange="renderTable()"><option value="">Estado: todos</option><option>Em aberto</option><option>Em processo</option><option>Concluído</option><option>Cancelado</option></select>
+          <select class="flt" id="ff-e" onchange="renderTable()"><option value="">Estado: todos</option><option selected>Em aberto</option><option>Em processo</option><option>Concluído</option><option>Cancelado</option></select>
           <button class="btn" onclick="loadItems()">&#8635;</button>
           <button class="btn btn-primary" onclick="openForm()">+ Novo assunto</button>
         </div>
@@ -2486,11 +2486,19 @@ function renderContentHTML(it){
 
 function renderSideHTML(it){
   const dec=carrDec[it.id]||{decisao:'',encaminhamento:'—',notas:''};
+  const isConcluido=it.estado==='Concluído';
+  const histHTML=it.historicoDecisoes?`
+    <hr style="border:none;border-top:0.5px solid var(--border);margin:.5rem 0">
+    <div class="dec-label">Histórico de decisões</div>
+    <div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto">
+      ${it.historicoDecisoes.split('\n---\n').filter(Boolean).map(e=>`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--text2);line-height:1.5">${e.replace(/\n/g,'<br>')}</div>`).join('')}
+    </div>`:'';
   return `
     <div class="dec-label">Decisão</div>
     <button class="dec-btn ${dec.decisao==='Aprovado'?'sel-aprov':''}" onclick="selDec('Aprovado',this)">&#10003; Aprovado</button>
     <button class="dec-btn ${dec.decisao==='Não aprovado'?'sel-nap':''}" onclick="selDec('Não aprovado',this)">&#10007; Não aprovado</button>
     <button class="dec-btn ${dec.decisao==='Pendente'?'sel-pend':''}" onclick="selDec('Pendente',this)">&#9646; Pendente</button>
+    <button class="dec-btn" onclick="marcarConcluido()" style="border-color:${isConcluido?'var(--green-mid)':'var(--border)'};background:${isConcluido?'var(--green-bg)':'var(--bg2)'};color:${isConcluido?'var(--green)':'var(--text)'};margin-top:2px">&#9654; ${isConcluido?'Concluído':'Marcar concluído'}</button>
     <hr style="border:none;border-top:0.5px solid var(--border);margin:.25rem 0">
     <div class="dec-label">Encaminhamento</div>
     <div class="enc-grid">
@@ -2504,6 +2512,7 @@ function renderSideHTML(it){
     <textarea class="notas-dec" id="notas-dec-input" placeholder="Registe as observações...">${dec.notas}</textarea>
     <button class="guardar-dec-btn" onclick="guardarDec()">&#10003; Guardar decisão</button>
     <div class="dec-saved-msg" id="dec-saved-msg"></div>
+    ${histHTML}
   `;
 }
 
@@ -2563,6 +2572,24 @@ async function guardarDec(){
     const msg=el('dec-saved-msg');if(msg){msg.textContent='✓ Guardado';setTimeout(()=>msg.textContent='',2500);}
     el('carr-saved-msg').textContent='✓ Decisão guardada';
     showNotif('Decisão guardada!','success');
+    setTimeout(()=>document.getElementById('notif').classList.remove('show'),2000);
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+}
+
+async function marcarConcluido(){
+  const it=carrItems[carrIdx];
+  const jaConc=it.estado==='Concluído';
+  const novoEstado=jaConc?'Em aberto':'Concluído';
+  if(!jaConc&&!confirm(`Marcar "${it.titulo}" como Concluído?`))return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Assuntos')/items(${it.id})`,
+      {__metadata:{type:'SP.Data.FJ_x005f_AssuntosListItem'},Estado:novoEstado},'MERGE','*');
+    // Update local state
+    it.estado=novoEstado;
+    const idx=items.findIndex(x=>x.id===it.id);
+    if(idx>=0)items[idx].estado=novoEstado;
+    renderCarr();if(fsOpen)renderFS();
+    showNotif(`Assunto marcado como "${novoEstado}"!`,'success');
     setTimeout(()=>document.getElementById('notif').classList.remove('show'),2000);
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
