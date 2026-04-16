@@ -64,7 +64,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;fo
 .nav-item.active{background:var(--fj-orange);color:#fff}
 .nav-item.hidden{display:none}
 .main{flex:1;padding:1.5rem;overflow-x:hidden}
-#module-rn,#module-pl,#module-gf{width:100%}
+#module-rn,#module-pl,#module-gf,#module-au{width:100%}
 .page{display:none}.page.active{display:block}
 .page-title{font-size:18px;font-weight:600;margin-bottom:1.25rem}
 
@@ -469,6 +469,55 @@ tr:hover td{background:var(--bg3)}
 ::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:3px}
 .hidden{display:none!important}
 
+/* ══ AUSÊNCIAS MODULE ══ */
+--au-teal:#0F6E56;--au-teal-bg:#E1F5EE;
+.au-page{display:none}.au-page.active{display:block}
+.au-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.au-stat{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.au-stat-n{font-size:22px;font-weight:600;display:block;margin-bottom:2px}
+.au-stat-l{font-size:11px;color:var(--text2)}
+/* calendar */
+.au-cal-wrap{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:1rem;margin-bottom:1.5rem}
+.au-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.au-cal-title{font-size:14px;font-weight:600}
+.au-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.au-cal-dh{font-size:11px;font-weight:600;color:var(--text3);text-align:center;padding:4px 0}
+.au-cal-day{min-height:34px;border-radius:5px;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:3px 2px;position:relative;cursor:default}
+.au-cal-day.today{background:var(--blue-l);font-weight:700;color:var(--blue-d)}
+.au-cal-day.other-month{color:var(--text3)}
+.au-cal-day.weekend{color:var(--text3)}
+.au-cal-dot{width:6px;height:6px;border-radius:50%;margin-top:2px}
+.au-cal-dot.ferias{background:#0F6E56}.au-cal-dot.doenca{background:#D85A30}.au-cal-dot.outro{background:#534AB7}
+/* request cards */
+.au-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:16px}
+.au-card:hover{border-color:var(--border2);background:var(--bg3)}
+.au-card-info{flex:1;min-width:0}
+.au-card-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.au-card-meta{font-size:12px;color:var(--text2);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.au-card-actions{display:flex;gap:6px;flex-shrink:0}
+/* timeline */
+.au-tl{display:flex;flex-direction:column;gap:0}
+.au-tl-item{display:flex;gap:12px;padding-bottom:14px;position:relative}
+.au-tl-item::before{content:'';position:absolute;left:11px;top:22px;bottom:0;width:1px;background:var(--border)}
+.au-tl-item:last-child::before{display:none}
+.au-tl-dot{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.au-tl-dot.done{background:var(--green-mid)}.au-tl-dot.current{background:var(--amber)}.au-tl-dot.wait{background:var(--border2);color:var(--text3)}.au-tl-dot.rejected{background:var(--red)}
+.au-tl-title{font-size:13px;font-weight:500}.au-tl-sub{font-size:12px;color:var(--text3);margin-top:1px}
+/* bulk bar PE */
+.au-bulk-bar{background:var(--fj-blue);color:#fff;border-radius:var(--r-lg);padding:12px 16px;margin-bottom:1rem;display:none;align-items:center;gap:12px}
+.au-bulk-bar.show{display:flex}
+.au-bulk-count{font-size:13px;font-weight:500;flex:1}
+/* badges */
+.b-au-pend{background:var(--amber-bg);color:var(--amber)}
+.b-au-n1{background:var(--blue-l);color:var(--blue-d)}
+.b-au-aprov{background:var(--green-bg);color:var(--green)}
+.b-au-rec{background:var(--red-bg);color:var(--red)}
+.b-au-can{background:var(--gray-bg);color:var(--gray)}
+/* saldo bar */
+.au-saldo-bar{height:8px;background:var(--border2);border-radius:4px;overflow:hidden;margin-top:6px}
+.au-saldo-fill{height:100%;background:var(--green-mid);border-radius:4px;transition:width .3s}
+.au-saldo-fill.warn{background:var(--amber)}.au-saldo-fill.danger{background:var(--red)}
+
 </style>
 </head>
 <body>
@@ -520,6 +569,7 @@ tr:hover td{background:var(--bg3)}
       <button class="module-tab active" id="tab-rn" onclick="switchModule('rn')">🤝 Reuniões</button>
       <button class="module-tab" id="tab-pl" onclick="switchModule('pl')">📊 Planeamento</button>
       <button class="module-tab" id="tab-gf" onclick="switchModule('gf')">💰 Financeiro</button>
+      <button class="module-tab" id="tab-au" onclick="switchModule('au')">🏖️ Ausências</button>
     </div>
     <div class="topbar-right">
       <div style="text-align:right">
@@ -629,7 +679,37 @@ tr:hover td{background:var(--bg3)}
         Vista Direção
       </div>
     </div>
-<div class="main">
+<div class="sidebar" id="sidebar-au" style="display:none">
+  <div class="sidebar-label" style="color:rgba(255,255,255,.4)">Ausências</div>
+  <div class="nav-item" id="au-nav-dashboard" onclick="auNav('dashboard')" style="color:rgba(255,255,255,.75)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" id="au-nav-pedidos" onclick="auNav('pedidos')" style="color:rgba(255,255,255,.75)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+    Os meus pedidos
+  </div>
+  <div class="nav-item" id="au-nav-novo" onclick="auOpenForm()" style="color:rgba(255,255,255,.75)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
+    Novo pedido
+  </div>
+  <div class="sidebar-label" id="au-lbl-dir" style="color:rgba(255,255,255,.4);display:none">Aprovações</div>
+  <div class="nav-item" id="au-nav-aprov-n1" onclick="auNav('aprov-n1')" style="color:rgba(255,255,255,.75);display:none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,8 6,11 13,4"/><circle cx="8" cy="8" r="7"/></svg>
+    Aprovações — Nível 1
+    <span id="au-badge-n1" style="margin-left:auto;background:var(--fj-orange);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;display:none"></span>
+  </div>
+  <div class="nav-item" id="au-nav-aprov-n2" onclick="auNav('aprov-n2')" style="color:rgba(255,255,255,.75);display:none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,8 6,11 13,4"/><polyline points="7,8 10,11 16,4" opacity=".5"/></svg>
+    Aprovações — Nível 2
+    <span id="au-badge-n2" style="margin-left:auto;background:var(--fj-orange);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;display:none"></span>
+  </div>
+  <div class="sidebar-label" id="au-lbl-admin" style="color:rgba(255,255,255,.4);display:none">Administração</div>
+  <div class="nav-item" id="au-nav-admin" onclick="auNav('admin')" style="color:rgba(255,255,255,.75);display:none">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3 3-5 6-5s6 2 6 5"/></svg>
+    Gestão / RH
+  </div>
+</div>
 <div class="notif" id="notif"></div>
 <div id="module-rn">
 
@@ -1283,6 +1363,188 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div><!-- /module-gf -->
 
+<!-- ══════════════ AUSÊNCIAS MODULE ══════════════ -->
+<div id="module-au" style="display:none">
+
+  <!-- FORM OVERLAY -->
+  <div class="overlay" id="au-form-ov">
+    <div class="panel" style="max-width:780px">
+      <div class="panel-title" id="au-form-title">Novo pedido de ausência</div>
+      <div class="fgrid">
+        <div class="fg"><label>Tipo de ausência *</label>
+          <select id="au-f-tipo">
+            <option value="Férias">🏖️ Férias</option>
+            <option value="Doença">🤒 Doença</option>
+            <option value="Luto">🕊️ Luto</option>
+            <option value="Casamento">💍 Casamento</option>
+            <option value="Assistência à família">👨‍👩‍👧 Assistência à família</option>
+            <option value="Consulta médica">🏥 Consulta médica</option>
+            <option value="Ausência injustificada">❌ Ausência injustificada</option>
+            <option value="Outro">📋 Outro</option>
+          </select>
+        </div>
+        <div class="fg"><label>Área / Departamento</label>
+          <select id="au-f-area">
+            <option value="">— automático —</option>
+            <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
+          </select>
+        </div>
+        <div class="fg"><label>Data de início *</label><input type="date" id="au-f-inicio" onchange="auCalcDias()"></div>
+        <div class="fg"><label>Data de fim *</label><input type="date" id="au-f-fim" onchange="auCalcDias()"></div>
+        <div class="fg"><label>Dias úteis</label>
+          <input type="text" id="au-f-dias" readonly style="background:var(--bg3);font-weight:600" placeholder="Calculado automaticamente">
+        </div>
+        <div class="fg"><label>Meio dia?</label>
+          <select id="au-f-meio"><option value="">Não — dia(s) completo(s)</option><option value="Manhã">Sim — manhã</option><option value="Tarde">Sim — tarde</option></select>
+        </div>
+        <div class="fg" style="grid-column:1/-1"><label>Observações / justificação</label>
+          <textarea id="au-f-obs" placeholder="Informação adicional, justificação ou contexto..."></textarea>
+        </div>
+        <div class="fg" style="grid-column:1/-1"><label>Anexo (ex.: atestado médico)</label>
+          <input type="file" id="au-f-file" accept=".pdf,.jpg,.png,.docx" style="padding:6px">
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button class="btn" onclick="auCloseForm()">Cancelar</button>
+        <button class="btn btn-primary" id="au-save-btn" onclick="auSaveForm()">Submeter pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REJECT MODAL -->
+  <div id="au-reject-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:400;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:var(--r-lg);width:100%;max-width:440px;padding:1.5rem;box-shadow:0 16px 40px rgba(0,0,0,.2)">
+      <div style="font-size:16px;font-weight:600;margin-bottom:1rem">Recusar pedido</div>
+      <input type="hidden" id="au-reject-id">
+      <div class="fg" style="margin-bottom:1rem"><label>Motivo da recusa *</label>
+        <textarea id="au-reject-motivo" rows="3" placeholder="Descreve o motivo da recusa..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="auCloseReject()">Cancelar</button>
+        <button class="btn btn-danger" style="background:var(--red-bg)" onclick="auConfirmReject()">Confirmar recusa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div class="au-page active" id="au-page-dashboard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div class="page-title" style="margin:0">Ausências &amp; Férias</div>
+      <button class="btn btn-primary" onclick="auOpenForm()">+ Novo pedido</button>
+    </div>
+    <!-- Saldo pessoal -->
+    <div id="au-saldo-pessoal" style="margin-bottom:1.5rem"></div>
+    <!-- Stats -->
+    <div class="au-stats" id="au-dash-stats"></div>
+    <!-- Calendar -->
+    <div class="au-cal-wrap">
+      <div class="au-cal-nav">
+        <button class="btn btn-sm" onclick="auCalPrev()">&#8592;</button>
+        <span class="au-cal-title" id="au-cal-title">—</span>
+        <button class="btn btn-sm" onclick="auCalNext()">&#8594;</button>
+      </div>
+      <div class="au-cal-grid" id="au-cal-grid"></div>
+      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div class="au-cal-dot ferias"></div>Férias</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div class="au-cal-dot doenca"></div>Doença</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><div class="au-cal-dot outro"></div>Outros</div>
+      </div>
+    </div>
+    <!-- Recent requests -->
+    <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem">Pedidos recentes</div>
+    <div id="au-recent-list"></div>
+  </div>
+
+  <!-- OS MEUS PEDIDOS PAGE -->
+  <div class="au-page" id="au-page-pedidos">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div class="page-title" style="margin:0">Os meus pedidos</div>
+      <button class="btn btn-primary" onclick="auOpenForm()">+ Novo pedido</button>
+    </div>
+    <div class="toolbar">
+      <select class="flt" id="au-ff-tipo" onchange="auRenderPedidos()"><option value="">Tipo: todos</option><option>Férias</option><option>Doença</option><option>Luto</option><option>Casamento</option><option>Assistência à família</option><option>Consulta médica</option><option>Ausência injustificada</option><option>Outro</option></select>
+      <select class="flt" id="au-ff-estado" onchange="auRenderPedidos()"><option value="">Estado: todos</option><option>Pendente</option><option>Aprovado N1</option><option>Aprovado</option><option>Recusado</option><option>Cancelado</option></select>
+      <select class="flt" id="au-ff-ano" onchange="auRenderPedidos()"><option value="">Ano: todos</option><option>2025</option><option selected>2026</option><option>2027</option></select>
+    </div>
+    <div id="au-pedidos-list"></div>
+  </div>
+
+  <!-- APROVAÇÕES N1 PAGE (Directors) -->
+  <div class="au-page" id="au-page-aprov-n1">
+    <div class="page-title">Aprovações — Nível 1 (Diretor de Área)</div>
+    <div style="background:var(--blue-l);border:0.5px solid var(--fj-blue);border-radius:var(--r);padding:10px 14px;margin-bottom:1rem;font-size:13px;color:var(--blue-d)">
+      Como Diretor de Área, aprova os pedidos da sua equipa antes de seguirem para o Presidente Executivo.
+    </div>
+    <div class="toolbar">
+      <select class="flt" id="au-ff-n1-tipo" onchange="auRenderN1()"><option value="">Tipo: todos</option><option>Férias</option><option>Doença</option><option>Outro</option></select>
+      <select class="flt" id="au-ff-n1-area" onchange="auRenderN1()"><option value="">Área: todas</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+      <button class="btn" onclick="auLoadAll().then(()=>auRenderN1())">&#8635; Atualizar</button>
+    </div>
+    <div id="au-n1-list"></div>
+  </div>
+
+  <!-- APROVAÇÕES N2 PAGE (Presidente Executivo) -->
+  <div class="au-page" id="au-page-aprov-n2">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div class="page-title" style="margin:0">Aprovações — Nível 2 (Presidente Executivo)</div>
+      <button class="btn" onclick="auLoadAll().then(()=>auRenderN2())">&#8635; Atualizar</button>
+    </div>
+    <!-- Bulk bar -->
+    <div class="au-bulk-bar" id="au-bulk-bar">
+      <input type="checkbox" id="au-sel-all" onclick="auToggleAll(this.checked)" style="cursor:pointer">
+      <span class="au-bulk-count" id="au-bulk-count">0 selecionados</span>
+      <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)" onclick="auBulkAprovar()">✔ Aprovar selecionados</button>
+    </div>
+    <div class="toolbar">
+      <select class="flt" id="au-ff-n2-tipo" onchange="auRenderN2()"><option value="">Tipo: todos</option><option>Férias</option><option>Doença</option><option>Outro</option></select>
+      <select class="flt" id="au-ff-n2-area" onchange="auRenderN2()"><option value="">Área: todas</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+    </div>
+    <div id="au-n2-list"></div>
+  </div>
+
+  <!-- ADMIN PAGE -->
+  <div class="au-page" id="au-page-admin">
+    <div class="page-title">Gestão de Ausências — RH</div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="au-q-admin" placeholder="Pesquisar colaborador..." oninput="auRenderAdmin()"></div>
+      <select class="flt" id="au-ff-adm-area" onchange="auRenderAdmin()"><option value="">Área: todas</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+      <select class="flt" id="au-ff-adm-ano" onchange="auRenderAdmin()"><option value="2025">2025</option><option selected value="2026">2026</option><option value="2027">2027</option></select>
+      <button class="btn btn-primary" onclick="auOpenSaldoForm()">+ Gerir saldo</button>
+    </div>
+    <!-- Saldo modal inline -->
+    <div id="au-saldo-form-wrap" class="overlay" style="margin-bottom:1rem">
+      <div class="panel" style="max-width:520px">
+        <div class="panel-title">Gerir saldo de férias</div>
+        <div class="fgrid">
+          <div class="fg people-wrap">
+            <label>Colaborador *</label>
+            <input id="au-sal-col" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'au-sal-sug','au-sal-col','au-sal-email')">
+            <input id="au-sal-email" type="hidden">
+            <div id="au-sal-sug" class="people-suggestions"></div>
+          </div>
+          <div class="fg"><label>Ano *</label><select id="au-sal-ano"><option>2025</option><option selected>2026</option><option>2027</option></select></div>
+          <div class="fg"><label>Dias com direito *</label><input type="number" id="au-sal-direito" min="0" max="60" placeholder="22"></div>
+          <div class="fg"><label>Dias transitados</label><input type="number" id="au-sal-trans" min="0" max="30" placeholder="0"></div>
+        </div>
+        <div class="panel-footer">
+          <button class="btn" onclick="auCloseSaldoForm()">Cancelar</button>
+          <button class="btn btn-primary" onclick="auSaveSaldo()">Guardar saldo</button>
+        </div>
+      </div>
+    </div>
+    <div id="au-admin-list"></div>
+    <div style="margin-top:1.5rem;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:.75rem">Todos os pedidos</div>
+    <div class="table-wrap">
+      <table>
+        <colgroup><col style="width:15%"><col style="width:12%"><col style="width:10%"><col style="width:10%"><col style="width:7%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:16%"></colgroup>
+        <thead><tr><th>Colaborador</th><th>Tipo</th><th>Início</th><th>Fim</th><th>Dias</th><th>Estado</th><th>Área</th><th>Submetido</th><th>Ações</th></tr></thead>
+        <tbody id="au-admin-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /module-au -->
+
 </div><!-- /main -->
 </div><!-- /layout -->
 
@@ -1407,7 +1669,7 @@ function getCores(tipo){return REUNIAO_CORES[tipo]||REUNIAO_CORES['Reunião com 
 let _currentModule='rn';
 function switchModule(mod){
   _currentModule=mod;
-  ['rn','pl','gf'].forEach(m=>{
+  ['rn','pl','gf','au'].forEach(m=>{
     document.getElementById('tab-'+m)?.classList.toggle('active',m===mod);
     const sb=document.getElementById('sidebar-'+m);
     const mc=document.getElementById('module-'+m);
@@ -1420,8 +1682,9 @@ function switchModule(mod){
   }
   if(mod==='gf'&&!_gfLoaded){_gfLoaded=true;gfInit();}
   if(mod==='rn')showPage('assuntos');
+  if(mod==='au'){if(!_auLoaded){_auLoaded=true;auInit();}else auNav('dashboard');}
 }
-let _plLoaded=false,_gfLoaded=false;
+let _plLoaded=false,_gfLoaded=false,_auLoaded=false;
 
 // ── SHARED PROJECTS ──
 let sharedProjetos=[];
@@ -2483,9 +2746,7 @@ function renderContentHTML(it){
     <div class="proposta-box ${it.proposta?'':'empty'}">${it.proposta?(it.proposta.replace(/\n/g,'<br>')):'Sem proposta definida.'}</div>`:''}
     ${it.historicoDecisoes?`
     <div class="sec-label" style="margin-top:1.25rem">Histórico de Decisões</div>
-    <div style="display:flex;flex-direction:column;gap:6px">
-      ${it.historicoDecisoes.split('\n---\n').filter(Boolean).map(e=>`<div style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--text2);line-height:1.6">${e.replace(/\n/g,'<br>')}</div>`).join('')}
-    </div>`:''}
+    <div class="content-box">${it.historicoDecisoes.split('\n---\n').filter(Boolean).map(e=>e.replace(/\n/g,'<br>')).join('<hr style="border:none;border-top:0.5px solid var(--border2);margin:.6rem 0">')}</div>`:''}
   `;
 }
 
@@ -6685,6 +6946,639 @@ async function saveBancoGlobal() {
 // gfRender() moved to gfInit() - called when user switches to GF tab
 // Auto-add primeira origem quando alterações carrega
 // MutationObserver removed - handled by gfInit
+
+
+
+// ═══════════════════════════════════════════════════
+// ════════════ MÓDULO AUSÊNCIAS ══════════════════════
+// ═══════════════════════════════════════════════════
+
+let AU_PEDIDOS=[], AU_SALDOS=[], AU_FERIADOS=[];
+let _auRole='worker'; // 'pe','director','admin','worker'
+let _auCalDate=new Date();
+let _auSelectedIds=new Set();
+let _auEditId=null;
+const AU_LIST='FJ_Ausencias';
+const AU_SALDO_LIST='FJ_SaldoFerias';
+const AU_FERIADOS_LIST='FJ_Feriados';
+
+// ── Init ──
+async function auInit(){
+  auSetRole();
+  auSetupSidebar();
+  await auLoadAll();
+  auNav('dashboard');
+}
+
+function auSetRole(){
+  if(userGroups.includes(GROUPS.CA)||userGroups.includes(GROUPS.Gestao)){_auRole='pe';}
+  else if([GROUPS.OpNorte,GROUPS.OpSul,GROUPS.Impacto,GROUPS.Financeiro].some(g=>userGroups.includes(g))){_auRole='director';}
+  else{_auRole='worker';}
+}
+
+function auSetupSidebar(){
+  const isDir=_auRole==='director'||_auRole==='pe';
+  const isPE=_auRole==='pe';
+  ['au-lbl-dir','au-nav-aprov-n1'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=isDir?'block':'none'; });
+  ['au-nav-aprov-n2'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=isPE?'flex':'none'; });
+  ['au-lbl-admin','au-nav-admin'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=isPE?'block':'none'; });
+  if(isDir) document.getElementById('au-lbl-dir').style.display='block';
+}
+
+// ── Load data ──
+async function auLoadAll(){
+  try{
+    // Carregar pedidos
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items?$select=*,Colaborador/Title,Colaborador/EMail,AprovadorN1/Title,AprovadorN2/Title&$expand=Colaborador,AprovadorN1,AprovadorN2&$orderby=DataInicio desc&$top=500`);
+    AU_PEDIDOS=d.d.results.map(r=>({
+      id:r.Id, etag:r.__metadata?.etag||'*',
+      tipo:r.TipoAusencia||'Outro',
+      inicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
+      fim:r.DataFim?r.DataFim.split('T')[0]:'',
+      dias:r.DiasUteis||0,
+      meioDia:r.MeioDia||'',
+      obs:r.Observacoes||'',
+      estado:r.Estado||'Pendente',
+      area:r.AreaColaborador||'',
+      colEmail:r.ColaboradorEmail||r.Colaborador?.EMail||'',
+      colNome:r.Colaborador?.Title||r.ColaboradorEmail||'',
+      aprov1:r.AprovadorN1?.Title||'',
+      aprov2:r.AprovadorN2?.Title||'',
+      dataAprov1:r.DataAprovN1?r.DataAprovN1.split('T')[0]:'',
+      dataAprov2:r.DataAprovN2?r.DataAprovN2.split('T')[0]:'',
+      motivoRecusa:r.MotivoRecusa||'',
+      dataSubmissao:r.DataSubmissao?r.DataSubmissao.split('T')[0]:'',
+      created:r.Created?r.Created.split('T')[0]:''
+    }));
+  }catch(e){
+    if(e.message.includes('404')||e.message.includes('does not exist')){
+      AU_PEDIDOS=[];
+      showNotif('Lista FJ_Ausencias não encontrada. Cria a lista no SharePoint primeiro.','error');
+    } else { console.warn('auLoadAll pedidos:',e); AU_PEDIDOS=[]; }
+  }
+  try{
+    const s=await spRead(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items?$select=*&$top=200`);
+    AU_SALDOS=s.d.results.map(r=>({
+      id:r.Id, etag:r.__metadata?.etag||'*',
+      email:r.ColaboradorEmail||'',
+      ano:r.Ano||new Date().getFullYear(),
+      direito:r.DiasDireito||22,
+      transitados:r.DiasTransitados||0
+    }));
+  }catch(e){ AU_SALDOS=[]; }
+  try{
+    const f=await spRead(`${SP}/_api/web/lists/getbytitle('${AU_FERIADOS_LIST}')/items?$select=Data&$top=200`);
+    AU_FERIADOS=f.d.results.map(r=>r.Data?r.Data.split('T')[0]:'').filter(Boolean);
+  }catch(e){ AU_FERIADOS=[]; }
+  auUpdateBadges();
+}
+
+function auUpdateBadges(){
+  const email=(user?.username||'').toLowerCase();
+  const pendN1=AU_PEDIDOS.filter(p=>p.estado==='Pendente').length;
+  const pendN2=AU_PEDIDOS.filter(p=>p.estado==='Aprovado N1').length;
+  const b1=document.getElementById('au-badge-n1');
+  const b2=document.getElementById('au-badge-n2');
+  if(b1){b1.textContent=pendN1;b1.style.display=pendN1>0?'inline':'none';}
+  if(b2){b2.textContent=pendN2;b2.style.display=pendN2>0?'inline':'none';}
+}
+
+// ── Navigation ──
+function auNav(page){
+  document.querySelectorAll('.au-page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('au-page-'+page);
+  if(pg)pg.classList.add('active');
+  // Update sidebar active
+  document.querySelectorAll('#sidebar-au .nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl=document.getElementById('au-nav-'+page);
+  if(navEl)navEl.classList.add('active');
+  // Render
+  if(page==='dashboard')auRenderDashboard();
+  if(page==='pedidos')auRenderPedidos();
+  if(page==='aprov-n1')auRenderN1();
+  if(page==='aprov-n2')auRenderN2();
+  if(page==='admin'){auRenderAdmin();auRenderAdminTable();}
+}
+
+// ── Helpers ──
+function auCalcDiasUteis(ini,fim){
+  if(!ini||!fim)return 0;
+  const d1=new Date(ini),d2=new Date(fim);
+  if(d2<d1)return 0;
+  let dias=0;
+  const cur=new Date(d1);
+  while(cur<=d2){
+    const dow=cur.getDay();
+    const ds=cur.toISOString().split('T')[0];
+    if(dow!==0&&dow!==6&&!AU_FERIADOS.includes(ds))dias++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return dias;
+}
+
+function auCalcDias(){
+  const ini=document.getElementById('au-f-inicio')?.value;
+  const fim=document.getElementById('au-f-fim')?.value;
+  const dias=auCalcDiasUteis(ini,fim);
+  const el=document.getElementById('au-f-dias');
+  if(el)el.value=dias>0?`${dias} dia${dias!==1?'s':''}`:dias===0?'0 dias':'—';
+}
+
+function auBadge(estado){
+  const map={'Pendente':'b-au-pend','Aprovado N1':'b-au-n1','Aprovado':'b-au-aprov','Recusado':'b-au-rec','Cancelado':'b-au-can'};
+  return `<span class="badge ${map[estado]||'b-au-pend'}">${estado}</span>`;
+}
+
+function auTipoIcon(tipo){
+  const map={'Férias':'🏖️','Doença':'🤒','Luto':'🕊️','Casamento':'💍','Assistência à família':'👨‍👩‍👧','Consulta médica':'🏥','Ausência injustificada':'❌'};
+  return map[tipo]||'📋';
+}
+
+function auFormatDate(d){
+  if(!d)return'—';
+  const [y,m,dd]=d.split('-');
+  return`${dd}/${m}/${y}`;
+}
+
+function auGetSaldo(email,ano){
+  const s=AU_SALDOS.find(s=>s.email.toLowerCase()===email.toLowerCase()&&s.ano===parseInt(ano));
+  const direito=s?s.direito+s.transitados:22;
+  const used=AU_PEDIDOS.filter(p=>
+    p.colEmail.toLowerCase()===email.toLowerCase()&&
+    p.inicio.startsWith(String(ano))&&
+    p.tipo==='Férias'&&
+    ['Aprovado N1','Aprovado'].includes(p.estado)
+  ).reduce((a,p)=>a+(p.dias||0),0);
+  const pending=AU_PEDIDOS.filter(p=>
+    p.colEmail.toLowerCase()===email.toLowerCase()&&
+    p.inicio.startsWith(String(ano))&&
+    p.tipo==='Férias'&&
+    p.estado==='Pendente'
+  ).reduce((a,p)=>a+(p.dias||0),0);
+  return{direito,used,pending,disponivel:Math.max(0,direito-used-pending)};
+}
+
+function auMySaldo(){
+  const email=(user?.username||'').toLowerCase();
+  const ano=new Date().getFullYear();
+  return auGetSaldo(email,ano);
+}
+
+// ── Dashboard ──
+function auRenderDashboard(){
+  const email=(user?.username||'').toLowerCase();
+  const ano=new Date().getFullYear();
+  const saldo=auMySaldo();
+  const pct=Math.min(100,Math.round((saldo.used/saldo.direito)*100));
+  const cls=pct>90?'danger':pct>70?'warn':'';
+  document.getElementById('au-saldo-pessoal').innerHTML=`
+    <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600">Saldo de férias ${ano}</div>
+        <div style="font-size:12px;color:var(--text2)">${saldo.used} usados de ${saldo.direito} dias</div>
+      </div>
+      <div class="au-saldo-bar"><div class="au-saldo-fill ${cls}" style="width:${pct}%"></div></div>
+      <div style="display:flex;gap:20px;margin-top:10px;font-size:12px">
+        <div><span style="font-weight:600;color:var(--green-mid)">${saldo.disponivel}</span> <span style="color:var(--text2)">disponíveis</span></div>
+        <div><span style="font-weight:600;color:var(--amber)">${saldo.pending}</span> <span style="color:var(--text2)">em aprovação</span></div>
+        <div><span style="font-weight:600;color:var(--text)">${saldo.used}</span> <span style="color:var(--text2)">utilizados</span></div>
+      </div>
+    </div>`;
+  // Stats
+  const meus=AU_PEDIDOS.filter(p=>p.colEmail.toLowerCase()===email);
+  const stats=[
+    {n:meus.filter(p=>p.estado==='Pendente').length,l:'Pendentes',c:'var(--amber)'},
+    {n:meus.filter(p=>p.estado==='Aprovado N1').length,l:'Aguarda N2',c:'var(--blue-d)'},
+    {n:meus.filter(p=>p.estado==='Aprovado').length,l:'Aprovados',c:'var(--green-mid)'},
+    {n:meus.filter(p=>p.estado==='Recusado').length,l:'Recusados',c:'var(--red)'}
+  ];
+  document.getElementById('au-dash-stats').innerHTML=stats.map(s=>`
+    <div class="au-stat"><span class="au-stat-n" style="color:${s.c}">${s.n}</span><span class="au-stat-l">${s.l}</span></div>`).join('');
+  // Calendar
+  auRenderCal();
+  // Recent
+  const recent=meus.slice(0,5);
+  document.getElementById('au-recent-list').innerHTML=recent.length?recent.map(p=>auCardHtml(p,false)).join(''):`<div class="empty">Sem pedidos recentes.</div>`;
+}
+
+// ── Calendar ──
+function auRenderCal(){
+  const y=_auCalDate.getFullYear(), m=_auCalDate.getMonth();
+  const title=document.getElementById('au-cal-title');
+  if(title)title.textContent=new Date(y,m,1).toLocaleString('pt-PT',{month:'long',year:'numeric'});
+  const grid=document.getElementById('au-cal-grid');
+  if(!grid)return;
+  const dias=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  let html=dias.map(d=>`<div class="au-cal-dh">${d}</div>`).join('');
+  const first=new Date(y,m,1);
+  let startDow=first.getDay();
+  if(startDow===0)startDow=7;
+  for(let i=1;i<startDow;i++)html+=`<div class="au-cal-day other-month"></div>`;
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const today=new Date().toISOString().split('T')[0];
+  const email=(user?.username||'').toLowerCase();
+  const aprovados=AU_PEDIDOS.filter(p=>
+    p.colEmail.toLowerCase()===email&&
+    ['Aprovado N1','Aprovado'].includes(p.estado)
+  );
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow=new Date(y,m,d).getDay();
+    const isWe=dow===0||dow===6;
+    const isToday=ds===today;
+    const abHere=aprovados.filter(p=>p.inicio<=ds&&p.fim>=ds);
+    const dot=abHere.length?`<div class="au-cal-dot ${abHere[0].tipo==='Férias'?'ferias':abHere[0].tipo==='Doença'?'doenca':'outro'}"></div>`:'';
+    html+=`<div class="au-cal-day${isToday?' today':''}${isWe?' weekend':''}" title="${abHere.map(p=>p.tipo).join(', ')}">${d}${dot}</div>`;
+  }
+  grid.innerHTML=html;
+}
+function auCalPrev(){_auCalDate=new Date(_auCalDate.getFullYear(),_auCalDate.getMonth()-1,1);auRenderCal();}
+function auCalNext(){_auCalDate=new Date(_auCalDate.getFullYear(),_auCalDate.getMonth()+1,1);auRenderCal();}
+
+// ── Card HTML ──
+function auCardHtml(p, showColaborador=false){
+  const myEmail=(user?.username||'').toLowerCase();
+  const isMine=p.colEmail.toLowerCase()===myEmail;
+  const timeline=`
+    <div class="au-tl" style="margin-top:10px">
+      <div class="au-tl-item">
+        <div class="au-tl-dot done">1</div>
+        <div><div class="au-tl-title">Pedido submetido</div><div class="au-tl-sub">${auFormatDate(p.dataSubmissao||p.created)}</div></div>
+      </div>
+      <div class="au-tl-item">
+        <div class="au-tl-dot ${p.estado==='Pendente'?'current':['Aprovado N1','Aprovado'].includes(p.estado)?'done':p.estado==='Recusado'?'rejected':'wait'}">2</div>
+        <div><div class="au-tl-title">Diretor de Área</div><div class="au-tl-sub">${p.dataAprov1?'Aprovado em '+auFormatDate(p.dataAprov1):p.estado==='Recusado'?'Recusado':'Aguarda aprovação'}</div></div>
+      </div>
+      <div class="au-tl-item">
+        <div class="au-tl-dot ${ p.estado==='Aprovado N1'?'current':p.estado==='Aprovado'?'done':['Recusado','Cancelado'].includes(p.estado)?'rejected':'wait'}">3</div>
+        <div><div class="au-tl-title">Presidente Executivo</div><div class="au-tl-sub">${p.dataAprov2?'Aprovado em '+auFormatDate(p.dataAprov2):p.estado==='Aprovado N1'?'A aguardar':p.estado==='Aprovado'?'Aprovado':'—'}</div></div>
+      </div>
+    </div>`;
+  const actions=isMine&&p.estado==='Pendente'?`<button class="btn btn-sm btn-danger" onclick="auCancelar(${p.id})">Cancelar</button>`:'';
+  const motivoHtml=p.motivoRecusa?`<div style="margin-top:8px;background:var(--red-bg);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--red)">Motivo de recusa: ${p.motivoRecusa}</div>`:'';
+  return`<div class="au-card" style="flex-direction:column;align-items:flex-start">
+    <div style="display:flex;width:100%;align-items:center;gap:12px">
+      <div style="font-size:20px">${auTipoIcon(p.tipo)}</div>
+      <div class="au-card-info">
+        <div class="au-card-title">${p.tipo}${showColaborador?` — <span style="color:var(--text2)">${p.colNome||p.colEmail}</span>`:''}</div>
+        <div class="au-card-meta">
+          <span>${auFormatDate(p.inicio)} → ${auFormatDate(p.fim)}</span>
+          <span style="font-weight:600">${p.dias} dia${p.dias!==1?'s':''}</span>
+          ${p.area?`<span style="color:var(--text3)">${p.area}</span>`:''}
+          ${auBadge(p.estado)}
+        </div>
+      </div>
+      <div class="au-card-actions">${actions}</div>
+    </div>
+    ${p.obs?`<div style="font-size:12px;color:var(--text2);margin-top:6px;padding-left:36px">${p.obs}</div>`:''}
+    ${motivoHtml}
+    <div style="padding-left:36px;width:100%">${timeline}</div>
+  </div>`;
+}
+
+// ── Render Pedidos ──
+function auRenderPedidos(){
+  const email=(user?.username||'').toLowerCase();
+  const tipo=document.getElementById('au-ff-tipo')?.value||'';
+  const estado=document.getElementById('au-ff-estado')?.value||'';
+  const ano=document.getElementById('au-ff-ano')?.value||'';
+  let list=AU_PEDIDOS.filter(p=>p.colEmail.toLowerCase()===email);
+  if(tipo)list=list.filter(p=>p.tipo===tipo);
+  if(estado)list=list.filter(p=>p.estado===estado);
+  if(ano)list=list.filter(p=>p.inicio.startsWith(ano));
+  const wrap=document.getElementById('au-pedidos-list');
+  if(wrap)wrap.innerHTML=list.length?list.map(p=>auCardHtml(p,false)).join(''):`<div class="empty">Sem pedidos encontrados.</div>`;
+}
+
+// ── Render N1 (Directors) ──
+function auRenderN1(){
+  const tipo=document.getElementById('au-ff-n1-tipo')?.value||'';
+  const area=document.getElementById('au-ff-n1-area')?.value||'';
+  let list=AU_PEDIDOS.filter(p=>p.estado==='Pendente');
+  if(tipo)list=list.filter(p=>p.tipo===tipo);
+  if(area)list=list.filter(p=>p.area===area);
+  const wrap=document.getElementById('au-n1-list');
+  if(!wrap)return;
+  if(!list.length){wrap.innerHTML=`<div class="empty">Sem pedidos pendentes para aprovação.</div>`;return;}
+  wrap.innerHTML=list.map(p=>`
+    <div class="au-card" style="flex-direction:column;align-items:flex-start">
+      <div style="display:flex;width:100%;align-items:center;gap:12px">
+        <div style="font-size:20px">${auTipoIcon(p.tipo)}</div>
+        <div class="au-card-info">
+          <div class="au-card-title">${p.tipo} — <strong>${p.colNome||p.colEmail}</strong></div>
+          <div class="au-card-meta">
+            <span>${auFormatDate(p.inicio)} → ${auFormatDate(p.fim)}</span>
+            <span style="font-weight:600">${p.dias} dia${p.dias!==1?'s':''}</span>
+            ${p.area?`<span class="badge b-info">${p.area}</span>`:''}
+            ${auBadge(p.estado)}
+          </div>
+          ${p.obs?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${p.obs}</div>`:''}
+        </div>
+        <div class="au-card-actions">
+          <button class="btn btn-sm btn-green" onclick="auAprovarN1(${p.id})">✔ Aprovar</button>
+          <button class="btn btn-sm btn-danger" onclick="auAbrirReject(${p.id},'n1')">✗ Recusar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Render N2 (PE) ──
+function auRenderN2(){
+  const tipo=document.getElementById('au-ff-n2-tipo')?.value||'';
+  const area=document.getElementById('au-ff-n2-area')?.value||'';
+  let list=AU_PEDIDOS.filter(p=>p.estado==='Aprovado N1');
+  if(tipo)list=list.filter(p=>p.tipo===tipo);
+  if(area)list=list.filter(p=>p.area===area);
+  const wrap=document.getElementById('au-n2-list');
+  if(!wrap)return;
+  const bar=document.getElementById('au-bulk-bar');
+  if(bar)bar.classList.toggle('show',list.length>0);
+  _auSelectedIds=new Set();
+  auUpdateBulkCount();
+  if(!list.length){wrap.innerHTML=`<div class="empty">Sem pedidos aprovados no nível 1 para aprovação final.</div>`;return;}
+  wrap.innerHTML=list.map(p=>`
+    <div class="au-card" id="au-n2-card-${p.id}" style="flex-direction:column;align-items:flex-start">
+      <div style="display:flex;width:100%;align-items:center;gap:12px">
+        <input type="checkbox" id="au-chk-${p.id}" onchange="auToggleSel(${p.id},this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
+        <div style="font-size:20px">${auTipoIcon(p.tipo)}</div>
+        <div class="au-card-info">
+          <div class="au-card-title">${p.tipo} — <strong>${p.colNome||p.colEmail}</strong></div>
+          <div class="au-card-meta">
+            <span>${auFormatDate(p.inicio)} → ${auFormatDate(p.fim)}</span>
+            <span style="font-weight:600">${p.dias} dia${p.dias!==1?'s':''}</span>
+            ${p.area?`<span class="badge b-info">${p.area}</span>`:''}
+            ${auBadge(p.estado)}
+            <span style="color:var(--text3);font-size:11px">N1 aprovado: ${auFormatDate(p.dataAprov1)}</span>
+          </div>
+          ${p.obs?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${p.obs}</div>`:''}
+        </div>
+        <div class="au-card-actions">
+          <button class="btn btn-sm btn-green" onclick="auAprovarN2(${p.id})">✔ Aprovar</button>
+          <button class="btn btn-sm btn-danger" onclick="auAbrirReject(${p.id},'n2')">✗ Recusar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function auToggleSel(id,checked){
+  if(checked)_auSelectedIds.add(id);
+  else _auSelectedIds.delete(id);
+  auUpdateBulkCount();
+  const card=document.getElementById('au-n2-card-'+id);
+  if(card)card.style.background=checked?'var(--blue-l)':'';
+}
+
+function auToggleAll(checked){
+  document.querySelectorAll('[id^="au-chk-"]').forEach(cb=>{
+    const id=parseInt(cb.id.replace('au-chk-',''));
+    cb.checked=checked;
+    auToggleSel(id,checked);
+  });
+}
+
+function auUpdateBulkCount(){
+  const n=_auSelectedIds.size;
+  const cnt=document.getElementById('au-bulk-count');
+  const btn=document.querySelector('.au-bulk-bar button');
+  if(cnt)cnt.textContent=n===0?'Nenhum selecionado':n===1?'1 selecionado':`${n} selecionados`;
+  if(btn)btn.textContent=n>0?`✔ Aprovar selecionados (${n})`:'✔ Aprovar selecionados';
+  if(btn)btn.disabled=n===0;
+}
+
+async function auBulkAprovar(){
+  if(_auSelectedIds.size===0)return;
+  if(!confirm(`Confirmas a aprovação de ${_auSelectedIds.size} pedido(s)?`))return;
+  showNotif(`A aprovar ${_auSelectedIds.size} pedidos...`,'info');
+  const ids=[..._auSelectedIds];
+  let ok=0;
+  for(const id of ids){
+    try{ await auAprovarN2Single(id);ok++; }catch(e){ console.warn('Bulk aprovar erro id='+id,e); }
+  }
+  showNotif(`${ok} pedido(s) aprovado(s) com sucesso.`,'success');
+  _auSelectedIds=new Set();
+  await auLoadAll();
+  auRenderN2();
+}
+
+// ── Approval actions ──
+async function auAprovarN1(id){
+  if(!confirm('Confirmas a aprovação deste pedido (Nível 1)?'))return;
+  try{
+    const uid=await getCurrentUserId();
+    const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Aprovado N1',DataAprovN1:new Date().toISOString()};
+    if(uid)body.AprovadorN1Id=uid;
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
+    showNotif('Pedido aprovado no Nível 1. Segue para o Presidente Executivo.','success');
+    await auLoadAll();
+    auRenderN1();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+}
+
+async function auAprovarN2(id){
+  await auAprovarN2Single(id);
+  showNotif('Pedido aprovado definitivamente!','success');
+  await auLoadAll();
+  auRenderN2();
+}
+
+async function auAprovarN2Single(id){
+  const uid=await getCurrentUserId();
+  const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Aprovado',DataAprovN2:new Date().toISOString()};
+  if(uid)body.AprovadorN2Id=uid;
+  await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
+}
+
+function auAbrirReject(id,nivel){
+  document.getElementById('au-reject-id').value=id+'|'+nivel;
+  document.getElementById('au-reject-motivo').value='';
+  const modal=document.getElementById('au-reject-modal');
+  if(modal)modal.style.display='flex';
+}
+function auCloseReject(){
+  const modal=document.getElementById('au-reject-modal');
+  if(modal)modal.style.display='none';
+}
+async function auConfirmReject(){
+  const raw=document.getElementById('au-reject-id').value;
+  const motivo=document.getElementById('au-reject-motivo').value.trim();
+  if(!motivo){showNotif('Preenche o motivo da recusa.','error');return;}
+  const [id]=raw.split('|');
+  try{
+    const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Recusado',MotivoRecusa:motivo};
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
+    showNotif('Pedido recusado.','success');
+    auCloseReject();
+    await auLoadAll();
+    auRenderN1();auRenderN2();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+}
+
+async function auCancelar(id){
+  if(!confirm('Tens a certeza que queres cancelar este pedido?'))return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,{__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Cancelado'},'MERGE');
+    showNotif('Pedido cancelado.','success');
+    await auLoadAll();
+    auRenderPedidos();auRenderDashboard();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+}
+
+// ── Form ──
+function auOpenForm(id){
+  _auEditId=id||null;
+  document.getElementById('au-form-title').textContent=id?'Editar pedido':'Novo pedido de ausência';
+  if(!id){
+    document.getElementById('au-f-tipo').value='Férias';
+    document.getElementById('au-f-inicio').value='';
+    document.getElementById('au-f-fim').value='';
+    document.getElementById('au-f-dias').value='';
+    document.getElementById('au-f-obs').value='';
+    document.getElementById('au-f-meio').value='';
+  }
+  document.getElementById('au-form-ov').classList.add('open');
+}
+function auCloseForm(){document.getElementById('au-form-ov').classList.remove('open');}
+
+async function auSaveForm(){
+  const tipo=document.getElementById('au-f-tipo').value;
+  const inicio=document.getElementById('au-f-inicio').value;
+  const fim=document.getElementById('au-f-fim').value;
+  const obs=document.getElementById('au-f-obs').value.trim();
+  const meio=document.getElementById('au-f-meio').value;
+  const area=document.getElementById('au-f-area').value;
+  if(!inicio||!fim){showNotif('Preenche as datas de início e fim.','error');return;}
+  if(fim<inicio){showNotif('A data de fim não pode ser anterior ao início.','error');return;}
+  const dias=auCalcDiasUteis(inicio,fim);
+  if(dias<=0){showNotif('O período selecionado não contém dias úteis.','error');return;}
+  const btn=document.getElementById('au-save-btn');
+  btn.disabled=true;btn.textContent='A guardar...';
+  try{
+    const uid=await getCurrentUserId();
+    const emailUser=(user?.username||'').toLowerCase();
+    const userArea=area||auGetUserArea();
+    const body={
+      __metadata:{type:`SP.Data.FJ_x005f_AusenciasListItem`},
+      Title:`${tipo} - ${inicio} - ${emailUser}`,
+      TipoAusencia:tipo,
+      DataInicio:inicio+'T00:00:00Z',
+      DataFim:fim+'T23:59:59Z',
+      DiasUteis:dias,
+      MeioDia:meio,
+      Observacoes:obs,
+      Estado:'Pendente',
+      ColaboradorEmail:emailUser,
+      AreaColaborador:userArea,
+      DataSubmissao:new Date().toISOString()
+    };
+    if(uid)body.ColaboradorId=uid;
+    const res=await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items`,body,'POST');
+    const newId=res.d?.Id;
+    // Upload attachment if any
+    const fileInput=document.getElementById('au-f-file');
+    if(newId&&fileInput?.files?.length){
+      try{await uploadAttachment(AU_LIST,newId,fileInput.files[0]);}catch(e){console.warn('Attach error',e);}
+    }
+    showNotif(`Pedido de ${tipo.toLowerCase()} submetido com sucesso (${dias} dia${dias!==1?'s':''}).`,'success');
+    auCloseForm();
+    await auLoadAll();
+    auRenderDashboard();
+    if(_currentModule==='au')auNav('pedidos');
+  }catch(e){
+    showNotif('Erro ao guardar: '+e.message,'error');
+  }finally{
+    btn.disabled=false;btn.textContent='Submeter pedido';
+  }
+}
+
+function auGetUserArea(){
+  if(userGroups.includes(GROUPS.OpNorte))return'Op.Norte';
+  if(userGroups.includes(GROUPS.OpSul))return'Op.Sul';
+  if(userGroups.includes(GROUPS.Impacto))return'Impacto';
+  if(userGroups.includes(GROUPS.Financeiro))return'Financeiro';
+  if(userGroups.includes(GROUPS.Gestao))return'Gestão';
+  if(userGroups.includes(GROUPS.CA))return'CAdm';
+  return'';
+}
+
+// ── Admin ──
+function auRenderAdmin(){
+  const wrap=document.getElementById('au-admin-list');
+  if(!wrap)return;
+  const q=(document.getElementById('au-q-admin')?.value||'').toLowerCase();
+  const area=document.getElementById('au-ff-adm-area')?.value||'';
+  const ano=document.getElementById('au-ff-adm-ano')?.value||'2026';
+  // Unique collaborators
+  const emails=[...new Set(AU_PEDIDOS.map(p=>p.colEmail).filter(Boolean))];
+  const filtered=emails.filter(e=>{
+    if(q&&!e.toLowerCase().includes(q)&&!AU_PEDIDOS.find(p=>p.colEmail===e&&p.colNome?.toLowerCase().includes(q)))return false;
+    if(area&&!AU_PEDIDOS.find(p=>p.colEmail===e&&p.area===area))return false;
+    return true;
+  });
+  if(!filtered.length){wrap.innerHTML='<div class="empty">Sem colaboradores encontrados.</div>';return;}
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">${filtered.map(email=>{
+    const nome=AU_PEDIDOS.find(p=>p.colEmail===email)?.colNome||email;
+    const saldo=auGetSaldo(email,ano);
+    const pct=Math.min(100,Math.round((saldo.used/saldo.direito)*100));
+    const cls=pct>90?'danger':pct>70?'warn':'';
+    return`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nome}">${nome}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">${email}</div>
+      <div class="au-saldo-bar"><div class="au-saldo-fill ${cls}" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text2)">
+        <span>${saldo.used}/${saldo.direito} dias</span>
+        <span style="color:var(--green-mid);font-weight:600">${saldo.disponivel} disponíveis</span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function auRenderAdminTable(){
+  const tbody=document.getElementById('au-admin-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=AU_PEDIDOS.map(p=>`<tr>
+    <td title="${p.colEmail}">${p.colNome||p.colEmail}</td>
+    <td>${auTipoIcon(p.tipo)} ${p.tipo}</td>
+    <td>${auFormatDate(p.inicio)}</td>
+    <td>${auFormatDate(p.fim)}</td>
+    <td style="font-weight:600">${p.dias}</td>
+    <td>${auBadge(p.estado)}</td>
+    <td>${p.area||'—'}</td>
+    <td>${auFormatDate(p.created)}</td>
+    <td>
+      <div class="actions">
+        ${p.estado==='Pendente'?`<button class="btn btn-sm btn-green" onclick="auAprovarN1(${p.id})">Aprov. N1</button>`:''}
+        ${p.estado==='Aprovado N1'?`<button class="btn btn-sm btn-green" onclick="auAprovarN2(${p.id})">Aprov. N2</button>`:''}
+        ${['Pendente','Aprovado N1'].includes(p.estado)?`<button class="btn btn-sm btn-danger" onclick="auAbrirReject(${p.id},'admin')">Recusar</button>`:''}
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+// ── Saldo management ──
+function auOpenSaldoForm(){document.getElementById('au-saldo-form-wrap').classList.add('open');}
+function auCloseSaldoForm(){document.getElementById('au-saldo-form-wrap').classList.remove('open');}
+async function auSaveSaldo(){
+  const email=document.getElementById('au-sal-email').value||document.getElementById('au-sal-col').value;
+  const ano=parseInt(document.getElementById('au-sal-ano').value);
+  const direito=parseInt(document.getElementById('au-sal-direito').value);
+  const trans=parseInt(document.getElementById('au-sal-trans').value)||0;
+  if(!email||!ano||isNaN(direito)){showNotif('Preenche todos os campos obrigatórios.','error');return;}
+  try{
+    const existe=AU_SALDOS.find(s=>s.email.toLowerCase()===email.toLowerCase()&&s.ano===ano);
+    const body={__metadata:{type:'SP.Data.FJ_x005f_SaldoFeriasListItem'},Title:`${email} - ${ano}`,ColaboradorEmail:email,Ano:ano,DiasDireito:direito,DiasTransitados:trans};
+    if(existe){
+      await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items(${existe.id})`,body,'MERGE');
+    }else{
+      await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items`,body,'POST');
+    }
+    showNotif('Saldo atualizado com sucesso.','success');
+    auCloseSaldoForm();
+    await auLoadAll();
+    auRenderAdmin();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+}
+
+// ═══════════════ FIM MÓDULO AUSÊNCIAS ═══════════════
 
 
 init();
