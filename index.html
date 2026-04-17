@@ -3443,8 +3443,9 @@ function kn(kpiId){
 function renderHier(){
   const dep=gv('ff-h-dep');
   const c=el('hier-container');
+  const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
   // Mostrar projeto se o seu dep bate, ou se tiver alguma ação do dep selecionado
-  const projs=plProjetos.filter(p=>!dep||p.dep===dep||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&a.dep===dep));
+  const projs=plProjetos.filter(p=>!dep||normDep(p.dep)===normDep(dep)||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&normDep(a.dep)===normDep(dep)));
   if(!projs.length){c.innerHTML='<div class="empty">Sem projetos carregados.</div>';return;}
   c.innerHTML=projs.map(p=>{
     const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id));
@@ -3554,8 +3555,10 @@ function toggleHierAcao(acaoId){
           <td style="padding:6px 4px">${estB(t.estado)}</td>
         </tr>`).join('')}
       </table>`:'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Sem plTarefas nesta ação.</div>'}
-      ${kps.length?`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">KPIs (${kps.length})</div>
-      ${kps.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct!==null?kpiColor(k,pct):'var(--tx3)';return`<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-size:12px"><span style="flex:1;font-weight:500">${k.nome}</span><span>${lr?lr.valor+' '+k.uni:'—'}</span><span style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</span></div>`;}).join('')}`:''}
+      ${kps.length?`<div style="margin-top:4px;background:#F5F3FF;border-left:4px solid #7C3AED;border-radius:0 6px 6px 0;padding:10px 14px">
+        <div style="font-size:11px;font-weight:700;color:#5B21B6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📊 KPIs (${kps.length})</div>
+        ${kps.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct!==null?kpiColor(k,pct):'var(--tx3)';return`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12px;border-bottom:1px dashed #DDD8FE"><span style="flex:1;font-weight:500;color:#3C3489">${k.nome}</span><span style="color:var(--tx2)">${lr?lr.valor+' '+k.uni:'—'}</span><span style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</span></div>`;}).join('')}
+      </div>`:''}
     `;
   }
 }
