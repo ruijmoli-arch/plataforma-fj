@@ -738,10 +738,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Data</label><input type="date" id="f-data"></div>
               <div class="fg"><label>Tipo *</label><select id="f-tipo"><option>Deliberativo</option><option>Informativo</option></select></div>
               <div class="fg"><label>Responsável</label>
-                <div class="people-wrap">
-                  <input type="text" id="f-resp" placeholder="Pesquisar pessoa..." autocomplete="off" oninput="searchPeople(this.value,'f-resp-suggestions','f-resp')">
-                  <div class="people-suggestions" id="f-resp-suggestions"></div>
-                </div>
+                <select id="f-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select>
               </div>
               <div class="fg"><label>Estado</label><select id="f-estado"><option>Em aberto</option><option>Em processo</option><option>Concluído</option><option>Cancelado</option></select></div>
               <div class="fg"><label>Encaminhamento</label><select id="f-enc"><option>—</option><option>Presidente Executivo</option><option>Segue para CA</option><option>Ambos</option></select></div>
@@ -871,11 +868,8 @@ tr:hover td{background:var(--bg3)}
                 <select id="fe-dep"><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
               </div>
               <div class="fg"><label>Responsável FJ</label>
-                <div class="people-wrap">
-                  <input type="text" id="fe-resp" placeholder="Pesquisar pessoa..." autocomplete="off" oninput="searchPeople(this.value,'fe-resp-suggestions','fe-resp','fe-resp-email')">
-                  <input type="hidden" id="fe-resp-email">
-                  <div class="people-suggestions" id="fe-resp-suggestions"></div>
-                </div>
+                <select id="fe-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fe-resp-email')" style="width:100%"><option value="">— Selecionar —</option></select>
+                <input type="hidden" id="fe-resp-email">
               </div>
               <div class="fg" style="grid-column:1/-1"><label>Participantes</label><textarea id="fe-part" placeholder="Lista de participantes da reunião..."></textarea></div>
               <div class="fg" style="grid-column:1/-1"><label>Resumo da reunião *</label><textarea id="fe-resumo" placeholder="Principais pontos discutidos na reunião..." style="min-height:120px"></textarea></div>
@@ -885,7 +879,7 @@ tr:hover td{background:var(--bg3)}
                 <div id="fe-tarefas-list" style="margin-bottom:8px"></div>
                 <div style="display:grid;grid-template-columns:3fr 2fr 1fr auto;gap:8px;align-items:end">
                   <input type="text" id="fe-tar-titulo" placeholder="Descrição da tarefa...">
-                  <input type="text" id="fe-tar-resp" placeholder="Responsável...">
+                  <select id="fe-tar-resp" class="user-resp-sel" style="font-size:13px"><option value="">— Responsável —</option></select>
                   <input type="date" id="fe-tar-data">
                   <button type="button" class="btn btn-primary btn-sm" onclick="addTarefaInline()">+ Adicionar</button>
                 </div>
@@ -936,10 +930,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg" style="grid-column:1/-1"><label>Título da tarefa *</label><input type="text" id="ft-titulo" placeholder="Descreve a tarefa..."></div>
               <div class="fg" style="grid-column:1/-1"><label>Descrição / Objetivo</label><textarea id="ft-desc" placeholder="Contexto e objetivo da tarefa..."></textarea></div>
               <div class="fg"><label>Responsável</label>
-                <div class="people-wrap">
-                  <input type="text" id="ft-resp" placeholder="Pesquisar pessoa..." autocomplete="off" oninput="searchPeople(this.value,'ft-resp-suggestions','ft-resp')">
-                  <div class="people-suggestions" id="ft-resp-suggestions"></div>
-                </div>
+                <select id="ft-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select>
               </div>
               <div class="fg"><label>Data limite</label><input type="date" id="ft-data"></div>
               <div class="fg"><label>Estado</label><select id="ft-estado"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select></div>
@@ -1102,11 +1093,10 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Estado</label><select id="fa-estado"><option>Ativo</option><option>Concluído</option><option>Pausado</option><option>Cancelado</option></select></div>
               <div class="fg"><label>Data de início</label><input id="fa-inicio" type="date"></div>
               <div class="fg"><label>Data de fim</label><input id="fa-fim" type="date"></div>
-              <div class="fg people-wrap">
+              <div class="fg">
                 <label>Responsável</label>
-                <input id="fa-resp" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'fa-sug','fa-resp','fa-resp-email')">
+                <select id="fa-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fa-resp-email')"><option value="">— Selecionar —</option></select>
                 <input id="fa-resp-email" type="hidden">
-                <div id="fa-sug" class="people-sugg"></div>
               </div>
               <div class="fg"></div>
               <div class="fg" style="grid-column:span 2"><label>Notas</label><textarea id="fa-notas"></textarea></div>
@@ -1138,11 +1128,10 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Estado</label>
                 <select id="fp-estado"><option value="active">Ativo</option><option value="Concluído">Concluído</option><option value="Pausado">Pausado</option></select>
               </div>
-              <div class="fg people-wrap">
+              <div class="fg">
                 <label>Responsável</label>
-                <input id="fp-resp" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'fp-sug','fp-resp','fp-resp-email')">
+                <select id="fp-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fp-resp-email')"><option value="">— Selecionar —</option></select>
                 <input id="fp-resp-email" type="hidden">
-                <div id="fp-sug" class="people-sugg"></div>
               </div>
               <div class="fg"></div>
               <div class="fg" style="grid-column:span 2"><label>Notas</label><textarea id="fp-notas"></textarea></div>
@@ -1212,32 +1201,89 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- MODAL DE TAREFA (fixo, acessível de qualquer página do módulo PL) -->
-      <div id="frm-pl-tar-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:500;background:rgba(0,0,0,.35);overflow-y:auto">
-        <div style="max-width:660px;margin:60px auto;padding:0 1rem">
-          <div class="panel" style="box-shadow:0 8px 32px rgba(0,0,0,.18)">
-            <div class="panel-title" id="frm-tar-title">Nova tarefa</div>
-            <div id="tar-warn" class="warn-box">⚠️ As tarefas do <strong>Factorial</strong> são criadas directamente no Factorial — esta plataforma sincroniza automaticamente. Por favor cria a tarefa lá.</div>
-            <div class="fgrid">
-              <div class="fg" style="grid-column:span 2"><label>Descrição *</label><input id="ftar-desc" placeholder="Descrição da tarefa"></div>
-              <div class="fg"><label>Origem *</label><select id="ftar-origem" onchange="checkOrigem(this.value)"><option value="Ad-hoc">Ad-hoc</option><option value="Reunião">Reunião externa</option><option value="Factorial">Factorial (só leitura)</option></select></div>
-              <div class="fg"><label>Projeto</label><select id="ftar-proj" onchange="loadAcoesForProj(this.value,'ftar-acao')"><option value="">Nenhum</option></select></div>
-              <div class="fg"><label>Ação</label><select id="ftar-acao"><option value="">Nenhuma</option></select></div>
-              <div class="fg people-wrap">
-                <label>Responsável</label>
-                <input id="ftar-resp" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'ftar-sug','ftar-resp','ftar-email')">
-                <input id="ftar-email" type="hidden">
-                <div id="ftar-sug" class="people-sugg"></div>
+      <div id="frm-pl-tar-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:500;background:rgba(0,0,0,.4);overflow-y:auto">
+        <div style="max-width:680px;margin:48px auto;padding:0 1rem 2rem">
+          <div class="panel" style="box-shadow:0 12px 40px rgba(0,0,0,.22);border-radius:16px;padding:0;overflow:hidden">
+
+            <!-- Cabeçalho -->
+            <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:18px">📋</span>
+                <span id="frm-tar-title" style="font-size:16px;font-weight:600;color:#fff">Nova tarefa</span>
               </div>
-              <div class="fg"><label>Data de início</label><input id="ftar-inicio" type="date"></div>
-              <div class="fg"><label>Data limite</label><input id="ftar-data" type="date"></div>
-              <div class="fg"><label>Prioridade</label><select id="ftar-prior"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
-              <div class="fg"><label>Estado</label><select id="ftar-estado"><option value="todo">Por fazer</option><option value="Em curso">Em curso</option><option value="Concluída">Concluída</option></select></div>
-              <div class="fg" style="grid-column:span 2"><label>Anexos</label><input id="ftar-file" type="file" multiple style="border:none;padding:0;background:none;font-size:13px"></div>
-              <div class="fg" style="grid-column:span 2"><div id="ftar-existing-attach" class="attach-list"></div></div>
+              <button onclick="closeTarForm()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
             </div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeTarForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-tar-btn" onclick="plSaveTarefa()">Guardar</button>
+
+            <div style="padding:24px">
+              <div id="tar-warn" class="warn-box">⚠️ As tarefas do <strong>Factorial</strong> são criadas directamente no Factorial — esta plataforma sincroniza automaticamente. Por favor cria a tarefa lá.</div>
+
+              <!-- Descrição -->
+              <div style="margin-bottom:16px">
+                <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Descrição *</label>
+                <input id="ftar-desc" placeholder="Descreve a tarefa..." style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text)">
+              </div>
+
+              <!-- Linha: Projeto + Ação -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Projeto</label>
+                  <select id="ftar-proj" onchange="loadAcoesForProj(this.value,'ftar-acao')" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)"><option value="">Nenhum</option></select>
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Ação</label>
+                  <select id="ftar-acao" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)"><option value="">Nenhuma</option></select>
+                </div>
+              </div>
+
+              <!-- Linha: Responsável + Origem -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="people-wrap">
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável</label>
+                  <select id="ftar-resp" class="user-resp-sel" onchange="onUserSelChange(this,'ftar-email')" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)"><option value="">— Selecionar —</option></select>
+                  <input id="ftar-email" type="hidden">
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Origem</label>
+                  <select id="ftar-origem" onchange="checkOrigem(this.value)" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)"><option value="Ad-hoc">Ad-hoc</option><option value="Reunião">Reunião externa</option><option value="Factorial">Factorial (só leitura)</option></select>
+                </div>
+              </div>
+
+              <!-- Linha: Datas -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data de início</label>
+                  <input id="ftar-inicio" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data limite</label>
+                  <input id="ftar-data" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                </div>
+              </div>
+
+              <!-- Linha: Prioridade + Estado -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Prioridade</label>
+                  <select id="ftar-prior" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)"><option>Alta</option><option selected>Média</option><option>Baixa</option></select>
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Estado</label>
+                  <select id="ftar-estado" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)"><option value="todo">Por fazer</option><option value="Em curso">Em curso</option><option value="Concluída">Concluída</option></select>
+                </div>
+              </div>
+
+              <!-- Anexos -->
+              <div style="background:var(--bg3);border:1.5px dashed var(--border2);border-radius:8px;padding:14px 16px;margin-bottom:8px">
+                <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📎 Anexos</label>
+                <input id="ftar-file" type="file" multiple style="font-size:13px;font-family:inherit;color:var(--text);width:100%">
+                <div id="ftar-existing-attach" class="attach-list" style="margin-top:8px"></div>
+              </div>
+            </div>
+
+            <!-- Rodapé -->
+            <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg3)">
+              <button class="btn" onclick="closeTarForm()" style="min-width:90px">Cancelar</button>
+              <button class="btn btn-primary" id="save-tar-btn" onclick="plSaveTarefa()" style="min-width:110px">Guardar</button>
             </div>
           </div>
         </div>
@@ -1314,7 +1360,7 @@ tr:hover td{background:var(--bg3)}
                 <div class="fg"><label>Frequência</label>
                   <select id="fk-freq"><option>Semanal</option><option selected>Mensal</option><option>Trimestral</option><option>Anual</option><option>Única vez</option></select>
                 </div>
-                <div class="fg"><label>Responsável</label><input id="fk-resp" placeholder="Nome..."></div>
+                <div class="fg"><label>Responsável</label><select id="fk-resp" class="user-resp-sel"><option value="">— Selecionar —</option></select></div>
                 <div class="fg"><label>Ativo</label><select id="fk-ativo"><option value="1">Sim</option><option value="0">Não</option></select></div>
                 <div class="fg" style="grid-column:span 2"><label>Descrição / Fórmula</label><textarea id="fk-desc" placeholder="Como é calculado?"></textarea></div>
               </div>
@@ -1520,11 +1566,10 @@ tr:hover td{background:var(--bg3)}
       <div class="panel" style="max-width:520px">
         <div class="panel-title">Gerir saldo de férias</div>
         <div class="fgrid">
-          <div class="fg people-wrap">
+          <div class="fg">
             <label>Colaborador *</label>
-            <input id="au-sal-col" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'au-sal-sug','au-sal-col','au-sal-email')">
+            <select id="au-sal-col" class="user-resp-sel" onchange="onUserSelChange(this,'au-sal-email')"><option value="">— Selecionar —</option></select>
             <input id="au-sal-email" type="hidden">
-            <div id="au-sal-sug" class="people-suggestions"></div>
           </div>
           <div class="fg"><label>Ano *</label><select id="au-sal-ano"><option>2025</option><option selected>2026</option><option>2027</option></select></div>
           <div class="fg"><label>Dias com direito *</label><input type="number" id="au-sal-direito" min="0" max="60" placeholder="22"></div>
@@ -1573,11 +1618,10 @@ tr:hover td{background:var(--bg3)}
       <div class="fg"><label>Estado</label>
         <select id="fp-estado-g"><option value="active">Ativo</option><option value="Concluído">Concluído</option><option value="Pausado">Pausado</option></select>
       </div>
-      <div class="fg people-wrap">
+      <div class="fg">
         <label>Responsável</label>
-        <input id="fp-resp-g" placeholder="Nome..." autocomplete="off" oninput="searchPeople(this.value,'fp-sug-g','fp-resp-g','fp-resp-email-g')">
+        <select id="fp-resp-g" class="user-resp-sel" onchange="onUserSelChange(this,'fp-resp-email-g')"><option value="">— Selecionar —</option></select>
         <input id="fp-resp-email-g" type="hidden">
-        <div id="fp-sug-g" class="people-sugg"></div>
       </div>
       <div class="fg"></div>
       <div class="fg" style="grid-column:span 2"><label>Notas</label><textarea id="fp-notas-g"></textarea></div>
@@ -1826,6 +1870,7 @@ async function loadFJUtilizadores(){
       projetos:(u.Projetos?.results||[]).map(p=>p.Id)
     }));
     console.log('FJ_Utilizadores carregados:', fjUtilizadores);
+    populateUserSelects();
     
     const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
     currentUserFJ=fjUtilizadores.find(u=>u.email===userEmail);
@@ -1843,6 +1888,37 @@ async function loadFJUtilizadores(){
     console.warn('Erro ao carregar FJ_Utilizadores:', e.message);
     fjUtilizadores=[];
   }
+}
+
+// ── Helpers para dropdowns de utilizadores ──
+function buildUserOpts(selectedVal=''){
+  const sorted=[...fjUtilizadores].sort((a,b)=>a.titulo.localeCompare(b.titulo));
+  return '<option value="">— Selecionar —</option>'+sorted.map(u=>`<option value="${u.titulo.replace(/"/g,'&quot;')}" data-email="${u.email}"${u.titulo===selectedVal?'selected':''}>${u.titulo}</option>`).join('');
+}
+function populateUserSelects(){
+  document.querySelectorAll('select.user-resp-sel').forEach(sel=>{
+    const cur=sel.value;
+    sel.innerHTML=buildUserOpts(cur);
+    if(cur)sel.value=cur;
+  });
+}
+function onUserSelChange(selectEl,emailHiddenId){
+  if(!emailHiddenId)return;
+  const opt=selectEl.selectedOptions[0];
+  const ef=document.getElementById(emailHiddenId);
+  if(ef)ef.value=opt?.dataset?.email||'';
+}
+
+// ── Download autenticado de ficheiros SharePoint ──
+async function downloadSPFile(serverRelUrl,name){
+  try{
+    await getSPToken();
+    const r=await fetch('https://fjuventude.sharepoint.com'+serverRelUrl,{headers:{Authorization:`Bearer ${spToken}`}});
+    if(!r.ok){showNotif('Erro ao descarregar o ficheiro.','error');return;}
+    const blob=await r.blob();
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
 // Determina o role principal e os departamentos onde pode aprovar como Diretor de Área.
@@ -3322,7 +3398,7 @@ async function loadAcoes(){
 async function loadTarefas(){
   let all=[];
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*&$orderby=Id desc&$top=2000`);
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*,AttachmentFiles&$expand=AttachmentFiles&$orderby=Id desc&$top=2000`);
     const ft=d.d.results.map(r=>({
       id:'f_'+r.Id,spId:r.Id,
       titulo:r.Title||'',
@@ -3338,7 +3414,7 @@ async function loadTarefas(){
       responsavel:r.Responsavel||'',
       dep:r.Departamento||'',
       lista:'FJ_Tarefas',
-      attachments:[]
+      attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     all=[...all,...ft];
     showNotif(`✓ ${ft.length} plTarefas carregadas`,'success');
@@ -3381,6 +3457,8 @@ function populateDrops(){
   const ko=plKpdefs.filter(k=>k.ativo).map(k=>`<option value="${k.id}">${k.nome}</option>`).join('');
   const frKpi=el('fr-kpi');if(frKpi)frKpi.innerHTML='<option value="">Selecionar KPI...</option>'+ko;
   const ffKr=el('ff-kr-kpi');if(ffKr)ffKr.innerHTML='<option value="">Todos os KPIs</option>'+ko;
+  // Utilizadores
+  populateUserSelects();
 }
 function loadAcoesForProj(projId,targetId,currId=null){
   const e=el(targetId);if(!e)return;
@@ -3493,7 +3571,7 @@ function renderHier(){
               <tbody>
               ${tarSemAcao.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}" style="border-top:0.5px solid var(--bd);background:#FFFBF0;border-left:4px solid #D97706">
                 <td style="padding:7px 11px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
-                <td style="font-size:12px;font-weight:500;padding:7px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.titulo}</td>
+                <td style="font-size:12px;font-weight:500;padding:7px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.titulo}${t.attachments?.length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}')\" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`:''}</td>
                 <td style="font-size:11px;color:var(--tx2);padding:7px 4px">${t.responsavel||'—'}</td>
                 <td style="font-size:11px;padding:7px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
                 <td style="padding:7px 4px">${estB(t.prioridade)}</td>
@@ -3548,7 +3626,7 @@ function toggleHierAcao(acaoId){
         <colgroup><col style="width:3%"><col style="width:35%"><col style="width:17%"><col style="width:18%"><col style="width:9%"><col style="width:10%"><col style="width:8%"></colgroup>
         ${ts.map(t=>`<tr class="hier-task-row${t.estado==='Concluída'?' done-row':''}" style="border-bottom:1.5px dashed #fde68a">
           <td style="padding:6px 6px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
-          <td style="font-size:12px;padding:6px 4px;font-weight:500">${t.titulo}</td>
+          <td style="font-size:12px;padding:6px 4px;font-weight:500">${t.titulo}${t.attachments?.length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}')\" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--blue-d);display:flex;align-items:center;gap:3px"><span>📎</span>${a.name}</button>`).join('')}</div>`:''}${''}</td>
           <td style="font-size:11px;color:var(--tx2);padding:6px 4px">${t.responsavel||'—'}</td>
           <td style="font-size:11px;padding:6px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
           <td style="padding:6px 4px">${estB(t.prioridade)}</td>
