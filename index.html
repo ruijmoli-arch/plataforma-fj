@@ -1873,14 +1873,17 @@ function canViewFinanceProject(projetoId){
   if(!currentUserFJ) return true; // Fallback: se não está na lista, vê tudo
   
   const equipas=currentUserFJ.equipa||[];
+  const cargo=currentUserFJ.cargo||'';
   
-  // CAdm e Gestão vêem tudo
+  // CAdm, Gestão e todos os Diretores vêem tudo
   if(equipas.includes('CAdm')) return true;
   if(equipas.includes('Gestão')) return true;
+  if(cargo === 'Diretor') return true;
   
-  // Verificar se está afeto ao projeto
-  const projetosAfetos=currentUserFJ.projetos||[];
-  return projetosAfetos.includes(projetoId);
+  // Membros: apenas projetos do seu departamento
+  const proj = GF_PROJETOS.find(p => p.id === projetoId);
+  if(!proj) return false;
+  return equipas.some(e => e === proj.dep);
 }
 
 // Filtrar projetos financeiros que o utilizador pode ver
@@ -1900,9 +1903,8 @@ function filterFinanceProjects(projects){
   if(equipas.includes('CAdm')) return projects;
   if(equipas.includes('Gestão')) return projects;
   
-  // Membros: apenas projetos afetos
-  const projetosAfetos=currentUserFJ.projetos||[];
-  return projects.filter(p=>projetosAfetos.includes(p.id));
+  // Membros: apenas projetos do seu departamento
+  return projects.filter(p => equipas.some(e => e === p.dep));
 }
 
 // Gerar options HTML de projetos filtrados
@@ -5508,10 +5510,8 @@ function gfRenderSolicitacoes() {
   let lista = tab === 'minhas' ? GF_SOLICITACOES.filter(s => s.autorNome === user?.name) : GF_SOLICITACOES;
   
   // FILTRAR solicitações de projetos que o utilizador pode ver
-  // PE vê tudo, não aplica filtro
-  if (_financeRole !== 'pe') {
-    lista = lista.filter(s => canViewFinanceProject(s.projetoId));
-  }
+  // canViewFinanceProject já trata todos os roles (PE, Diretores, Membros)
+  lista = lista.filter(s => canViewFinanceProject(s.projetoId));
   
   return `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
