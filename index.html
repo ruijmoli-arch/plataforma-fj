@@ -296,15 +296,17 @@ tr:hover td{background:var(--bg3)}
 /* ── PLANEAMENTO ADDITIONS ── */
 /* HIERARCHY */
 .hier-proj{background:var(--bg2);border:0.5px solid var(--bd);border-radius:var(--rl);margin-bottom:8px;overflow:hidden}
-.hier-proj-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:background .1s}
-.hier-proj-hdr:hover{background:var(--bg3)}
+.hier-proj-hdr{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:background .1s;background:#EFF6FF;border-left:4px solid #3B6B9A}
+.hier-proj-hdr:hover{background:#dbeafe}
 .hier-acao-wrap{border-top:0.5px solid var(--bd);display:none}
 .hier-acao-wrap.open{display:block}
-.hier-acao-row{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 36px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background .1s}
+.hier-acao-row{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 36px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background .1s;background:#F0FDF4;border-left:4px solid #3A7D5F}
 .hier-acao-row:last-child{border-bottom:none}
-.hier-acao-row:hover{background:var(--bg3)}
-.hier-tasks{background:var(--bg3);border-top:0.5px solid var(--bd);padding:1rem;display:none}
+.hier-acao-row:hover{background:#dcfce7}
+.hier-tasks{background:#FFFBF0;border-top:0.5px solid var(--bd);padding:.75rem 1rem;display:none;border-left:4px solid #D97706}
 .hier-tasks.open{display:block}
+.hier-task-row{border-bottom:1.5px dashed #fde68a !important}
+.hier-task-row:last-child{border-bottom:none !important}
 
 /* WEEK NAV */
 .week-nav{display:flex;align-items:center;gap:12px;background:var(--bg2);border:0.5px solid var(--bd);border-radius:var(--r);padding:10px 16px;flex:1}
@@ -1226,10 +1228,11 @@ tr:hover td{background:var(--bg3)}
                 <input id="ftar-email" type="hidden">
                 <div id="ftar-sug" class="people-sugg"></div>
               </div>
-              <div class="fg"><label>Data prevista</label><input id="ftar-data" type="date"></div>
+              <div class="fg"><label>Data de início</label><input id="ftar-inicio" type="date"></div>
+              <div class="fg"><label>Data limite</label><input id="ftar-data" type="date"></div>
               <div class="fg"><label>Prioridade</label><select id="ftar-prior"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
               <div class="fg"><label>Estado</label><select id="ftar-estado"><option value="todo">Por fazer</option><option value="Em curso">Em curso</option><option value="Concluída">Concluída</option></select></div>
-              <div class="fg" style="grid-column:span 2"><label>Anexos</label><input id="ftar-file" type="file" multiple style="border:none;padding:0;background:none"></div>
+              <div class="fg" style="grid-column:span 2"><label>Anexos</label><input id="ftar-file" type="file" multiple style="border:none;padding:0;background:none;font-size:13px"></div>
               <div class="fg" style="grid-column:span 2"><div id="ftar-existing-attach" class="attach-list"></div></div>
             </div>
             <div class="panel-footer">
@@ -3325,6 +3328,7 @@ async function loadTarefas(){
       titulo:r.Title||'',
       estado:r.Estado||r.Status||'todo',
       dataLimite:r.DataLimite?r.DataLimite.split('T')[0]:(r.due_on||''),
+      dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
       semana:r.Semana||null,
       anoFJ:r.AnoFJ||null,
       notas:r.Notas||'',
@@ -3439,7 +3443,8 @@ function kn(kpiId){
 function renderHier(){
   const dep=gv('ff-h-dep');
   const c=el('hier-container');
-  const projs=plProjetos.filter(p=>!dep||p.dep===dep);
+  // Mostrar projeto se o seu dep bate, ou se tiver alguma ação do dep selecionado
+  const projs=plProjetos.filter(p=>!dep||p.dep===dep||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&a.dep===dep));
   if(!projs.length){c.innerHTML='<div class="empty">Sem projetos carregados.</div>';return;}
   c.innerHTML=projs.map(p=>{
     const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id));
@@ -3485,11 +3490,11 @@ function renderHier(){
             <table style="width:100%;border-collapse:collapse">
               <colgroup><col style="width:4%"><col style="width:36%"><col style="width:20%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:5%"></colgroup>
               <tbody>
-              ${tarSemAcao.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}" style="border-top:0.5px solid var(--bd)">
+              ${tarSemAcao.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}" style="border-top:0.5px solid var(--bd);background:#FFFBF0;border-left:4px solid #D97706">
                 <td style="padding:7px 11px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
                 <td style="font-size:12px;font-weight:500;padding:7px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.titulo}</td>
                 <td style="font-size:11px;color:var(--tx2);padding:7px 4px">${t.responsavel||'—'}</td>
-                <td style="font-size:11px;padding:7px 4px">${fd(t.dataLimite)}</td>
+                <td style="font-size:11px;padding:7px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
                 <td style="padding:7px 4px">${estB(t.prioridade)}</td>
                 <td style="padding:7px 4px">${estB(t.estado)}</td>
                 <td style="padding:7px 4px"><button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button></td>
@@ -3540,11 +3545,11 @@ function toggleHierAcao(acaoId){
       ${ts.length?`<div style="font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Tarefas (${ts.length})</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
         <colgroup><col style="width:4%"><col style="width:40%"><col style="width:20%"><col style="width:15%"><col style="width:11%"><col style="width:10%"></colgroup>
-        ${ts.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}" style="border-bottom:0.5px solid var(--bd)">
+        ${ts.map(t=>`<tr class="hier-task-row${t.estado==='Concluída'?' done-row':''}" style="border-bottom:1.5px dashed #fde68a">
           <td><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
           <td style="font-size:12px;padding:6px 4px">${t.titulo}</td>
           <td style="font-size:11px;color:var(--tx2);padding:6px 4px">${t.responsavel||'—'}</td>
-          <td style="font-size:11px;padding:6px 4px">${fd(t.dataLimite)}</td>
+          <td style="font-size:11px;padding:6px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
           <td style="padding:6px 4px">${estB(t.prioridade)}</td>
           <td style="padding:6px 4px">${estB(t.estado)}</td>
         </tr>`).join('')}
@@ -4035,7 +4040,7 @@ function openTarForm(){
   const acaoSelect = el('ftar-acao');
   if(acaoSelect) acaoSelect.innerHTML = '<option value="">Nenhuma</option>' + plAcoes.map(a => `<option value="${a.id}">${a.titulo||a.nome}</option>`).join('');
   sv2('ftar-desc','');sv2('ftar-origem','Ad-hoc');sv2('ftar-proj','');sv2('ftar-acao','');
-  sv2('ftar-resp','');sv2('ftar-email','');sv2('ftar-data','');
+  sv2('ftar-resp','');sv2('ftar-email','');sv2('ftar-inicio','');sv2('ftar-data','');
   sv2('ftar-prior','Média');sv2('ftar-estado','todo');
   el('ftar-existing-attach').innerHTML='';
 }
@@ -4052,7 +4057,7 @@ function openTarFormEdit(compId){
   else { const acaoSelect=el('ftar-acao'); if(acaoSelect) acaoSelect.innerHTML='<option value="">Nenhuma</option>'+plAcoes.map(a=>`<option value="${a.id}"${String(a.id)===String(t.acaoId)?'selected':''}>${a.titulo||a.nome}</option>`).join(''); }
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');
   sv2('ftar-resp',t.responsavel||'');sv2('ftar-email',t.responsavelEmail||'');
-  sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
+  sv2('ftar-inicio',t.dataInicio||'');sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');
   el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
 function closeTarForm(){el('frm-pl-tar-ov').style.display='none';plEditTarId=null;}
@@ -4106,6 +4111,7 @@ async function plSaveTarefa(){
     const dep=gv('ftar-dep');if(dep)body.Departamento=dep;
     // Responsável (texto)
     const resp=gv('ftar-resp');if(resp)body.Responsavel=resp;
+    const inicio=gv('ftar-inicio');if(inicio)body.DataInicio=inicio+'T00:00:00Z';
     if(data)body.DataLimite=data+'T00:00:00Z';
     const pid=gv('ftar-proj');if(pid)body.ProjetoIdId=parseInt(pid);
     const aid=gv('ftar-acao');if(aid)body.AcaoIdId=parseInt(aid);
@@ -4116,6 +4122,13 @@ async function plSaveTarefa(){
     }else{
       const r=await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
       try{const d=await r.json();itemId=d.d?.Id;}catch(e){}
+    }
+    // Upload de anexos
+    const fileInput=document.getElementById('ftar-file');
+    if(itemId&&fileInput?.files?.length){
+      for(const f of Array.from(fileInput.files)){
+        try{await uploadAttachment('FJ_Tarefas',itemId,f);}catch(e){console.warn('Attach error',e);}
+      }
     }
     closeTarForm();await loadTarefas();renderSem();renderHier();renderDash();showNotif('Tarefa guardada!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');console.error(e);}
