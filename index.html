@@ -1588,7 +1588,7 @@ tr:hover td{background:var(--bg3)}
           </div>
           <div class="fg"><label>Ano *</label><select id="au-sal-ano"><option>2025</option><option selected>2026</option><option>2027</option></select></div>
           <div class="fg"><label>Dias com direito *</label><input type="number" id="au-sal-direito" min="0" max="60" placeholder="22"></div>
-          <div class="fg"><label>Dias transitados</label><input type="number" id="au-sal-trans" min="0" max="30" placeholder="0"></div>
+          <div class="fg"><label>Dias transitados</label><input type="number" id="au-sal-trans" min="-30" max="30" placeholder="0"></div>
         </div>
         <div class="panel-footer">
           <button class="btn" onclick="auCloseSaldoForm()">Cancelar</button>
@@ -7803,15 +7803,27 @@ function auRenderAdminTable(){
 }
 
 // ── Saldo de férias ──
-function auOpenSaldoForm(){document.getElementById('au-saldo-form-wrap').classList.add('open');}
+function auOpenSaldoForm(){
+  document.getElementById('au-saldo-form-wrap').classList.add('open');
+  document.getElementById('au-sal-email').value='';
+  document.getElementById('au-sal-direito').value='';
+  document.getElementById('au-sal-trans').value='0';
+}
 function auCloseSaldoForm(){document.getElementById('au-saldo-form-wrap').classList.remove('open');}
 
+
 async function auSaveSaldo(){
-  const email=(document.getElementById('au-sal-email').value||document.getElementById('au-sal-col').value||'').toLowerCase();
+  // Lê o email directamente do data-email da opção seleccionada
+  // (o campo hidden só é preenchido quando o utilizador muda a selecção via onUserSelChange)
+  const selEl=document.getElementById('au-sal-col');
+  const emailFromOpt=(selEl?.selectedOptions?.[0]?.dataset?.email||'').toLowerCase();
+  const emailFromHidden=(document.getElementById('au-sal-email')?.value||'').toLowerCase();
+  const email=emailFromOpt||emailFromHidden;
   const ano=parseInt(document.getElementById('au-sal-ano').value);
   const direito=parseInt(document.getElementById('au-sal-direito').value);
   const trans=parseInt(document.getElementById('au-sal-trans').value)||0;
-  if(!email||!ano||isNaN(direito)){showNotif('Preenche todos os campos obrigatórios.','error');return;}
+  if(!email){showNotif('Seleciona um colaborador.','error');return;}
+  if(!ano||isNaN(direito)){showNotif('Preenche o ano e os dias com direito.','error');return;}
   try{
     const existe=AU_SALDOS.find(s=>s.email===email&&s.ano===ano);
     const body={__metadata:{type:'SP.Data.FJ_x005f_SaldoFeriasListItem'},
@@ -7821,11 +7833,12 @@ async function auSaveSaldo(){
     }else{
       await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items`,body,'POST');
     }
-    showNotif('Saldo atualizado com sucesso.','success');
+    showNotif(`Saldo de ${auNomeDeEmail(email)} atualizado: ${direito} dias (${ano}).`,'success');
     auCloseSaldoForm();
     await auLoadAll();
     auRenderAdmin();
-  }catch(e){showNotif('Erro: '+e.message,'error');}
+    auRenderAdminTable();
+  }catch(e){showNotif('Erro ao guardar: '+e.message,'error');}
 }
 
 // ═══════════════ FIM MÓDULO AUSÊNCIAS ═══════════════
