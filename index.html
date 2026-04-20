@@ -1454,12 +1454,6 @@ tr:hover td{background:var(--bg3)}
             <option value="Outro">📋 Outro</option>
           </select>
         </div>
-        <div class="fg"><label>Área / Departamento</label>
-          <select id="au-f-area">
-            <option value="">— automático —</option>
-            <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
-          </select>
-        </div>
         <div class="fg"><label>Data de início *</label><input type="date" id="au-f-inicio" onchange="auCalcDias()"></div>
         <div class="fg"><label>Data de fim *</label><input type="date" id="au-f-fim" onchange="auCalcDias()"></div>
         <div class="fg"><label>Dias úteis</label>
@@ -7172,6 +7166,7 @@ async function saveBancoGlobal() {
 
 
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 // ════════════ MÓDULO AUSÊNCIAS ══════════════════════
 // ═══════════════════════════════════════════════════
 
@@ -7186,6 +7181,8 @@ const AU_FERIADOS_LIST='FJ_Feriados';
 
 // ── Init ──
 async function auInit(){
+  // Garantir que FJ_Utilizadores está carregado antes de definir o role
+  if(!fjUtilizadores.length) await loadFJUtilizadores();
   auSetRole();
   auSetupSidebar();
   await auLoadAll();
@@ -7193,59 +7190,89 @@ async function auInit(){
 }
 
 function auSetRole(){
-  // Fonte: FJ_Utilizadores
-  const cargo = userCargo();
-  const equipas = userEquipas();
-  if(cargo === 'Presidente Executivo' || equipas.includes('CAdm')){_auRole='pe';}
-  else if(cargo === 'Diretor'){_auRole='director';}
+  // Fonte de verdade: FJ_Utilizadores via currentUserFJ
+  const cargo=userCargo();
+  const equipas=userEquipas();
+  if(cargo==='Presidente Executivo'||equipas.includes('CAdm')){_auRole='pe';}
+  else if(cargo==='Diretor'){_auRole='director';}
   else{_auRole='worker';}
 }
 
 function auSetupSidebar(){
   const isDir=_auRole==='director'||_auRole==='pe';
   const isPE=_auRole==='pe';
-  ['au-lbl-dir','au-nav-aprov-n1'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=isDir?'block':'none'; });
-  ['au-nav-aprov-n2'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=isPE?'flex':'none'; });
-  ['au-lbl-admin','au-nav-admin'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=isPE?'block':'none'; });
-  if(isDir) document.getElementById('au-lbl-dir').style.display='block';
+  const show=(id,v)=>{const e=document.getElementById(id);if(e)e.style.display=v;};
+  show('au-lbl-dir',isDir?'block':'none');
+  show('au-nav-aprov-n1',isDir?'flex':'none');
+  show('au-nav-aprov-n2',isPE?'flex':'none');
+  show('au-lbl-admin',isPE?'block':'none');
+  show('au-nav-admin',isPE?'flex':'none');
+}
+
+// ── Helper: área de um email via FJ_Utilizadores ──
+function auAreaDeEmail(email){
+  if(!email) return '';
+  const u=fjUtilizadores.find(u=>u.email===email.toLowerCase());
+  if(!u||!u.equipa?.length) return '';
+  // Retorna a primeira equipa operacional conhecida
+  const ORDEM=['Op.Norte','Op.Sul','Impacto','INOV','Financeiro','Gestão','CAdm'];
+  return ORDEM.find(eq=>u.equipa.includes(eq))||u.equipa[0]||'';
+}
+
+// ── Helper: nome de um email via FJ_Utilizadores ──
+function auNomeDeEmail(email){
+  if(!email) return email||'';
+  const u=fjUtilizadores.find(u=>u.email===email.toLowerCase());
+  return u?.titulo||email;
+}
+
+// ── Helper: área do utilizador atual ──
+function auGetUserArea(){
+  const ORDEM=['Op.Norte','Op.Sul','Impacto','INOV','Financeiro','Gestão','CAdm'];
+  return ORDEM.find(e=>userHasEquipa(e))||'';
 }
 
 // ── Load data ──
 async function auLoadAll(){
   try{
-    // Carregar pedidos
+    // Colaborador é campo Pessoa do SP — expande Title e EMail
+    // Sem ColaboradorEmail nem AreaColaborador (não existem na lista)
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items?$select=*,Colaborador/Title,Colaborador/EMail,AprovadorN1/Title,AprovadorN2/Title&$expand=Colaborador,AprovadorN1,AprovadorN2&$orderby=DataInicio desc&$top=500`);
-    AU_PEDIDOS=d.d.results.map(r=>({
-      id:r.Id, etag:r.__metadata?.etag||'*',
-      tipo:r.TipoAusencia||'Outro',
-      inicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
-      fim:r.DataFim?r.DataFim.split('T')[0]:'',
-      dias:r.DiasUteis||0,
-      meioDia:r.MeioDia||'',
-      obs:r.Observacoes||'',
-      estado:r.Estado||'Pendente',
-      area:r.AreaColaborador||'',
-      colEmail:r.ColaboradorEmail||r.Colaborador?.EMail||'',
-      colNome:r.Colaborador?.Title||r.ColaboradorEmail||'',
-      aprov1:r.AprovadorN1?.Title||'',
-      aprov2:r.AprovadorN2?.Title||'',
-      dataAprov1:r.DataAprovN1?r.DataAprovN1.split('T')[0]:'',
-      dataAprov2:r.DataAprovN2?r.DataAprovN2.split('T')[0]:'',
-      motivoRecusa:r.MotivoRecusa||'',
-      dataSubmissao:r.DataSubmissao?r.DataSubmissao.split('T')[0]:'',
-      created:r.Created?r.Created.split('T')[0]:''
-    }));
+    AU_PEDIDOS=d.d.results.map(r=>{
+      const colEmail=(r.Colaborador?.EMail||'').toLowerCase();
+      const colNome=r.Colaborador?.Title||colEmail;
+      // Área derivada da FJ_Utilizadores em tempo real
+      const area=auAreaDeEmail(colEmail);
+      return{
+        id:r.Id, etag:r.__metadata?.etag||'*',
+        tipo:r.TipoAusencia||'Outro',
+        inicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
+        fim:r.DataFim?r.DataFim.split('T')[0]:'',
+        dias:r.DiasUteis||0,
+        meioDia:r.MeioDia||'',
+        obs:r.Observacoes||'',
+        estado:r.Estado||'Pendente',
+        colEmail, colNome, area,
+        aprov1:r.AprovadorN1?.Title||'',
+        aprov2:r.AprovadorN2?.Title||'',
+        dataAprov1:r.DataAprovN1?r.DataAprovN1.split('T')[0]:'',
+        dataAprov2:r.DataAprovN2?r.DataAprovN2.split('T')[0]:'',
+        motivoRecusa:r.MotivoRecusa||'',
+        dataSubmissao:r.DataSubmissao?r.DataSubmissao.split('T')[0]:'',
+        created:r.Created?r.Created.split('T')[0]:''
+      };
+    });
   }catch(e){
     if(e.message.includes('404')||e.message.includes('does not exist')){
       AU_PEDIDOS=[];
-      showNotif('Lista FJ_Ausencias não encontrada. Cria a lista no SharePoint primeiro.','error');
-    } else { console.warn('auLoadAll pedidos:',e); AU_PEDIDOS=[]; }
+      showNotif('Lista FJ_Ausencias não encontrada no SharePoint.','error');
+    }else{ console.warn('auLoadAll pedidos:',e); AU_PEDIDOS=[]; }
   }
   try{
     const s=await spRead(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items?$select=*&$top=200`);
     AU_SALDOS=s.d.results.map(r=>({
       id:r.Id, etag:r.__metadata?.etag||'*',
-      email:r.ColaboradorEmail||'',
+      email:(r.ColaboradorEmail||'').toLowerCase(),
       ano:r.Ano||new Date().getFullYear(),
       direito:r.DiasDireito||22,
       transitados:r.DiasTransitados||0
@@ -7259,7 +7286,8 @@ async function auLoadAll(){
 }
 
 function auUpdateBadges(){
-  const email=(user?.username||'').toLowerCase();
+  // N1: pedidos Pendentes (aguardam director)
+  // N2: pedidos Aprovado N1 (aguardam PE)
   const pendN1=AU_PEDIDOS.filter(p=>p.estado==='Pendente').length;
   const pendN2=AU_PEDIDOS.filter(p=>p.estado==='Aprovado N1').length;
   const b1=document.getElementById('au-badge-n1');
@@ -7273,11 +7301,9 @@ function auNav(page){
   document.querySelectorAll('.au-page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('au-page-'+page);
   if(pg)pg.classList.add('active');
-  // Update sidebar active
   document.querySelectorAll('#sidebar-au .nav-item').forEach(n=>n.classList.remove('active'));
   const navEl=document.getElementById('au-nav-'+page);
   if(navEl)navEl.classList.add('active');
-  // Render
   if(page==='dashboard')auRenderDashboard();
   if(page==='pedidos')auRenderPedidos();
   if(page==='aprov-n1')auRenderN1();
@@ -7285,7 +7311,7 @@ function auNav(page){
   if(page==='admin'){auRenderAdmin();auRenderAdminTable();}
 }
 
-// ── Helpers ──
+// ── Cálculo de dias úteis ──
 function auCalcDiasUteis(ini,fim){
   if(!ini||!fim)return 0;
   const d1=new Date(ini),d2=new Date(fim);
@@ -7305,13 +7331,14 @@ function auCalcDias(){
   const ini=document.getElementById('au-f-inicio')?.value;
   const fim=document.getElementById('au-f-fim')?.value;
   const dias=auCalcDiasUteis(ini,fim);
-  const el=document.getElementById('au-f-dias');
-  if(el)el.value=dias>0?`${dias} dia${dias!==1?'s':''}`:dias===0?'0 dias':'—';
+  const elDias=document.getElementById('au-f-dias');
+  if(elDias)elDias.value=dias>0?`${dias} dia${dias!==1?'s':''}`:dias===0?'0 dias':'—';
 }
 
+// ── Badge helpers ──
 function auBadge(estado){
   const map={'Pendente':'b-au-pend','Aprovado N1':'b-au-n1','Aprovado':'b-au-aprov','Recusado':'b-au-rec','Cancelado':'b-au-can'};
-  return `<span class="badge ${map[estado]||'b-au-pend'}">${estado}</span>`;
+  return`<span class="badge ${map[estado]||'b-au-pend'}">${estado}</span>`;
 }
 
 function auTipoIcon(tipo){
@@ -7325,28 +7352,25 @@ function auFormatDate(d){
   return`${dd}/${m}/${y}`;
 }
 
+// ── Saldo ──
 function auGetSaldo(email,ano){
-  const s=AU_SALDOS.find(s=>s.email.toLowerCase()===email.toLowerCase()&&s.ano===parseInt(ano));
+  const emailLow=email.toLowerCase();
+  const s=AU_SALDOS.find(s=>s.email===emailLow&&s.ano===parseInt(ano));
   const direito=s?s.direito+s.transitados:22;
   const used=AU_PEDIDOS.filter(p=>
-    p.colEmail.toLowerCase()===email.toLowerCase()&&
-    p.inicio.startsWith(String(ano))&&
-    p.tipo==='Férias'&&
-    ['Aprovado N1','Aprovado'].includes(p.estado)
+    p.colEmail===emailLow&&p.inicio.startsWith(String(ano))&&
+    p.tipo==='Férias'&&['Aprovado N1','Aprovado'].includes(p.estado)
   ).reduce((a,p)=>a+(p.dias||0),0);
   const pending=AU_PEDIDOS.filter(p=>
-    p.colEmail.toLowerCase()===email.toLowerCase()&&
-    p.inicio.startsWith(String(ano))&&
-    p.tipo==='Férias'&&
-    p.estado==='Pendente'
+    p.colEmail===emailLow&&p.inicio.startsWith(String(ano))&&
+    p.tipo==='Férias'&&p.estado==='Pendente'
   ).reduce((a,p)=>a+(p.dias||0),0);
   return{direito,used,pending,disponivel:Math.max(0,direito-used-pending)};
 }
 
 function auMySaldo(){
   const email=(user?.username||'').toLowerCase();
-  const ano=new Date().getFullYear();
-  return auGetSaldo(email,ano);
+  return auGetSaldo(email,new Date().getFullYear());
 }
 
 // ── Dashboard ──
@@ -7354,7 +7378,7 @@ function auRenderDashboard(){
   const email=(user?.username||'').toLowerCase();
   const ano=new Date().getFullYear();
   const saldo=auMySaldo();
-  const pct=Math.min(100,Math.round((saldo.used/saldo.direito)*100));
+  const pct=Math.min(100,Math.round((saldo.used/Math.max(1,saldo.direito))*100));
   const cls=pct>90?'danger':pct>70?'warn':'';
   document.getElementById('au-saldo-pessoal').innerHTML=`
     <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:16px 20px">
@@ -7369,43 +7393,39 @@ function auRenderDashboard(){
         <div><span style="font-weight:600;color:var(--text)">${saldo.used}</span> <span style="color:var(--text2)">utilizados</span></div>
       </div>
     </div>`;
-  // Stats
-  const meus=AU_PEDIDOS.filter(p=>p.colEmail.toLowerCase()===email);
+  const meus=AU_PEDIDOS.filter(p=>p.colEmail===email);
   const stats=[
     {n:meus.filter(p=>p.estado==='Pendente').length,l:'Pendentes',c:'var(--amber)'},
     {n:meus.filter(p=>p.estado==='Aprovado N1').length,l:'Aguarda N2',c:'var(--blue-d)'},
     {n:meus.filter(p=>p.estado==='Aprovado').length,l:'Aprovados',c:'var(--green-mid)'},
     {n:meus.filter(p=>p.estado==='Recusado').length,l:'Recusados',c:'var(--red)'}
   ];
-  document.getElementById('au-dash-stats').innerHTML=stats.map(s=>`
-    <div class="au-stat"><span class="au-stat-n" style="color:${s.c}">${s.n}</span><span class="au-stat-l">${s.l}</span></div>`).join('');
-  // Calendar
+  document.getElementById('au-dash-stats').innerHTML=stats.map(s=>
+    `<div class="au-stat"><span class="au-stat-n" style="color:${s.c}">${s.n}</span><span class="au-stat-l">${s.l}</span></div>`
+  ).join('');
   auRenderCal();
-  // Recent
   const recent=meus.slice(0,5);
-  document.getElementById('au-recent-list').innerHTML=recent.length?recent.map(p=>auCardHtml(p,false)).join(''):`<div class="empty">Sem pedidos recentes.</div>`;
+  document.getElementById('au-recent-list').innerHTML=recent.length
+    ?recent.map(p=>auCardHtml(p,false)).join('')
+    :`<div class="empty">Sem pedidos recentes.</div>`;
 }
 
-// ── Calendar ──
+// ── Calendário ──
 function auRenderCal(){
-  const y=_auCalDate.getFullYear(), m=_auCalDate.getMonth();
-  const title=document.getElementById('au-cal-title');
-  if(title)title.textContent=new Date(y,m,1).toLocaleString('pt-PT',{month:'long',year:'numeric'});
+  const y=_auCalDate.getFullYear(),m=_auCalDate.getMonth();
+  const titleEl=document.getElementById('au-cal-title');
+  if(titleEl)titleEl.textContent=new Date(y,m,1).toLocaleString('pt-PT',{month:'long',year:'numeric'});
   const grid=document.getElementById('au-cal-grid');
   if(!grid)return;
   const dias=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
   let html=dias.map(d=>`<div class="au-cal-dh">${d}</div>`).join('');
-  const first=new Date(y,m,1);
-  let startDow=first.getDay();
+  let startDow=new Date(y,m,1).getDay();
   if(startDow===0)startDow=7;
   for(let i=1;i<startDow;i++)html+=`<div class="au-cal-day other-month"></div>`;
   const daysInMonth=new Date(y,m+1,0).getDate();
   const today=new Date().toISOString().split('T')[0];
   const email=(user?.username||'').toLowerCase();
-  const aprovados=AU_PEDIDOS.filter(p=>
-    p.colEmail.toLowerCase()===email&&
-    ['Aprovado N1','Aprovado'].includes(p.estado)
-  );
+  const aprovados=AU_PEDIDOS.filter(p=>p.colEmail===email&&['Aprovado N1','Aprovado'].includes(p.estado));
   for(let d=1;d<=daysInMonth;d++){
     const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dow=new Date(y,m,d).getDay();
@@ -7421,9 +7441,9 @@ function auCalPrev(){_auCalDate=new Date(_auCalDate.getFullYear(),_auCalDate.get
 function auCalNext(){_auCalDate=new Date(_auCalDate.getFullYear(),_auCalDate.getMonth()+1,1);auRenderCal();}
 
 // ── Card HTML ──
-function auCardHtml(p, showColaborador=false){
+function auCardHtml(p,showColaborador=false){
   const myEmail=(user?.username||'').toLowerCase();
-  const isMine=p.colEmail.toLowerCase()===myEmail;
+  const isMine=p.colEmail===myEmail;
   const timeline=`
     <div class="au-tl" style="margin-top:10px">
       <div class="au-tl-item">
@@ -7435,21 +7455,22 @@ function auCardHtml(p, showColaborador=false){
         <div><div class="au-tl-title">Diretor de Área</div><div class="au-tl-sub">${p.dataAprov1?'Aprovado em '+auFormatDate(p.dataAprov1):p.estado==='Recusado'?'Recusado':'Aguarda aprovação'}</div></div>
       </div>
       <div class="au-tl-item">
-        <div class="au-tl-dot ${ p.estado==='Aprovado N1'?'current':p.estado==='Aprovado'?'done':['Recusado','Cancelado'].includes(p.estado)?'rejected':'wait'}">3</div>
+        <div class="au-tl-dot ${p.estado==='Aprovado N1'?'current':p.estado==='Aprovado'?'done':['Recusado','Cancelado'].includes(p.estado)?'rejected':'wait'}">3</div>
         <div><div class="au-tl-title">Presidente Executivo</div><div class="au-tl-sub">${p.dataAprov2?'Aprovado em '+auFormatDate(p.dataAprov2):p.estado==='Aprovado N1'?'A aguardar':p.estado==='Aprovado'?'Aprovado':'—'}</div></div>
       </div>
     </div>`;
   const actions=isMine&&p.estado==='Pendente'?`<button class="btn btn-sm btn-danger" onclick="auCancelar(${p.id})">Cancelar</button>`:'';
   const motivoHtml=p.motivoRecusa?`<div style="margin-top:8px;background:var(--red-bg);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--red)">Motivo de recusa: ${p.motivoRecusa}</div>`:'';
+  const areaTag=p.area?`<span style="color:var(--text3)">${p.area}</span>`:'';
   return`<div class="au-card" style="flex-direction:column;align-items:flex-start">
     <div style="display:flex;width:100%;align-items:center;gap:12px">
       <div style="font-size:20px">${auTipoIcon(p.tipo)}</div>
       <div class="au-card-info">
-        <div class="au-card-title">${p.tipo}${showColaborador?` — <span style="color:var(--text2)">${p.colNome||p.colEmail}</span>`:''}</div>
+        <div class="au-card-title">${p.tipo}${showColaborador?` — <span style="color:var(--text2)">${p.colNome}</span>`:''}</div>
         <div class="au-card-meta">
           <span>${auFormatDate(p.inicio)} → ${auFormatDate(p.fim)}</span>
           <span style="font-weight:600">${p.dias} dia${p.dias!==1?'s':''}</span>
-          ${p.area?`<span style="color:var(--text3)">${p.area}</span>`:''}
+          ${areaTag}
           ${auBadge(p.estado)}
         </div>
       </div>
@@ -7461,27 +7482,33 @@ function auCardHtml(p, showColaborador=false){
   </div>`;
 }
 
-// ── Render Pedidos ──
+// ── Os meus pedidos ──
 function auRenderPedidos(){
   const email=(user?.username||'').toLowerCase();
   const tipo=document.getElementById('au-ff-tipo')?.value||'';
   const estado=document.getElementById('au-ff-estado')?.value||'';
   const ano=document.getElementById('au-ff-ano')?.value||'';
-  let list=AU_PEDIDOS.filter(p=>p.colEmail.toLowerCase()===email);
+  let list=AU_PEDIDOS.filter(p=>p.colEmail===email);
   if(tipo)list=list.filter(p=>p.tipo===tipo);
   if(estado)list=list.filter(p=>p.estado===estado);
   if(ano)list=list.filter(p=>p.inicio.startsWith(ano));
   const wrap=document.getElementById('au-pedidos-list');
-  if(wrap)wrap.innerHTML=list.length?list.map(p=>auCardHtml(p,false)).join(''):`<div class="empty">Sem pedidos encontrados.</div>`;
+  if(wrap)wrap.innerHTML=list.length
+    ?list.map(p=>auCardHtml(p,false)).join('')
+    :`<div class="empty">Sem pedidos encontrados.</div>`;
 }
 
-// ── Render N1 (Directors) ──
+// ── Aprovações N1 (Diretores de Área) ──
 function auRenderN1(){
   const tipo=document.getElementById('au-ff-n1-tipo')?.value||'';
-  const area=document.getElementById('au-ff-n1-area')?.value||'';
+  const areaFiltro=document.getElementById('au-ff-n1-area')?.value||'';
   let list=AU_PEDIDOS.filter(p=>p.estado==='Pendente');
+  // Diretor de área: filtrar pelos seus departamentos; PE: vê tudo
+  if(_auRole==='director'&&_financeDepts?.length){
+    list=list.filter(p=>_financeDepts.includes(p.area));
+  }
   if(tipo)list=list.filter(p=>p.tipo===tipo);
-  if(area)list=list.filter(p=>p.area===area);
+  if(areaFiltro)list=list.filter(p=>p.area===areaFiltro);
   const wrap=document.getElementById('au-n1-list');
   if(!wrap)return;
   if(!list.length){wrap.innerHTML=`<div class="empty">Sem pedidos pendentes para aprovação.</div>`;return;}
@@ -7490,7 +7517,7 @@ function auRenderN1(){
       <div style="display:flex;width:100%;align-items:center;gap:12px">
         <div style="font-size:20px">${auTipoIcon(p.tipo)}</div>
         <div class="au-card-info">
-          <div class="au-card-title">${p.tipo} — <strong>${p.colNome||p.colEmail}</strong></div>
+          <div class="au-card-title">${p.tipo} — <strong>${p.colNome}</strong></div>
           <div class="au-card-meta">
             <span>${auFormatDate(p.inicio)} → ${auFormatDate(p.fim)}</span>
             <span style="font-weight:600">${p.dias} dia${p.dias!==1?'s':''}</span>
@@ -7507,13 +7534,13 @@ function auRenderN1(){
     </div>`).join('');
 }
 
-// ── Render N2 (PE) ──
+// ── Aprovações N2 (Presidente Executivo) ──
 function auRenderN2(){
   const tipo=document.getElementById('au-ff-n2-tipo')?.value||'';
-  const area=document.getElementById('au-ff-n2-area')?.value||'';
+  const areaFiltro=document.getElementById('au-ff-n2-area')?.value||'';
   let list=AU_PEDIDOS.filter(p=>p.estado==='Aprovado N1');
   if(tipo)list=list.filter(p=>p.tipo===tipo);
-  if(area)list=list.filter(p=>p.area===area);
+  if(areaFiltro)list=list.filter(p=>p.area===areaFiltro);
   const wrap=document.getElementById('au-n2-list');
   if(!wrap)return;
   const bar=document.getElementById('au-bulk-bar');
@@ -7527,13 +7554,13 @@ function auRenderN2(){
         <input type="checkbox" id="au-chk-${p.id}" onchange="auToggleSel(${p.id},this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
         <div style="font-size:20px">${auTipoIcon(p.tipo)}</div>
         <div class="au-card-info">
-          <div class="au-card-title">${p.tipo} — <strong>${p.colNome||p.colEmail}</strong></div>
+          <div class="au-card-title">${p.tipo} — <strong>${p.colNome}</strong></div>
           <div class="au-card-meta">
             <span>${auFormatDate(p.inicio)} → ${auFormatDate(p.fim)}</span>
             <span style="font-weight:600">${p.dias} dia${p.dias!==1?'s':''}</span>
             ${p.area?`<span class="badge b-info">${p.area}</span>`:''}
             ${auBadge(p.estado)}
-            <span style="color:var(--text3);font-size:11px">N1 aprovado: ${auFormatDate(p.dataAprov1)}</span>
+            <span style="color:var(--text3);font-size:11px">N1: ${auFormatDate(p.dataAprov1)}</span>
           </div>
           ${p.obs?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${p.obs}</div>`:''}
         </div>
@@ -7546,8 +7573,7 @@ function auRenderN2(){
 }
 
 function auToggleSel(id,checked){
-  if(checked)_auSelectedIds.add(id);
-  else _auSelectedIds.delete(id);
+  if(checked)_auSelectedIds.add(id);else _auSelectedIds.delete(id);
   auUpdateBulkCount();
   const card=document.getElementById('au-n2-card-'+id);
   if(card)card.style.background=checked?'var(--blue-l)':'';
@@ -7566,8 +7592,7 @@ function auUpdateBulkCount(){
   const cnt=document.getElementById('au-bulk-count');
   const btn=document.querySelector('.au-bulk-bar button');
   if(cnt)cnt.textContent=n===0?'Nenhum selecionado':n===1?'1 selecionado':`${n} selecionados`;
-  if(btn)btn.textContent=n>0?`✔ Aprovar selecionados (${n})`:'✔ Aprovar selecionados';
-  if(btn)btn.disabled=n===0;
+  if(btn){btn.textContent=n>0?`✔ Aprovar selecionados (${n})`:'✔ Aprovar selecionados';btn.disabled=n===0;}
 }
 
 async function auBulkAprovar(){
@@ -7577,7 +7602,7 @@ async function auBulkAprovar(){
   const ids=[..._auSelectedIds];
   let ok=0;
   for(const id of ids){
-    try{ await auAprovarN2Single(id);ok++; }catch(e){ console.warn('Bulk aprovar erro id='+id,e); }
+    try{await auAprovarN2Single(id);ok++;}catch(e){console.warn('Bulk erro id='+id,e);}
   }
   showNotif(`${ok} pedido(s) aprovado(s) com sucesso.`,'success');
   _auSelectedIds=new Set();
@@ -7585,7 +7610,7 @@ async function auBulkAprovar(){
   auRenderN2();
 }
 
-// ── Approval actions ──
+// ── Ações de aprovação ──
 async function auAprovarN1(id){
   if(!confirm('Confirmas a aprovação deste pedido (Nível 1)?'))return;
   try{
@@ -7593,7 +7618,7 @@ async function auAprovarN1(id){
     const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Aprovado N1',DataAprovN1:new Date().toISOString()};
     if(uid)body.AprovadorN1Id=uid;
     await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
-    showNotif('Pedido aprovado no Nível 1. Segue para o Presidente Executivo.','success');
+    showNotif('Aprovado. O pedido segue para o Presidente Executivo.','success');
     await auLoadAll();
     auRenderN1();
   }catch(e){showNotif('Erro: '+e.message,'error');}
@@ -7619,10 +7644,12 @@ function auAbrirReject(id,nivel){
   const modal=document.getElementById('au-reject-modal');
   if(modal)modal.style.display='flex';
 }
+
 function auCloseReject(){
   const modal=document.getElementById('au-reject-modal');
   if(modal)modal.style.display='none';
 }
+
 async function auConfirmReject(){
   const raw=document.getElementById('au-reject-id').value;
   const motivo=document.getElementById('au-reject-motivo').value.trim();
@@ -7641,14 +7668,15 @@ async function auConfirmReject(){
 async function auCancelar(id){
   if(!confirm('Tens a certeza que queres cancelar este pedido?'))return;
   try{
-    await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,{__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Cancelado'},'MERGE');
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,
+      {__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Cancelado'},'MERGE');
     showNotif('Pedido cancelado.','success');
     await auLoadAll();
     auRenderPedidos();auRenderDashboard();
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
-// ── Form ──
+// ── Formulário de novo pedido ──
 function auOpenForm(id){
   _auEditId=id||null;
   document.getElementById('au-form-title').textContent=id?'Editar pedido':'Novo pedido de ausência';
@@ -7662,6 +7690,7 @@ function auOpenForm(id){
   }
   document.getElementById('au-form-ov').classList.add('open');
 }
+
 function auCloseForm(){document.getElementById('au-form-ov').classList.remove('open');}
 
 async function auSaveForm(){
@@ -7670,7 +7699,6 @@ async function auSaveForm(){
   const fim=document.getElementById('au-f-fim').value;
   const obs=document.getElementById('au-f-obs').value.trim();
   const meio=document.getElementById('au-f-meio').value;
-  const area=document.getElementById('au-f-area').value;
   if(!inicio||!fim){showNotif('Preenche as datas de início e fim.','error');return;}
   if(fim<inicio){showNotif('A data de fim não pode ser anterior ao início.','error');return;}
   const dias=auCalcDiasUteis(inicio,fim);
@@ -7680,9 +7708,10 @@ async function auSaveForm(){
   try{
     const uid=await getCurrentUserId();
     const emailUser=(user?.username||'').toLowerCase();
-    const userArea=area||auGetUserArea();
+    // Corpo limpo: sem ColaboradorEmail nem AreaColaborador
+    // Área e nome são sempre derivados de FJ_Utilizadores em runtime
     const body={
-      __metadata:{type:`SP.Data.FJ_x005f_AusenciasListItem`},
+      __metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},
       Title:`${tipo} - ${inicio} - ${emailUser}`,
       TipoAusencia:tipo,
       DataInicio:inicio+'T00:00:00Z',
@@ -7691,19 +7720,17 @@ async function auSaveForm(){
       MeioDia:meio,
       Observacoes:obs,
       Estado:'Pendente',
-      ColaboradorEmail:emailUser,
-      AreaColaborador:userArea,
       DataSubmissao:new Date().toISOString()
     };
+    // Colaborador: campo Pessoa do SP (obrigatório para expandir Title/EMail)
     if(uid)body.ColaboradorId=uid;
     const res=await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items`,body,'POST');
     const newId=res.d?.Id;
-    // Upload attachment if any
     const fileInput=document.getElementById('au-f-file');
     if(newId&&fileInput?.files?.length){
       try{await uploadAttachment(AU_LIST,newId,fileInput.files[0]);}catch(e){console.warn('Attach error',e);}
     }
-    showNotif(`Pedido de ${tipo.toLowerCase()} submetido com sucesso (${dias} dia${dias!==1?'s':''}).`,'success');
+    showNotif(`Pedido de ${tipo.toLowerCase()} submetido (${dias} dia${dias!==1?'s':''}).`,'success');
     auCloseForm();
     await auLoadAll();
     auRenderDashboard();
@@ -7715,49 +7742,51 @@ async function auSaveForm(){
   }
 }
 
-function auGetUserArea(){
-  // Fonte: FJ_Utilizadores — primeira equipa operacional encontrada
-  const ORDEM = ['Op.Norte','Op.Sul','Impacto','Financeiro','Gestão','CAdm'];
-  return ORDEM.find(e => userHasEquipa(e)) || '';
-}
-
-// ── Admin ──
+// ── Administração / RH ──
 function auRenderAdmin(){
   const wrap=document.getElementById('au-admin-list');
   if(!wrap)return;
   const q=(document.getElementById('au-q-admin')?.value||'').toLowerCase();
-  const area=document.getElementById('au-ff-adm-area')?.value||'';
-  const ano=document.getElementById('au-ff-adm-ano')?.value||'2026';
-  // Unique collaborators
-  const emails=[...new Set(AU_PEDIDOS.map(p=>p.colEmail).filter(Boolean))];
-  const filtered=emails.filter(e=>{
-    if(q&&!e.toLowerCase().includes(q)&&!AU_PEDIDOS.find(p=>p.colEmail===e&&p.colNome?.toLowerCase().includes(q)))return false;
-    if(area&&!AU_PEDIDOS.find(p=>p.colEmail===e&&p.area===area))return false;
+  const areaFiltro=document.getElementById('au-ff-adm-area')?.value||'';
+  const ano=document.getElementById('au-ff-adm-ano')?.value||String(new Date().getFullYear());
+  // Agrupa por email único dos pedidos + todos da FJ_Utilizadores
+  const emails=[...new Set([
+    ...AU_PEDIDOS.map(p=>p.colEmail),
+    ...fjUtilizadores.map(u=>u.email)
+  ].filter(Boolean))];
+  const filtered=emails.filter(email=>{
+    const nome=auNomeDeEmail(email);
+    const area=auAreaDeEmail(email);
+    if(q&&!email.includes(q)&&!nome.toLowerCase().includes(q))return false;
+    if(areaFiltro&&area!==areaFiltro)return false;
     return true;
   });
   if(!filtered.length){wrap.innerHTML='<div class="empty">Sem colaboradores encontrados.</div>';return;}
-  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">${filtered.map(email=>{
-    const nome=AU_PEDIDOS.find(p=>p.colEmail===email)?.colNome||email;
-    const saldo=auGetSaldo(email,ano);
-    const pct=Math.min(100,Math.round((saldo.used/saldo.direito)*100));
-    const cls=pct>90?'danger':pct>70?'warn':'';
-    return`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nome}">${nome}</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">${email}</div>
-      <div class="au-saldo-bar"><div class="au-saldo-fill ${cls}" style="width:${pct}%"></div></div>
-      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text2)">
-        <span>${saldo.used}/${saldo.direito} dias</span>
-        <span style="color:var(--green-mid);font-weight:600">${saldo.disponivel} disponíveis</span>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">${
+    filtered.map(email=>{
+      const nome=auNomeDeEmail(email);
+      const area=auAreaDeEmail(email);
+      const saldo=auGetSaldo(email,ano);
+      const pct=Math.min(100,Math.round((saldo.used/Math.max(1,saldo.direito))*100));
+      const cls=pct>90?'danger':pct>70?'warn':'';
+      return`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
+        <div style="font-size:13px;font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${nome}">${nome}</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${area||email}</div>
+        <div class="au-saldo-bar"><div class="au-saldo-fill ${cls}" style="width:${pct}%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text2)">
+          <span>${saldo.used}/${saldo.direito} dias</span>
+          <span style="color:var(--green-mid);font-weight:600">${saldo.disponivel} disponíveis</span>
+        </div>
+      </div>`;
+    }).join('')
+  }</div>`;
 }
 
 function auRenderAdminTable(){
   const tbody=document.getElementById('au-admin-tbody');
   if(!tbody)return;
   tbody.innerHTML=AU_PEDIDOS.map(p=>`<tr>
-    <td title="${p.colEmail}">${p.colNome||p.colEmail}</td>
+    <td title="${p.colEmail}">${p.colNome}</td>
     <td>${auTipoIcon(p.tipo)} ${p.tipo}</td>
     <td>${auFormatDate(p.inicio)}</td>
     <td>${auFormatDate(p.fim)}</td>
@@ -7765,28 +7794,28 @@ function auRenderAdminTable(){
     <td>${auBadge(p.estado)}</td>
     <td>${p.area||'—'}</td>
     <td>${auFormatDate(p.created)}</td>
-    <td>
-      <div class="actions">
-        ${p.estado==='Pendente'?`<button class="btn btn-sm btn-green" onclick="auAprovarN1(${p.id})">Aprov. N1</button>`:''}
-        ${p.estado==='Aprovado N1'?`<button class="btn btn-sm btn-green" onclick="auAprovarN2(${p.id})">Aprov. N2</button>`:''}
-        ${['Pendente','Aprovado N1'].includes(p.estado)?`<button class="btn btn-sm btn-danger" onclick="auAbrirReject(${p.id},'admin')">Recusar</button>`:''}
-      </div>
-    </td>
+    <td><div class="actions">
+      ${p.estado==='Pendente'?`<button class="btn btn-sm btn-green" onclick="auAprovarN1(${p.id})">Aprov. N1</button>`:''}
+      ${p.estado==='Aprovado N1'?`<button class="btn btn-sm btn-green" onclick="auAprovarN2(${p.id})">Aprov. N2</button>`:''}
+      ${['Pendente','Aprovado N1'].includes(p.estado)?`<button class="btn btn-sm btn-danger" onclick="auAbrirReject(${p.id},'admin')">Recusar</button>`:''}
+    </div></td>
   </tr>`).join('');
 }
 
-// ── Saldo management ──
+// ── Saldo de férias ──
 function auOpenSaldoForm(){document.getElementById('au-saldo-form-wrap').classList.add('open');}
 function auCloseSaldoForm(){document.getElementById('au-saldo-form-wrap').classList.remove('open');}
+
 async function auSaveSaldo(){
-  const email=document.getElementById('au-sal-email').value||document.getElementById('au-sal-col').value;
+  const email=(document.getElementById('au-sal-email').value||document.getElementById('au-sal-col').value||'').toLowerCase();
   const ano=parseInt(document.getElementById('au-sal-ano').value);
   const direito=parseInt(document.getElementById('au-sal-direito').value);
   const trans=parseInt(document.getElementById('au-sal-trans').value)||0;
   if(!email||!ano||isNaN(direito)){showNotif('Preenche todos os campos obrigatórios.','error');return;}
   try{
-    const existe=AU_SALDOS.find(s=>s.email.toLowerCase()===email.toLowerCase()&&s.ano===ano);
-    const body={__metadata:{type:'SP.Data.FJ_x005f_SaldoFeriasListItem'},Title:`${email} - ${ano}`,ColaboradorEmail:email,Ano:ano,DiasDireito:direito,DiasTransitados:trans};
+    const existe=AU_SALDOS.find(s=>s.email===email&&s.ano===ano);
+    const body={__metadata:{type:'SP.Data.FJ_x005f_SaldoFeriasListItem'},
+      Title:`${email} - ${ano}`,ColaboradorEmail:email,Ano:ano,DiasDireito:direito,DiasTransitados:trans};
     if(existe){
       await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items(${existe.id})`,body,'MERGE');
     }else{
@@ -7800,7 +7829,6 @@ async function auSaveSaldo(){
 }
 
 // ═══════════════ FIM MÓDULO AUSÊNCIAS ═══════════════
-
 
 init();
 </script>
