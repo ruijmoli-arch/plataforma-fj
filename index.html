@@ -4555,7 +4555,8 @@ let GF = {
   alteracao: null,
   tab: { orc: 'projetos', sol: 'lista', alt: 'lista', aprov: 'pendentes' },
   origens: [], // Para alterações orçamentais
-  bloqueado: false  // Novo: controla se edições de valores orçamentados estão bloqueadas pela DF
+  bloqueado: false,  // controla se edições de valores orçamentados estão bloqueadas pela DF
+  _bloqueadoId: null // Id do item em FJ_Configuracoes (para MERGE)
 };
 
 let GF_PROJETOS = [];
@@ -4703,6 +4704,19 @@ async function gfLoadAll() {
     }));
 
     console.log('GF Data loaded:', { projetos: GF_PROJETOS.length, rubricas: GF_RUBRICAS.length, solicitacoes: GF_SOLICITACOES.length });
+
+    // Carregar estado do bloqueio do orçamento (persiste em FJ_Configuracoes)
+    try {
+      const dc = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Configuracoes')/items?$filter=Title eq 'OrcamentoBloqueado_${GF.year}'&$select=Id,Title,Valor&$top=1`);
+      const cfg = dc.d?.results?.[0];
+      GF.bloqueado = cfg?.Valor === 'true';
+      GF._bloqueadoId = cfg?.Id || null;
+    } catch(e) {
+      // Lista FJ_Configuracoes pode não existir ainda — assume desbloqueado
+      GF.bloqueado = false;
+      GF._bloqueadoId = null;
+    }
+
     gfRender();
   } catch (e) {
     console.error('gfLoadAll error:', e);
@@ -6636,8 +6650,8 @@ function gfRenderAprovacoes() {
         const diretorAltArea = gfGetDiretorArea(altDep);
         const diretorAltNome = a.aprovDirNome || diretorAltArea?.titulo || 'Diretor de Área';
         const podeAprovarDir = (_financeRole === 'area_director' || _financeRole === 'pca' || _financeRole === 'pe' || _financeRole === 'pe') && !aprovDir && gfIsMyDepartamento(altDep);
-        const podeAprovarDF = _financeRole === 'df' && (isAltFinanceiro || isBancoGlobal ? true : aprovDir);
         const isBancoGlobal = a.titulo?.includes('Banco Global');
+        const podeAprovarDF = _financeRole === 'df' && (isAltFinanceiro || isBancoGlobal ? true : aprovDir);
         const isPE = _financeRole === 'pe';
         
         return `
@@ -6911,11 +6925,31 @@ async function getCurrentUserId() {
 }
 
 // ═══════════════ BLOQUEIO ORÇAMENTO ═══════════════
-function toggleBloqueioOrcamento() {
-  GF.bloqueado = !GF.bloqueado;
-  const estado = GF.bloqueado ? 'bloqueado' : 'desbloqueado';
-  showNotif(`Orçamento ${estado} com sucesso! ${GF.bloqueado ? 'Apenas você pode editar valores orçamentados.' : 'Edições permitidas.'}`, 'success');
-  gfRender();
+async function toggleBloqueioOrcamento() {
+  if (_financeRole !== 'df') {
+    showNotif('Apenas a Diretora Financeira pode alterar o bloqueio.', 'error');
+    return;
+  }
+  const novoEstado = !GF.bloqueado;
+  try {
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_ConfiguracoesListItem' },
+      Title: `OrcamentoBloqueado_${GF.year}`,
+      Valor: novoEstado ? 'true' : 'false'
+    };
+    if (GF._bloqueadoId) {
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Configuracoes')/items(${GF._bloqueadoId})`, body, 'MERGE');
+    } else {
+      const r = await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Configuracoes')/items`, body, 'POST');
+      GF._bloqueadoId = r.d?.Id || null;
+    }
+    GF.bloqueado = novoEstado;
+    const estado = GF.bloqueado ? 'bloqueado' : 'desbloqueado';
+    showNotif(`Orçamento ${estado} com sucesso! ${GF.bloqueado ? 'Apenas você pode editar valores orçamentados.' : 'Edições permitidas.'}`, 'success');
+    gfRender();
+  } catch(e) {
+    showNotif('Erro ao guardar bloqueio: ' + e.message + ' — Certifica-te que a lista FJ_Configuracoes existe no SharePoint.', 'error');
+  }
 }
 
 // ═══════════════ BANCO GLOBAL ═══════════════
