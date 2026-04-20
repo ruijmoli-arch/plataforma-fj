@@ -757,6 +757,7 @@ tr:hover td{background:var(--bg3)}
     <span id="co-badge-tarefas" style="margin-left:auto;background:var(--fj-orange);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;display:none"></span>
   </div>
 </div>
+<div class="main">
 <div class="notif" id="notif"></div>
 <div id="module-rn">
 
@@ -1888,6 +1889,7 @@ tr:hover td{background:var(--bg3)}
     </div>
   </div>
 </div>
+</div><!-- /main -->
 </div><!-- /layout -->
 
 <!-- Overlay global de novo projeto (acessível de qualquer módulo) -->
@@ -8464,14 +8466,14 @@ async function coSaveRegisto() {
       __metadata:      { type: listType },
       Title:           assunto,
       TipoCorreio:     document.getElementById('co-tipo').value,
-      DataEntrada:     data,
+      DataEntrada:     data + 'T00:00:00Z',
       Remetente:       document.getElementById('co-remetente').value.trim(),
       Departamento:    document.getElementById('co-departamento').value,
       ResponsavelNome: respNome !== '— Selecionar —' ? respNome : '',
       ResponsavelEmail:respEmail,
-      ProjetoIdId:     projetoId ? parseInt(projetoId) : null,
       Notas:           document.getElementById('co-notas').value.trim()
     };
+    if (projetoId) body.ProjetoIdId = parseInt(projetoId);
 
     const res = await spWrite(`${SP}/_api/web/lists/getbytitle('${CO_LIST}')/items`, body, 'POST');
     const newId = res.d?.Id;
@@ -8494,11 +8496,11 @@ async function coSaveRegisto() {
           CorreioIdId:     newId,
           ResponsavelNome: t.respNome,
           ResponsavelEmail:t.respEmail,
-          DataLimite:      t.dataLimite || null,
           Prioridade:      t.prioridade,
           Estado:          t.estado,
           Notas:           t.notas
         };
+        if (t.dataLimite) tarBody.DataLimite = t.dataLimite + 'T00:00:00Z';
         await spWrite(`${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')/items`, tarBody, 'POST');
       }
     }
