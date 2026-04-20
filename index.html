@@ -656,26 +656,47 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div class="sidebar" id="sidebar-gf" style="display:none">
       <div class="sidebar-label" style="color:rgba(255,255,255,.4)">Financeiro</div>
+
+      <!-- Início -->
       <div class="nav-item" id="gf-nav-home" onclick="gfNav('home')" style="color:rgba(255,255,255,.75)">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6l6-4 6 4v8H2z"/></svg>
         Início
       </div>
+
+      <!-- Orçamento -->
       <div class="nav-item" id="gf-nav-orcamento" onclick="gfNav('orcamento')" style="color:rgba(255,255,255,.75)">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1"/><path d="M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1"/></svg>
         Orçamento
       </div>
-      <div class="nav-item" id="gf-nav-solicitacao" onclick="gfNav('solicitacao-form')" style="color:rgba(255,255,255,.75)">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
-        Nova solicitação
+
+      <!-- Solicitações -->
+      <div class="sidebar-lbl" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:.6rem .75rem .15rem">Solicitações</div>
+      <div class="nav-item" id="gf-nav-sol-nova" onclick="GF.solicitacao=null;gfNav('solicitacao-form')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
+        + Nova Solicitação
       </div>
-      <div class="nav-item" id="gf-nav-alteracoes" onclick="gfNav('alteracao-form')" style="color:rgba(255,255,255,.75)">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8h14M9 4l5 4-5 4"/></svg>
-        Alterações orç.
+      <div class="nav-item" id="gf-nav-sol-lista" onclick="gfNav('solicitacoes')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="10" x2="9" y2="10"/></svg>
+        Solicitações realizadas
       </div>
+
+      <!-- Alterações -->
+      <div class="sidebar-lbl" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:.6rem .75rem .15rem">Alterações Orç.</div>
+      <div class="nav-item" id="gf-nav-alt-nova" onclick="GF.origens=[];gfNav('alteracao-form')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
+        + Pedido de Alteração
+      </div>
+      <div class="nav-item" id="gf-nav-alt-lista" onclick="gfNav('alteracoes')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8z"/><path d="M9 2l3 2-3 2"/></svg>
+        Pedidos de Alterações
+      </div>
+
+      <!-- Aprovações -->
       <div class="nav-item" id="gf-nav-aprovacoes" onclick="gfNav('aprovacoes')" style="color:rgba(255,255,255,.75)">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,8 6,11 13,4"/></svg>
         Aprovações
       </div>
+
       <div class="nav-item" id="gf-nav-direcao" onclick="gfNav('direcao')" style="color:rgba(255,255,255,.75);display:none">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-8 4 4 4-6"/></svg>
         Vista Direção
@@ -2078,16 +2099,48 @@ function getCurrentUserRole(){
   return'worker';
 }
 
-// Verificar se utilizador atual é admin (CA ou Gestão)
+// Verificar se utilizador atual é admin (apenas CAdm pode gerir utilizadores)
 function isAdmin(){
-  return userGroups.includes(GROUPS.CA)||userGroups.includes(GROUPS.Gestao);
+  return userGroups.includes(GROUPS.CA);
 }
 
 function hasGroupAccess(groupId){return userGroups.includes(groupId)||userGroups.includes(GROUPS.CA);}
 function canSeeReuniao(tipoReuniao){
-  const req=REUNIAO_GROUPS[tipoReuniao];
-  if(!req)return true;
-  return req.some(gid=>userGroups.includes(gid));
+  // Cada utilizador só vê as reuniões da(s) sua(s) própria(s) equipa(s)
+  const REUNIAO_TEAM_MAP={
+    'Reunião com CAdm': GROUPS.CA,
+    'Reunião Gestão':   GROUPS.Gestao,
+    'Reunião O.Norte':  GROUPS.OpNorte,
+    'Reunião O.Sul':    GROUPS.OpSul,
+    'Reunião Financeiro': GROUPS.Financeiro,
+    'Reunião Impacto':  GROUPS.Impacto
+  };
+  const requiredGroup = REUNIAO_TEAM_MAP[tipoReuniao];
+  if(!requiredGroup) return true;
+  return userGroups.includes(requiredGroup);
+}
+
+// Devolve a lista de tipos de reunião acessíveis ao utilizador atual
+function getAcessibleReunioes(){
+  const ALL=['Reunião com CAdm','Reunião Gestão','Reunião O.Norte','Reunião O.Sul','Reunião Financeiro','Reunião Impacto'];
+  return ALL.filter(canSeeReuniao);
+}
+
+// Preenche os selects de reunião com apenas as opções acessíveis ao utilizador
+function initReuniaoSelects(){
+  const tipos = getAcessibleReunioes();
+  // Select do filtro na lista de assuntos
+  const ffr = document.getElementById('ff-r');
+  if(ffr){
+    ffr.innerHTML = '<option value="">Reunião: todas</option>' +
+      tipos.map(t=>`<option>${t}</option>`).join('');
+  }
+  // Select do tipo na página Conduzir Reunião
+  const rtipo = document.getElementById('r-tipo');
+  if(rtipo){
+    rtipo.innerHTML = tipos.map(t=>`<option>${t}</option>`).join('');
+    loadSavedSessions();
+  }
 }
 
 function toggleDropdown(){
@@ -2216,7 +2269,7 @@ async function loadItems(){
       nivelOrigem:r.NivelOrigem||'',nivelAtual:r.NivelAtual||'',
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
-    renderStats();renderTable();renderCATopics();
+    initReuniaoSelects();renderStats();renderTable();renderCATopics();
     showNotif('Carregado!','success');setTimeout(()=>document.getElementById('notif').classList.remove('show'),1500);
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
@@ -2264,10 +2317,11 @@ const CM={'Presidente Executivo':'b-pe','Segue para CA':'b-segca','Ambos':'b-amb
 const bdg=(map,v,txt)=>`<span class="badge ${map[v]||'b-na'}">${txt||v||'—'}</span>`;
 
 function renderStats(){
-  el('s-total').textContent=items.length;
-  el('s-delib').textContent=items.filter(i=>i.tipo==='Deliberativo').length;
-  el('s-aprov').textContent=items.filter(i=>i.decisao==='Aprovado').length;
-  el('s-pend').textContent=items.filter(i=>i.decisao==='Pendente').length;
+  const visible=items.filter(i=>canSeeReuniao(i.reuniao));
+  el('s-total').textContent=visible.length;
+  el('s-delib').textContent=visible.filter(i=>i.tipo==='Deliberativo').length;
+  el('s-aprov').textContent=visible.filter(i=>i.decisao==='Aprovado').length;
+  el('s-pend').textContent=visible.filter(i=>i.decisao==='Pendente').length;
 }
 function filteredItems(){
   const q=(el('q')||{value:''}).value.toLowerCase();
@@ -4793,7 +4847,22 @@ function gfNav(screen, params = {}) {
   Object.assign(GF, params);
   gfRender();
   document.querySelectorAll('#sidebar-gf .nav-item').forEach(el => el.classList.remove('active'));
-  const navEl = gfEl('gf-nav-' + screen.split('-')[0]);
+  // Mapeamento ecrã → id do nav-item
+  const NAV_MAP = {
+    'home':                 'gf-nav-home',
+    'orcamento':            'gf-nav-orcamento',
+    'orcamento-rubricas':   'gf-nav-orcamento',
+    'orcamento-rubrica':    'gf-nav-orcamento',
+    'solicitacao-form':     'gf-nav-sol-nova',
+    'solicitacoes':         'gf-nav-sol-lista',
+    'solicitacao-view':     'gf-nav-sol-lista',
+    'alteracao-form':       'gf-nav-alt-nova',
+    'alteracoes':           'gf-nav-alt-lista',
+    'aprovacoes':           'gf-nav-aprovacoes',
+    'direcao':              'gf-nav-direcao',
+  };
+  const navId = NAV_MAP[screen] || NAV_MAP[screen.split('-')[0]];
+  const navEl = navId ? gfEl(navId) : null;
   if (navEl) navEl.classList.add('active');
 }
 
