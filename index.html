@@ -2030,21 +2030,15 @@ function gfProjetosOptions(selectedId = null){
 }
 
 // Verificar se utilizador pode ver um item (baseado em equipa/departamento)
+// Diretores para cima vêem tudo; membros só vêem o seu departamento
 function userCanView(departamento){
-  if(!currentUserFJ) return true; // Se não está na lista, vê tudo (fallback)
-  
-  const equipas=currentUserFJ.equipa||[];
-  const cargo=currentUserFJ.cargo||'';
-  
-  // PE, Diretores e Gestão vêem tudo
-  if(cargo==='Presidente Executivo') return true;
-  if(cargo==='Diretor') return true;
-  if(equipas.includes('Gestão')) return true;
-  if(equipas.includes('CAdm')) return true;
-  
-  // Outros só vêem do seu departamento
+  if(!currentUserFJ) return true; // fallback: sem dados FJ, vê tudo
+  const cargo = userCargo();
+  if(cargo === 'Presidente Executivo') return true;
+  if(cargo === 'Diretor') return true;
+  if(userHasEquipa('CAdm')) return true;
   if(!departamento) return true;
-  return equipas.includes(departamento);
+  return userHasEquipa(departamento);
 }
 
 // Verificar se é admin (conselho.administracao@fjuventude.pt)
@@ -2464,6 +2458,7 @@ function renderExtTable(){
   const q=(el('qe')||{value:''}).value.toLowerCase();
   const fd_=gv('ffe-dep'),ff=gv('ffe-from'),ft=gv('ffe-to');
   let list=extItems.filter(i=>{
+    if(!userCanView(i.departamento))return false; // visibilidade por departamento
     if(q&&!(i.titulo.toLowerCase().includes(q)||i.entidade.toLowerCase().includes(q)))return false;
     if(fd_&&i.departamento!==fd_)return false;
     if(ff&&i.data&&i.data<ff)return false;
@@ -2638,6 +2633,7 @@ function renderTarefasTable(){
   const fe=gv('fft-est'),fd_=gv('fft-dep'),fp=gv('fft-prior');
   const hoje=today();
   let list=rnTarefas.filter(i=>{
+    if(!userCanView(i.departamento))return false; // visibilidade por departamento
     if(q&&!i.titulo.toLowerCase().includes(q))return false;
     if(fe&&i.estado!==fe)return false;
     if(fd_&&i.departamento!==fd_)return false;
