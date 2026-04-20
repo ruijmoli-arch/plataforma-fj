@@ -631,9 +631,9 @@ tr:hover td{background:var(--bg3)}
     </div>
 <div class="sidebar" id="sidebar-pl" style="display:none">
       <div class="sidebar-lbl">Planeamento</div>
-      <div class="nav-item active" id="pl-nav-dashboard" onclick="plShowPage('dashboard')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-        Dashboard
+      <div class="nav-item active" id="pl-nav-semanal" onclick="plShowPage('semanal')">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
+        Plano Semanal
       </div>
       <div class="nav-item" id="pl-nav-hierarquia" onclick="plShowPage('hierarquia')">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="4" rx="1"/><rect x="9" y="1" width="6" height="4" rx="1"/><rect x="5" y="11" width="6" height="4" rx="1"/><line x1="4" y1="5" x2="4" y2="13"/><line x1="12" y1="5" x2="8" y2="13"/><line x1="4" y1="9" x2="8" y2="11"/></svg>
@@ -647,9 +647,9 @@ tr:hover td{background:var(--bg3)}
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="2" x2="5" y2="6"/><line x1="11" y1="2" x2="11" y2="6"/></svg>
         Plano Trimestral
       </div>
-      <div class="nav-item" id="pl-nav-semanal" onclick="plShowPage('semanal')">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 2"/></svg>
-        Plano Semanal
+      <div class="nav-item" id="pl-nav-dashboard" onclick="plShowPage('dashboard')" style="display:none">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
       </div>
       <div class="sidebar-lbl">Métricas</div>
       <div class="nav-item" id="pl-nav-kpis" onclick="plShowPage('kpis')">
@@ -1101,7 +1101,7 @@ tr:hover td{background:var(--bg3)}
       <!-- notif removed -->
 
       <!-- DASHBOARD -->
-      <div id="pl-page-dashboard" class="page active">
+      <div id="pl-page-dashboard" class="page">
         <div class="page-title">Dashboard</div>
         <div class="stats">
           <div class="stat"><span class="stat-n" id="s-proj">—</span><span class="stat-l">Projetos ativos</span></div>
@@ -1335,7 +1335,7 @@ tr:hover td{background:var(--bg3)}
       </div>
 
       <!-- PLANO SEMANAL -->
-      <div id="pl-page-semanal" class="page">
+      <div id="pl-page-semanal" class="page active">
         <div class="page-title">Plano Semanal</div>
           <div class="week-nav">
             <button class="btn btn-sm" onclick="chgWeek(-1)">← Anterior</button>
@@ -1344,8 +1344,8 @@ tr:hover td{background:var(--bg3)}
           </div>
           <div class="view-toggle">
             <button class="vt-btn active" id="vt-pes" onclick="setView('pessoal')">A minha semana</button>
-            <button class="vt-btn" id="vt-eq" onclick="setView('equipa')">Departamento</button>
-            <button class="vt-btn" id="vt-col" onclick="setView('colaborador')">Colaborador</button>
+            <button class="vt-btn" id="vt-eq" onclick="setView('equipa')" style="display:none">Departamento</button>
+            <button class="vt-btn" id="vt-col" onclick="setView('colaborador')" style="display:none">Colaborador</button>
           </div>
         </div>
         <div id="col-picker" style="display:none;margin-bottom:1rem">
@@ -1356,21 +1356,19 @@ tr:hover td{background:var(--bg3)}
             <div id="col-sug" class="people-sugg"></div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
           <select class="flt" id="ff-s-dep" onchange="renderSem()" style="display:none"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
-          <select class="flt" id="ff-s-est" onchange="renderSem()"><option value="">Todos os estados</option><option value="todo">Por fazer</option><option value="Em curso">Em curso</option><option value="Concluída">Concluída</option></select>
-          <select class="flt" id="ff-s-orig" onchange="renderSem()"><option value="">Todas as origens</option><option value="Plano">Plano</option><option value="Ad-hoc">Ad-hoc</option><option value="Reunião">Reunião</option></select>
-          <div class="search-wrap" style="max-width:200px">
+          <div class="search-wrap" style="max-width:220px">
             <svg class="si" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><line x1="11" y1="11" x2="15" y2="15"/></svg>
-            <input placeholder="Pesquisar..." oninput="renderSem()" id="q-sem">
+            <input placeholder="Pesquisar tarefa..." oninput="renderSem()" id="q-sem">
           </div>
           <button class="btn btn-primary" onclick="openTarForm()">+ Nova tarefa</button>
         </div>
         <div class="stats" id="stats-sem" style="margin-bottom:1rem"></div>
         <div class="table-wrap">
           <table>
-            <colgroup><col style="width:3%"><col style="width:26%"><col style="width:17%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:15%"></colgroup>
-            <thead><tr><th></th><th>Tarefa</th><th>Ação</th><th>Responsável</th><th>Data</th><th>Prioridade</th><th>Origem</th><th>Ações</th></tr></thead>
+            <colgroup><col style="width:4%"><col style="width:32%"><col style="width:16%"><col style="width:13%"><col style="width:10%"><col style="width:11%"><col style="width:14%"></colgroup>
+            <thead><tr><th></th><th>Tarefa</th><th>Responsável</th><th>Data limite</th><th>Prioridade</th><th>Estado</th><th>Ações</th></tr></thead>
             <tbody id="tbody-sem"></tbody>
           </table>
         </div>
@@ -2037,7 +2035,7 @@ function switchModule(mod){
   });
   if(mod==='pl'){
     if(!_plLoaded){_plLoaded=true;plInit();}
-    plShowPage('dashboard');
+    plShowPage('semanal');
   }
   if(mod==='gf'&&!_gfLoaded){_gfLoaded=true;gfInit();}
   if(mod==='rn')showPage('assuntos');
@@ -3933,7 +3931,7 @@ function renderHier(){
               <tbody>
               ${tarSemAcao.map(t=>`<tr class="${t.estado==='Concluída'?'done-row':''}" style="border-top:0.5px solid var(--bd);background:#FFFBF0;border-left:4px solid #D97706">
                 <td style="padding:7px 11px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
-                <td style="font-size:12px;font-weight:500;padding:7px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.titulo}${t.attachments?.length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}')\" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`:''}</td>
+                <td style="font-size:12px;font-weight:500;padding:7px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.titulo}${t.attachments?.length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`:''}</td>
                 <td style="font-size:11px;color:var(--tx2);padding:7px 4px">${t.responsavel||'—'}</td>
                 <td style="font-size:11px;padding:7px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
                 <td style="padding:7px 4px">${estB(t.prioridade)}</td>
@@ -3988,7 +3986,7 @@ function toggleHierAcao(acaoId){
         <colgroup><col style="width:3%"><col style="width:35%"><col style="width:17%"><col style="width:18%"><col style="width:9%"><col style="width:10%"><col style="width:8%"></colgroup>
         ${ts.map(t=>`<tr class="hier-task-row${t.estado==='Concluída'?' done-row':''}" style="border-bottom:1.5px dashed #fde68a">
           <td style="padding:6px 6px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
-          <td style="font-size:12px;padding:6px 4px;font-weight:500">${t.titulo}${t.attachments?.length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}')\" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--blue-d);display:flex;align-items:center;gap:3px"><span>📎</span>${a.name}</button>`).join('')}</div>`:''}${''}</td>
+          <td style="font-size:12px;padding:6px 4px;font-weight:500">${t.titulo}${t.attachments?.length?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:4px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--blue-d);display:flex;align-items:center;gap:3px"><span>📎</span>${a.name}</button>`).join('')}</div>`:''}${''}</td>
           <td style="font-size:11px;color:var(--tx2);padding:6px 4px">${t.responsavel||'—'}</td>
           <td style="font-size:11px;padding:6px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
           <td style="padding:6px 4px">${estB(t.prioridade)}</td>
@@ -4398,9 +4396,18 @@ async function delTrim(id){
 }
 
 /* ===== PLANO SEMANAL ===== */
+// Determina se o utilizador atual pode ver todas as tarefas (Diretor ou superior)
+function plCanSeeAll(){
+  if(!currentUserFJ) return true;
+  const cargo   = userCargo();
+  const equipas = currentUserFJ.equipa || [];
+  return cargo==='Presidente Executivo'||cargo==='Diretor'||equipas.includes('CAdm')||equipas.includes('Gestão');
+}
+
 function setView(v){
+  // Só Diretores e superiores podem usar os filtros de Departamento e Colaborador
+  if((v==='equipa'||v==='colaborador')&&!plCanSeeAll()) return;
   plSemView=v;
-  ['pes','eq','col'].forEach(k=>el('vt-'+k)?.classList.toggle('active',k===v[0]+v[1]+(v==='colaborador'?'l':'')));
   el('vt-pes').classList.toggle('active',v==='pessoal');
   el('vt-eq').classList.toggle('active',v==='equipa');
   el('vt-col').classList.toggle('active',v==='colaborador');
@@ -4408,56 +4415,168 @@ function setView(v){
   el('col-picker').style.display=v==='colaborador'?'block':'none';
   renderSem();
 }
+
+function plInitSemPermissions(){
+  // Oculta os botões de Departamento e Colaborador para membros não-diretores
+  if(!plCanSeeAll()){
+    el('vt-eq')?.style.setProperty('display','none');
+    el('vt-col')?.style.setProperty('display','none');
+  }
+}
+
 function chgWeek(d){plViewWeek+=d;if(plViewWeek<1){plViewWeek=52;plViewYear--;}else if(plViewWeek>52){plViewWeek=1;plViewYear++;}renderSem();}
+
 function renderSem(){
   const elWl=el('week-label'),elStats=el('stats-sem'),tbody=el('tbody-sem');
   if(!elWl||!elStats||!tbody)return;
   elWl.textContent=weekLabel(plViewWeek,plViewYear);
-  const wr=weekRange(plViewWeek,plViewYear);
-  const q=(gv('q-sem')||'').toLowerCase(),est=gv('ff-s-est'),dep=gv('ff-s-dep'),orig=gv('ff-s-orig');
+  const wr=weekRange(plViewWeek,plViewYear); // start=Monday, end=Sunday 23:59:59
+  const q=(gv('q-sem')||'').toLowerCase();
+  const dep=gv('ff-s-dep')||'';
+  const colEmail=gv('col-email')||'';
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const isDir=plCanSeeAll();
+  const myEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
   const myName=(user?.name||'').toLowerCase();
-  const colEmail=gv('col-email');
+
+  // Utilitário: verifica se nome coincide com o utilizador atual
+  const matchesMe=nome=>nome&&myName&&nome.toLowerCase().split(/\s+/).some(w=>w.length>2&&myName.split(/\s+/).some(m=>m.includes(w)||w.includes(m)));
+
+  // Inclui tarefas NÃO concluídas cuja dataLimite <= fim desta semana
   const list=plTarefas.filter(t=>{
-    const byW=t.semana==plViewWeek&&t.anoFJ==plViewYear;
-    const byD=t.dataLimite&&new Date(t.dataLimite+'T12:00:00')>=wr.start&&new Date(t.dataLimite+'T12:00:00')<=wr.end;
-    if(!byW&&!byD)return false;
-    if(plSemView==='pessoal'&&myName&&t.responsavel&&!t.responsavel.toLowerCase().split(' ').some(w=>w.length>2&&myName.includes(w)))return false;
-    if(plSemView==='colaborador'&&colEmail&&t.responsavelEmail!==colEmail)return false;
-    if(dep&&t.dep!==dep)return false;
-    if(est==='todo'&&t.estado!=='todo'&&t.estado!=='Por fazer')return false;
-    if(est&&est!=='todo'&&t.estado!==est)return false;
-    if(orig&&t.notas&&!t.notas.toLowerCase().includes(orig.toLowerCase()))return false;
-    if(q&&!t.titulo.toLowerCase().includes(q))return false;
+    if(t.estado==='Concluída') return false;
+    if(!t.dataLimite) return false;
+    const dl=new Date(t.dataLimite+'T23:59:59');
+    if(dl>wr.end) return false; // só mostra até ao fim da semana atual
+
+    // Permissões: membros vêem apenas as suas responsabilidades
+    if(!isDir){
+      const byTask=matchesMe(t.responsavel)||(t.responsavelEmail&&t.responsavelEmail.toLowerCase()===myEmail);
+      if(!byTask){
+        const acao=plAcoes.find(a=>String(a.id)===String(t.acaoId));
+        const byAcao=acao&&matchesMe(acao.responsavel);
+        if(!byAcao){
+          const projId=t.projetoId||(acao?.projetoId)||null;
+          const proj=projId?plProjetos.find(p=>String(p.id)===String(projId)):null;
+          const byProj=proj&&matchesMe(proj.responsavel);
+          if(!byProj) return false;
+        }
+      }
+    }
+
+    // Filtros de equipa/colaborador (apenas Diretores+)
+    if(isDir&&plSemView==='equipa'&&dep&&t.dep!==dep) return false;
+    if(isDir&&plSemView==='colaborador'&&colEmail&&(t.responsavelEmail||'').toLowerCase()!==colEmail.toLowerCase()) return false;
+
+    if(q&&!t.titulo.toLowerCase().includes(q)) return false;
     return true;
   });
-  const total=list.length,conc=list.filter(t=>t.estado==='Concluída').length,emcurso=list.filter(t=>t.estado==='Em curso').length;
-  const atras=list.filter(t=>t.estado!=='Concluída'&&t.dataLimite&&new Date(t.dataLimite)<new Date()).length;
+
+  const total=list.length;
+  const emcurso=list.filter(t=>t.estado==='Em curso').length;
+  const pfazer=list.filter(t=>t.estado!=='Em curso'&&t.estado!=='Concluída').length;
+  const atrasadas=list.filter(t=>new Date(t.dataLimite+'T23:59:59')<hoje).length;
   elStats.innerHTML=`
     <div class="stat"><span class="stat-n">${total}</span><span class="stat-l">Total</span></div>
-    <div class="stat"><span class="stat-n" style="color:var(--g5)">${conc}</span><span class="stat-l">Concluídas</span></div>
-    <div class="stat"><span class="stat-n" style="color:var(--bld)">${emcurso}</span><span class="stat-l">Em curso</span></div>
-    <div class="stat"><span class="stat-n" style="color:var(--red)">${atras}</span><span class="stat-l">Atrasadas</span></div>`;
-  const origCls=o=>o==='Ad-hoc'?'b-adhoc':o==='Reunião'?'b-reuniao':'b-plano';
-  tbody.innerHTML=list.map(t=>{
-    const conc2=t.estado==='Concluída';
-    const acaoNome=an(t.acaoId);
-    const hasAtt=t.attachments?.length>0;
-    return`<tr class="${conc2?'done-row':''}">
-      <td><input type="checkbox" ${conc2?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
-      <td style="font-weight:500" title="${t.titulo}">${t.titulo}${hasAtt?` <span style="font-size:10px;background:var(--bl);color:var(--bld);border-radius:4px;padding:1px 5px">📎${t.attachments.length}</span>`:''}</td>
-      <td style="font-size:12px;color:var(--tx2)" title="${acaoNome}">${acaoNome}</td>
-      <td>${t.responsavel||'—'}</td>
-      <td>${fd(t.dataLimite)}</td>
-      <td>${estB(t.prioridade)}</td>
-      <td>${badgeHTML(origCls(t.origem),t.origem||'Plano')}</td>
-      <td><div class="actions">
-        <button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">Editar</button>
-      </div></td>
+    <div class="stat"><span class="stat-n" style="color:var(--green-mid)">${emcurso}</span><span class="stat-l">Em curso</span></div>
+    <div class="stat"><span class="stat-n">${pfazer}</span><span class="stat-l">Por fazer</span></div>
+    <div class="stat"><span class="stat-n" style="color:var(--red)">${atrasadas}</span><span class="stat-l">Atrasadas</span></div>`;
+
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty">Sem tarefas pendentes até esta semana. 🎉</div></td></tr>`;
+    const ec=el('tcount-sem');if(ec)ec.textContent='';
+    return;
+  }
+
+  // Obter projetoId efectivo de uma tarefa (via ação se necessário)
+  const getProjId=t=>{
+    if(t.projetoId) return String(t.projetoId);
+    const a=plAcoes.find(x=>String(x.id)===String(t.acaoId));
+    return a?.projetoId?String(a.projetoId):null;
+  };
+
+  // Agrupar Projeto > Ação > Tarefa
+  const projIds=[...new Set(list.map(getProjId).filter(Boolean))];
+  let html='';
+
+  projIds.forEach(projId=>{
+    const proj=plProjetos.find(p=>String(p.id)===projId);
+    const projNome=proj?.nome||`Projeto #${projId}`;
+    const projDep=proj?.dep||'';
+    const projTarefas=list.filter(t=>getProjId(t)===projId);
+    const atrasadasProj=projTarefas.filter(t=>new Date(t.dataLimite+'T23:59:59')<hoje).length;
+
+    html+=`<tr>
+      <td colspan="7" style="background:var(--bg3);padding:9px 14px;border-top:2px solid var(--mod-planeamento);border-bottom:0.5px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--mod-planeamento)" stroke-width="2"><rect x="1" y="1" width="6" height="4" rx="1"/><rect x="9" y="1" width="6" height="4" rx="1"/><rect x="5" y="11" width="6" height="4" rx="1"/><line x1="4" y1="5" x2="4" y2="13"/><line x1="12" y1="5" x2="8" y2="13"/><line x1="4" y1="9" x2="8" y2="11"/></svg>
+          <span style="font-weight:700;font-size:13px;color:var(--mod-planeamento)">${projNome}</span>
+          ${projDep?`<span class="badge" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${projDep}</span>`:''}
+          <span style="font-size:11px;color:var(--text2);margin-left:4px">${projTarefas.length} tarefa${projTarefas.length!==1?'s':''}</span>
+          ${atrasadasProj?`<span style="font-size:11px;color:var(--red);font-weight:600">· ${atrasadasProj} atrasada${atrasadasProj!==1?'s':''} ⚠️</span>`:''}
+        </div>
+      </td>
     </tr>`;
-  }).join('')||`<tr><td colspan="8"><div class="empty">Sem plTarefas para esta semana.</div></td></tr>`;
-  tbody.innerHTML=tbody.innerHTML||'';
+
+    // Agrupar por ação dentro do projeto
+    const acaoIds=[...new Set(projTarefas.map(t=>t.acaoId?String(t.acaoId):null))];
+    acaoIds.filter(Boolean).forEach(acaoId=>{
+      const acao=plAcoes.find(a=>String(a.id)===acaoId);
+      const acaoNome=acao?.nome||`Ação #${acaoId}`;
+      const acaoTarefas=projTarefas.filter(t=>String(t.acaoId)===acaoId);
+      html+=`<tr>
+        <td colspan="7" style="background:#f0fdf4;padding:6px 14px 6px 28px;border-bottom:0.5px solid var(--border)">
+          <span style="font-size:11px;font-weight:600;color:var(--mod-planeamento-mid)">↳ ${acaoNome}</span>
+          <span style="font-size:11px;color:var(--text3);margin-left:6px">(${acaoTarefas.length})</span>
+        </td>
+      </tr>`;
+      acaoTarefas.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+    });
+
+    // Tarefas do projeto sem ação
+    const semAcao=projTarefas.filter(t=>!t.acaoId);
+    if(semAcao.length){
+      html+=`<tr><td colspan="7" style="background:#fafafa;padding:6px 14px 6px 28px;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:11px;font-weight:600;color:var(--text3)">↳ Sem ação atribuída (${semAcao.length})</span>
+      </td></tr>`;
+      semAcao.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+    }
+  });
+
+  // Tarefas sem projeto
+  const semProj=list.filter(t=>!getProjId(t));
+  if(semProj.length){
+    html+=`<tr>
+      <td colspan="7" style="background:var(--bg3);padding:9px 14px;border-top:2px solid var(--border2);border-bottom:0.5px solid var(--border)">
+        <span style="font-weight:700;font-size:13px;color:var(--text2)">📋 Sem projeto (${semProj.length})</span>
+      </td>
+    </tr>`;
+    semProj.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+  }
+
+  tbody.innerHTML=html;
   const elCount=el('tcount-sem');
-  if(elCount)elCount.textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
+  if(elCount)elCount.textContent=`${total} tarefa${total!==1?'s':''} pendente${total!==1?'s':''}`;
+}
+
+function _semTarefaRow(t,hoje){
+  if(!hoje){hoje=new Date();hoje.setHours(0,0,0,0);}
+  const atrasada=t.dataLimite&&new Date(t.dataLimite+'T23:59:59')<hoje;
+  const dataStr=t.dataLimite
+    ?`<span style="${atrasada?'color:var(--red);font-weight:600':''}">${atrasada?'⚠️ ':''}${fd(t.dataLimite)}</span>`
+    :'—';
+  const attHtml=t.attachments?.length
+    ?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`
+    :'';
+  return`<tr class="${t.estado==='Concluída'?'done-row':''}" style="${atrasada?'background:#fff8f8':''}">
+    <td style="padding:7px 12px 7px 44px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
+    <td style="font-weight:500;padding:7px 4px;font-size:13px">${t.titulo}${attHtml}</td>
+    <td style="font-size:12px;color:var(--tx2);padding:7px 4px">${t.responsavel||'—'}</td>
+    <td style="padding:7px 4px">${dataStr}</td>
+    <td style="padding:7px 4px">${estB(t.prioridade)}</td>
+    <td style="padding:7px 4px">${estB(t.estado)}</td>
+    <td style="padding:7px 4px"><button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">Editar</button></td>
+  </tr>`;
 }
 async function toggleTar(compId,checked){
   const t=plTarefas.find(x=>x.id===compId);if(!t)return;
@@ -4899,7 +5018,7 @@ function plInit(){
   plViewWeek=isoWeek(now);plViewYear=now.getFullYear();
   // Use shared projetos
   if(sharedProjetos.length) plProjetos=sharedProjetos;
-  plLoadAll();
+  plLoadAll().then(()=>plInitSemPermissions());
 }
 
 
@@ -8276,6 +8395,34 @@ function coUpdateBadge() {
   badge.style.display = pend > 0 ? 'inline' : 'none';
 }
 
+// ── Permissões de visualização ────────────────────
+function coCanViewRegisto(r) {
+  if (!currentUserFJ) return true;
+  const cargo   = userCargo();
+  const equipas = currentUserFJ.equipa || [];
+  if (cargo === 'Presidente Executivo') return true;
+  if (cargo === 'Diretor')              return true;
+  if (equipas.includes('CAdm'))         return true;
+  if (equipas.includes('Gestão'))       return true;
+  const myEmail = (user?.username || user?.preferredUsername || '').toLowerCase();
+  if (r.respEmail && r.respEmail.toLowerCase() === myEmail) return true;
+  return equipas.some(dep => dep === r.departamento);
+}
+function coCanViewTarefa(t) {
+  if (!currentUserFJ) return true;
+  const cargo   = userCargo();
+  const equipas = currentUserFJ.equipa || [];
+  if (cargo === 'Presidente Executivo') return true;
+  if (cargo === 'Diretor')              return true;
+  if (equipas.includes('CAdm'))         return true;
+  if (equipas.includes('Gestão'))       return true;
+  const myEmail = (user?.username || user?.preferredUsername || '').toLowerCase();
+  if (t.respEmail && t.respEmail.toLowerCase() === myEmail) return true;
+  const reg = CO_REGISTOS.find(r => r.id === t.correioId);
+  if (reg) return coCanViewRegisto(reg);
+  return false;
+}
+
 // ── Tabela de registos ────────────────────────────
 function coRenderTabela() {
   const tbody = document.getElementById('co-tbody');
@@ -8287,6 +8434,7 @@ function coRenderTabela() {
   const to   = document.getElementById('co-ff-to')?.value || '';
 
   const list = CO_REGISTOS.filter(r => {
+    if (!coCanViewRegisto(r)) return false;
     if (q && !r.assunto.toLowerCase().includes(q) && !r.remetente.toLowerCase().includes(q)) return false;
     if (tipo && r.tipo !== tipo) return false;
     if (dep  && r.departamento !== dep) return false;
@@ -8341,6 +8489,7 @@ function coRenderTarefas() {
   const hoje  = today();
 
   const list = CO_TAREFAS.filter(t => {
+    if (!coCanViewTarefa(t)) return false;
     if (t.estado === 'Concluída' || t.estado === 'Cancelada') return false;
     if (q     && !t.titulo.toLowerCase().includes(q) && !t.assuntoRef.toLowerCase().includes(q)) return false;
     if (prior && t.prioridade !== prior) return false;
@@ -8476,13 +8625,16 @@ async function coSaveRegisto() {
     if (projetoId) body.ProjetoIdId = parseInt(projetoId);
 
     const res = await spWrite(`${SP}/_api/web/lists/getbytitle('${CO_LIST}')/items`, body, 'POST');
-    const newId = res.d?.Id;
+    const resData = await res.json();
+    const newId = resData.d?.Id;
 
-    // 2) Upload do anexo
+    // 2) Upload do(s) anexo(s)
     const fileInput = document.getElementById('co-file');
     if (newId && fileInput?.files?.length) {
-      try { await uploadAttachment(CO_LIST, newId, fileInput.files[0]); }
-      catch(e) { console.warn('Attach error', e); }
+      for (const f of Array.from(fileInput.files)) {
+        try { await uploadAttachment(CO_LIST, newId, f); }
+        catch(e) { console.warn('Attach error', e); }
+      }
     }
 
     // 3) Criar tarefas associadas
