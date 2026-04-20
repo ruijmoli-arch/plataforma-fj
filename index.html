@@ -25,6 +25,7 @@
   --mod-reunioes:#1E3A5F;--mod-reunioes-bg:#EFF6FF;--mod-reunioes-mid:#3B6B9A;
   --mod-planeamento:#1E4D3A;--mod-planeamento-bg:#F0FDF4;--mod-planeamento-mid:#3A7D5F;
   --mod-financeiro:#8B4513;--mod-financeiro-bg:#FFF7ED;--mod-financeiro-mid:#B8860B;
+  --mod-correio:#2D3B6B;--mod-correio-bg:#EEF2FF;--mod-correio-mid:#4B5DA8;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:14px;color:var(--text);background:var(--bg);min-height:100vh}
 
@@ -293,6 +294,10 @@ tr:hover td{background:var(--bg3)}
 #sidebar-gf { background: var(--mod-financeiro) !important; }
 #sidebar-gf .nav-item.active { background: rgba(255,255,255,.2); }
 
+#sidebar-co { background: var(--mod-correio) !important; }
+#sidebar-co .nav-item.active { background: rgba(255,255,255,.2); }
+#sidebar-co .nav-item:hover { background: rgba(255,255,255,.1); }
+
 /* ── PLANEAMENTO ADDITIONS ── */
 /* HIERARCHY */
 .hier-proj{background:var(--bg2);border:0.5px solid var(--bd);border-radius:var(--rl);margin-bottom:8px;overflow:hidden}
@@ -474,6 +479,8 @@ tr:hover td{background:var(--bg3)}
 /* ══ AUSÊNCIAS MODULE ══ */
 --au-teal:#0F6E56;--au-teal-bg:#E1F5EE;
 .au-page{display:none}.au-page.active{display:block}
+/* ══ CORREIO MODULE ══ */
+.co-page{display:none}.co-page.active{display:block}
 .au-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
 .au-stat{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:14px 16px}
 .au-stat-n{font-size:22px;font-weight:600;display:block;margin-bottom:2px}
@@ -572,6 +579,7 @@ tr:hover td{background:var(--bg3)}
       <button class="module-tab" id="tab-pl" onclick="switchModule('pl')">📊 Planeamento</button>
       <button class="module-tab" id="tab-gf" onclick="switchModule('gf')">💰 Financeiro</button>
       <button class="module-tab" id="tab-au" onclick="switchModule('au')">🏖️ Ausências</button>
+      <button class="module-tab" id="tab-co" onclick="switchModule('co')">📬 Correio</button>
     </div>
     <div class="topbar-right">
       <div style="text-align:right">
@@ -733,7 +741,22 @@ tr:hover td{background:var(--bg3)}
     Gestão / RH
   </div>
 </div>
-<div class="main">
+<div class="sidebar" id="sidebar-co" style="display:none">
+  <div class="sidebar-label" style="color:rgba(255,255,255,.4)">Correio</div>
+  <div class="nav-item active" id="co-nav-registo" onclick="coNav('registo')" style="color:rgba(255,255,255,.75)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4z"/><path d="M8 2v12M2 8h12"/></svg>
+    Registo de Correio
+  </div>
+  <div class="nav-item" id="co-nav-ver" onclick="coNav('ver')" style="color:rgba(255,255,255,.75)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+    Ver Registos
+  </div>
+  <div class="nav-item" id="co-nav-tarefas" onclick="coNav('tarefas')" style="color:rgba(255,255,255,.75)">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,8 7,11 12,5"/><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+    Tarefas Pendentes
+    <span id="co-badge-tarefas" style="margin-left:auto;background:var(--fj-orange);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;display:none"></span>
+  </div>
+</div>
 <div class="notif" id="notif"></div>
 <div id="module-rn">
 
@@ -1609,7 +1632,262 @@ tr:hover td{background:var(--bg3)}
 
 </div><!-- /module-au -->
 
-</div><!-- /main -->
+<!-- ══════════ MÓDULO CORREIO ══════════ -->
+<div id="module-co" style="display:none;width:100%">
+
+  <!-- REGISTO DE CORREIO -->
+  <div class="co-page active" id="co-page-registo">
+    <div class="page-title">Registo de Correio</div>
+    <div class="panel" style="max-width:860px">
+      <div class="panel-title">Nova entrada de correio</div>
+      <div class="fgrid">
+        <div class="fg">
+          <label>Tipo *</label>
+          <select id="co-tipo">
+            <option value="Entrada">Entrada</option>
+            <option value="Saída">Saída</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Data de entrada *</label>
+          <input type="date" id="co-data">
+        </div>
+        <div class="fg" style="grid-column:1/-1">
+          <label>Assunto / Referência *</label>
+          <input type="text" id="co-assunto" placeholder="Ex: Ofício nº 123/2026 — IPDJ — Candidatura X">
+        </div>
+        <div class="fg">
+          <label>Remetente / Entidade</label>
+          <input type="text" id="co-remetente" placeholder="Nome da entidade ou pessoa">
+        </div>
+        <div class="fg">
+          <label>Departamento destinatário</label>
+          <select id="co-departamento">
+            <option value="">— Selecionar —</option>
+            <option>CAdm</option><option>Gestão</option><option>Op.Norte</option>
+            <option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Responsável pelo tratamento</label>
+          <select id="co-responsavel" class="user-resp-sel" onchange="onUserSelChange(this,'co-resp-email')" style="width:100%">
+            <option value="">— Selecionar —</option>
+          </select>
+          <input type="hidden" id="co-resp-email">
+        </div>
+        <div class="fg">
+          <label>Projeto associado</label>
+          <select id="co-projeto" style="width:100%">
+            <option value="">— Nenhum —</option>
+          </select>
+        </div>
+        <div class="fg" style="grid-column:1/-1">
+          <label>Notas / Descrição</label>
+          <textarea id="co-notas" placeholder="Descrição do conteúdo e contexto do correio..."></textarea>
+        </div>
+        <div class="fg" style="grid-column:1/-1">
+          <label>Anexo (documento digitalizado)</label>
+          <input type="file" id="co-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="padding:6px">
+        </div>
+      </div>
+
+      <!-- TAREFAS ASSOCIADAS -->
+      <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:0.5px solid var(--border)">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+          📋 Tarefas associadas a esta carta
+          <span style="font-size:11px;font-weight:400;color:var(--text3)">Serão criadas quando guardar o registo</span>
+        </div>
+        <div id="co-tarefas-lista" style="margin-bottom:10px"></div>
+        <!-- Linha de adição de tarefa -->
+        <div style="background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--r);padding:12px">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">+ Nova tarefa</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div class="fg" style="grid-column:1/-1">
+              <label>Descrição da tarefa *</label>
+              <input type="text" id="co-tar-titulo" placeholder="Descreve a tarefa...">
+            </div>
+            <div class="fg">
+              <label>Responsável</label>
+              <select id="co-tar-resp" class="user-resp-sel" onchange="onUserSelChange(this,'co-tar-email')" style="width:100%">
+                <option value="">— Selecionar —</option>
+              </select>
+              <input type="hidden" id="co-tar-email">
+            </div>
+            <div class="fg">
+              <label>Data limite</label>
+              <input type="date" id="co-tar-data">
+            </div>
+            <div class="fg">
+              <label>Prioridade</label>
+              <select id="co-tar-prior">
+                <option value="Média" selected>Média</option>
+                <option value="Alta">Alta</option>
+                <option value="Baixa">Baixa</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Estado inicial</label>
+              <select id="co-tar-estado">
+                <option value="Por fazer">Por fazer</option>
+                <option value="Em curso">Em curso</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label>Notas da tarefa</label>
+            <textarea id="co-tar-notas" placeholder="Contexto ou instruções da tarefa..." style="min-height:50px"></textarea>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="coAddTarefa()">+ Adicionar tarefa</button>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <button class="btn" onclick="coResetForm()">Limpar</button>
+        <button class="btn btn-primary" id="co-save-btn" onclick="coSaveRegisto()">💾 Guardar Registo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VER REGISTOS -->
+  <div class="co-page" id="co-page-ver">
+    <div class="page-title">Registos de Correio</div>
+    <div class="stats">
+      <div class="stat"><span class="stat-n" id="co-s-total">—</span><span class="stat-l">Total</span></div>
+      <div class="stat"><span class="stat-n" id="co-s-entrada" style="color:var(--blue-d)">—</span><span class="stat-l">Entradas</span></div>
+      <div class="stat"><span class="stat-n" id="co-s-saida" style="color:var(--purple)">—</span><span class="stat-l">Saídas</span></div>
+      <div class="stat"><span class="stat-n" id="co-s-tarefas-pend" style="color:var(--amber)">—</span><span class="stat-l">Tarefas pendentes</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="co-q" placeholder="Pesquisar assunto ou entidade..." oninput="coRenderTabela()"></div>
+      <select class="flt" id="co-ff-tipo" onchange="coRenderTabela()">
+        <option value="">Tipo: todos</option><option>Entrada</option><option>Saída</option>
+      </select>
+      <select class="flt" id="co-ff-dep" onchange="coRenderTabela()">
+        <option value="">Departamento: todos</option>
+        <option>CAdm</option><option>Gestão</option><option>Op.Norte</option>
+        <option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
+      </select>
+      <input type="date" class="flt" id="co-ff-from" onchange="coRenderTabela()" style="font-size:13px;padding:8px">
+      <input type="date" class="flt" id="co-ff-to" onchange="coRenderTabela()" style="font-size:13px;padding:8px">
+      <button class="btn" onclick="coLoadAll()">&#8635;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width:8%"><col style="width:6%"><col style="width:24%"><col style="width:14%">
+          <col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:14%">
+        </colgroup>
+        <thead><tr>
+          <th>Data</th><th>Tipo</th><th>Assunto / Referência</th><th>Remetente/Destinatário</th>
+          <th>Departamento</th><th>Responsável</th><th>Anexo</th><th>Ações</th>
+        </tr></thead>
+        <tbody id="co-tbody"></tbody>
+      </table>
+    </div>
+    <div id="co-tcount" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+  </div>
+
+  <!-- TAREFAS PENDENTES -->
+  <div class="co-page" id="co-page-tarefas">
+    <div class="page-title">Tarefas de Correio Pendentes</div>
+    <div class="stats">
+      <div class="stat"><span class="stat-n" id="co-t-total">—</span><span class="stat-l">Total pendentes</span></div>
+      <div class="stat"><span class="stat-n" id="co-t-pfazer" style="color:var(--gray)">—</span><span class="stat-l">Por fazer</span></div>
+      <div class="stat"><span class="stat-n" id="co-t-emcurso" style="color:var(--blue-d)">—</span><span class="stat-l">Em curso</span></div>
+      <div class="stat"><span class="stat-n" id="co-t-atrasadas" style="color:var(--red)">—</span><span class="stat-l">Atrasadas</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="co-tq" placeholder="Pesquisar tarefa..." oninput="coRenderTarefas()"></div>
+      <select class="flt" id="co-tff-prior" onchange="coRenderTarefas()">
+        <option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option>
+      </select>
+      <button class="btn" onclick="coLoadAll()">&#8635;</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width:22%"><col style="width:18%"><col style="width:12%">
+          <col style="width:10%"><col style="width:10%"><col style="width:14%"><col style="width:14%">
+        </colgroup>
+        <thead><tr>
+          <th>Tarefa</th><th>Correio associado</th><th>Responsável</th>
+          <th>Data limite</th><th>Prioridade</th><th>Estado</th><th>Ações</th>
+        </tr></thead>
+        <tbody id="co-tbody-tarefas"></tbody>
+      </table>
+    </div>
+    <div id="co-tcount-tarefas" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+  </div>
+
+</div><!-- /module-co -->
+
+<!-- Modal de detalhe de registo de correio -->
+<div id="co-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;overflow-y:auto">
+  <div style="max-width:700px;margin:48px auto;padding:0 1rem 2rem">
+    <div class="panel" style="box-shadow:0 12px 40px rgba(0,0,0,.22);border-radius:16px;padding:0;overflow:hidden">
+      <div style="background:var(--mod-correio);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">📬</span>
+          <span id="co-detail-title" style="font-size:16px;font-weight:600;color:#fff">Detalhe do Registo</span>
+        </div>
+        <button onclick="coCloseDetail()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div id="co-detail-body" style="padding:24px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edição de tarefa de correio -->
+<div id="co-tar-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;overflow-y:auto">
+  <div style="max-width:560px;margin:48px auto;padding:0 1rem 2rem">
+    <div class="panel" style="box-shadow:0 12px 40px rgba(0,0,0,.22);border-radius:16px;padding:0;overflow:hidden">
+      <div style="background:var(--mod-correio);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">📋</span>
+          <span style="font-size:16px;font-weight:600;color:#fff">Editar Tarefa</span>
+        </div>
+        <button onclick="coCloseTarModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="padding:24px">
+        <input type="hidden" id="co-edit-tar-id">
+        <div class="fgrid">
+          <div class="fg" style="grid-column:1/-1">
+            <label>Descrição *</label>
+            <input type="text" id="co-edit-tar-titulo" placeholder="Descrição da tarefa...">
+          </div>
+          <div class="fg">
+            <label>Responsável</label>
+            <select id="co-edit-tar-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select>
+          </div>
+          <div class="fg">
+            <label>Data limite</label>
+            <input type="date" id="co-edit-tar-data">
+          </div>
+          <div class="fg">
+            <label>Prioridade</label>
+            <select id="co-edit-tar-prior">
+              <option>Alta</option><option selected>Média</option><option>Baixa</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Estado</label>
+            <select id="co-edit-tar-estado">
+              <option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option>
+            </select>
+          </div>
+          <div class="fg" style="grid-column:1/-1">
+            <label>Notas</label>
+            <textarea id="co-edit-tar-notas" style="min-height:60px"></textarea>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <button class="btn" onclick="coCloseTarModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="coSaveTarefaEdit()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 </div><!-- /layout -->
 
 <!-- Overlay global de novo projeto (acessível de qualquer módulo) -->
@@ -1695,6 +1973,22 @@ const REDIRECT=window.location.href.split('?')[0].split('#')[0];
 const SCOPES=['https://fjuventude.sharepoint.com/AllSites.Write','https://fjuventude.sharepoint.com/AllSites.Read'];
 const GRAPH_SCOPES=['User.Read','GroupMember.Read.All'];
 
+// ── Normalização de departamentos ──────────────────
+// Garante que variantes do SharePoint (ex: "OP. Norte", "op norte") ficam todas iguais
+function normalizeDep(dep) {
+  if (!dep) return '';
+  const map = {
+    'op. norte':'Op.Norte','op norte':'Op.Norte','opnorte':'Op.Norte','op.norte':'Op.Norte','operações norte':'Op.Norte','operacoes norte':'Op.Norte',
+    'op. sul':  'Op.Sul',  'op sul':  'Op.Sul',  'opsul':  'Op.Sul',  'op.sul':  'Op.Sul',  'operações sul':'Op.Sul','operacoes sul':'Op.Sul',
+    'cadm':     'CAdm',    'c adm':   'CAdm',    'c.adm':  'CAdm',    'conselho administração':'CAdm','conselho de administração':'CAdm',
+    'gestao':   'Gestão',  'gestão':  'Gestão',  'gestao ':'Gestão',
+    'financeiro':'Financeiro',
+    'impacto':  'Impacto',
+    'inov':     'INOV',    'inovação':'INOV',    'inovacao':'INOV'
+  };
+  return map[dep.toLowerCase().trim()] || dep.trim();
+}
+
 // GROUP IDs
 const GROUPS={
   CA:'0c05918f-4508-45fd-82f4-d5cc3925cd4f',
@@ -1732,7 +2026,7 @@ function getCores(tipo){return REUNIAO_CORES[tipo]||REUNIAO_CORES['Reunião com 
 let _currentModule='rn';
 function switchModule(mod){
   _currentModule=mod;
-  ['rn','pl','gf','au'].forEach(m=>{
+  ['rn','pl','gf','au','co'].forEach(m=>{
     document.getElementById('tab-'+m)?.classList.toggle('active',m===mod);
     const sb=document.getElementById('sidebar-'+m);
     const mc=document.getElementById('module-'+m);
@@ -1746,8 +2040,9 @@ function switchModule(mod){
   if(mod==='gf'&&!_gfLoaded){_gfLoaded=true;gfInit();}
   if(mod==='rn')showPage('assuntos');
   if(mod==='au'){if(!_auLoaded){_auLoaded=true;auInit();}else auNav('dashboard');}
+  if(mod==='co'){if(!_coLoaded){_coLoaded=true;coInit();}else coNav('registo');}
 }
-let _plLoaded=false,_gfLoaded=false,_auLoaded=false;
+let _plLoaded=false,_gfLoaded=false,_auLoaded=false,_coLoaded=false;
 
 // ── SHARED PROJECTS ──
 let sharedProjetos=[];
@@ -1756,7 +2051,7 @@ async function loadSharedProjetos(){
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*,Departamento/Title&$expand=Departamento&$orderby=Title asc&$top=500`);
     sharedProjetos=d.d.results.map(r=>({
       id:r.Id,nome:r.Title||'',codigo:r.Codigo||'',
-      dep:r.Departamento?.Title||r.Departamento||'',
+      dep:normalizeDep(r.Departamento?.Title||r.Departamento||''),
       estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
       dataFim:r.DataFim?r.DataFim.split('T')[0]:'',
       anoOrcamental:r.AnoOrcamental||new Date().getFullYear(),
@@ -1880,7 +2175,7 @@ async function loadFJUtilizadores(){
       titulo:u.Title||'',
       email:u.Email?.toLowerCase()||'',
       // Equipa pode ser multi-choice (strings) ou multi-lookup (objetos com Title)
-      equipa:(u.Equipa?.results||[]).map(e=>typeof e==='string'?e:(e.Title||'')).filter(Boolean),
+      equipa:(u.Equipa?.results||[]).map(e=>normalizeDep(typeof e==='string'?e:(e.Title||''))).filter(Boolean),
       cargo:typeof u.Cargo==='string'?u.Cargo:(u.Cargo?.Title||'Membro'),
       projetos:(u.Projetos?.results||[]).map(p=>p.Id)
     }));
@@ -2442,7 +2737,7 @@ async function loadExtItems(){
       data:r.DataReuniao?r.DataReuniao.split('T')[0]:'',
       local:r.Local||'',participantes:r.Participantes||'',
       resumo:r.Resumo||'',proximosPassos:r.ProximosPassos||'',
-      departamento:r.Departamento?.Title||r.Departamento||'',responsavel:r.Responsavel?.Title||'',
+      departamento:normalizeDep(r.Departamento?.Title||r.Departamento||''),responsavel:r.Responsavel?.Title||'',
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     renderExtTable();
@@ -2609,7 +2904,7 @@ async function loadRnTarefas(){
       responsavel:r.Responsavel||'',
       data:r.DataLimite?r.DataLimite.split('T')[0]:'',
       estado:r.Estado||'Por fazer',prioridade:r.Prioridade||'Média',
-      departamento:r.Departamento||'',projetoId:r.ProjetoIdId||null,
+      departamento:normalizeDep(r.Departamento||''),projetoId:r.ProjetoIdId||null,
       acaoId:r.AcaoIdId||null
     }));
     renderTarefasTable();renderTarefasStats();
@@ -2683,7 +2978,7 @@ async function saveTarefa(){
       Title:titulo,Notas:gv2t('ft-desc'),Estado:gv('ft-estado'),
       Prioridade:gv('ft-prior'),Departamento:gv('ft-dep')
     };
-    const projId=gv('ft-proj');if(projId)body.ProjetoId=parseInt(projId);
+    const projId=gv('ft-proj');if(projId)body.ProjetoIdId=parseInt(projId);
     if(gv('ft-data'))body.DataLimite=gv('ft-data')+'T00:00:00Z';
     if(rnEditTarId){
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items(${rnEditTarId})`,body,'MERGE','*');
@@ -3450,14 +3745,14 @@ async function loadDepartamentos(){
 async function loadProjetos(){
   // Factorial_Projetos = plProjetos top-level (vindos do Factorial)
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items?$select=*,Departamento/Title&$expand=Departamento&$orderby=Title asc&$top=1000`);
-  plProjetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:r.Departamento?.Title||'',estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',notas:r.Notas||'',responsavel:r.Responsavel?.Title||'',membros:r.Membros||[]}));
+  plProjetos=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',dep:normalizeDep(r.Departamento?.Title||''),estado:r.Estado||'active',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',notas:r.Notas||'',responsavel:r.Responsavel?.Title||'',membros:r.Membros||[]}));
   console.log('Projetos carregados:', plProjetos);
 }
 async function loadAcoes(){
   // Acoes = lista manual criada na plataforma, filho de Factorial_Projetos
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Acoes')/items?$select=*,ProjetoId/Id,Departamento/Title&$expand=ProjetoId,Departamento&$orderby=Title asc&$top=1000`);
-    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId?.Id||r.ProjetoIdId||null,dep:r.Departamento?.Title||'',responsavel:'',notas:r.Notas||''}));
+    plAcoes=d.d.results.map(r=>({id:r.Id,nome:r.Title||'',estado:r.Estado||'Ativo',dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',dataFim:r.DataFim?r.DataFim.split('T')[0]:'',projetoId:r.ProjetoId?.Id||r.ProjetoIdId||null,dep:normalizeDep(r.Departamento?.Title||''),responsavel:'',notas:r.Notas||''}));
     console.log('Ações carregadas:', plAcoes, 'Projetos IDs:', plProjetos.map(p=>p.id));
   }catch(e){console.warn('Acoes list error:',e.message);plAcoes=[];}
 }
@@ -3478,8 +3773,7 @@ async function loadTarefas(){
       projetoId:r.ProjetoIdId||null,
       acaoId:r.AcaoIdId||null,
       responsavel:r.Responsavel||'',
-      dep:r.Departamento||'',
-      lista:'FJ_Tarefas',
+      dep:normalizeDep(r.Departamento||''),
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     all=[...all,...ft];
@@ -3506,7 +3800,7 @@ async function loadKPIRegs(){
 }
 async function loadPlanoTrim(){
   const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_PlanoTrimestral')/items?$select=*&$orderby=AnoFJ desc,Trimestre asc&$top=500`);
-  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoIdId||null,acaoId:r.AcaoIdId||null,trim:r.Trimestre||'',ano:r.AnoFJ||null,dep:r.Departamento||'',estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
+  plPlanoTrim=d.d.results.map(r=>({id:r.Id,titulo:r.Title||'',projetoId:r.ProjetoIdId||null,acaoId:r.AcaoIdId||null,trim:r.Trimestre||'',ano:r.AnoFJ||null,dep:normalizeDep(r.Departamento||''),estado:r.Estado||'Previsto',aprovacao:r.EstadoAprov||'Rascunho',tarPrev:r.TarefasPrevistas||0,notas:r.Notas||''}));
 }
 
 /* ===== DROPDOWNS ===== */
@@ -7862,6 +8156,548 @@ async function auSaveSaldo(){
 
 
 // ═══════════════ FIM MÓDULO AUSÊNCIAS ═══════════════
+
+// ═══════════════════════════════════════════════════
+// ══════════  MÓDULO CORREIO  ════════════════════════
+// ═══════════════════════════════════════════════════
+
+const CO_LIST        = 'FJ_Correio';
+const CO_TAR_LIST    = 'FJ_CorreioTarefas';
+
+let CO_REGISTOS   = [];   // registos de correio
+let CO_TAREFAS    = [];   // tarefas de correio
+let _coTarefasTemp = [];  // tarefas ainda não guardadas (form de novo registo)
+
+// ── Navegação ──────────────────────────────────────
+function coNav(page) {
+  document.querySelectorAll('.co-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#sidebar-co .nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('co-page-' + page);
+  const nav = document.getElementById('co-nav-' + page);
+  if (pg)  pg.classList.add('active');
+  if (nav) nav.classList.add('active');
+  if (page === 'ver')     coRenderTabela();
+  if (page === 'tarefas') coRenderTarefas();
+}
+
+// ── Init ───────────────────────────────────────────
+async function coInit() {
+  coPreencherProjetos();
+  coSetDataHoje();
+  await coLoadAll();
+  coNav('registo');
+}
+
+function coSetDataHoje() {
+  const d = document.getElementById('co-data');
+  if (d && !d.value) d.value = today();
+}
+
+function coPreencherProjetos() {
+  const sel = document.getElementById('co-projeto');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Nenhum —</option>' +
+    sharedProjetos.filter(p => p.estado === 'Ativo' || p.estado === 'active')
+      .map(p => `<option value="${p.id}">${p.nome}${p.dep ? ' · ' + p.dep : ''}</option>`).join('');
+}
+
+// ── Carregar dados SharePoint ─────────────────────
+async function coLoadAll() {
+  try {
+    await coLoadRegistos();
+    await coLoadTarefas();
+    coUpdateBadge();
+    coRenderStats();
+  } catch(e) {
+    console.warn('coLoadAll:', e);
+  }
+}
+
+async function coLoadRegistos() {
+  const d = await spRead(
+    `${SP}/_api/web/lists/getbytitle('${CO_LIST}')/items` +
+    `?$select=*,AttachmentFiles,ProjetoId/Id,ProjetoId/Title` +
+    `&$expand=AttachmentFiles,ProjetoId&$orderby=DataEntrada desc&$top=500`
+  );
+  CO_REGISTOS = (d.d?.results || []).map(r => ({
+    id:           r.Id,
+    assunto:      r.Title || '',
+    tipo:         r.TipoCorreio || 'Entrada',
+    data:         r.DataEntrada ? r.DataEntrada.split('T')[0] : '',
+    remetente:    r.Remetente || '',
+    departamento: normalizeDep(r.Departamento || ''),
+    respNome:     r.ResponsavelNome || '',
+    respEmail:    r.ResponsavelEmail || '',
+    projetoId:    r.ProjetoId?.Id || null,
+    projetoNome:  r.ProjetoId?.Title || '',
+    notas:        r.Notas || '',
+    attachments:  (r.AttachmentFiles?.results || []).map(a => ({
+      name: a.FileName, url: a.ServerRelativeUrl
+    }))
+  }));
+}
+
+async function coLoadTarefas() {
+  const d = await spRead(
+    `${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')/items` +
+    `?$select=*,CorreioId/Id,CorreioId/Title` +
+    `&$expand=CorreioId&$orderby=DataLimite asc&$top=500`
+  );
+  CO_TAREFAS = (d.d?.results || []).map(r => ({
+    id:          r.Id,
+    titulo:      r.Title || '',
+    correioId:   r.CorreioId?.Id || null,
+    assuntoRef:  r.CorreioId?.Title || '',
+    respNome:    r.ResponsavelNome || '',
+    respEmail:   r.ResponsavelEmail || '',
+    dataLimite:  r.DataLimite ? r.DataLimite.split('T')[0] : '',
+    prioridade:  r.Prioridade || 'Média',
+    estado:      r.Estado || 'Por fazer',
+    notas:       r.Notas || ''
+  }));
+}
+
+// ── Stats & Badge ─────────────────────────────────
+function coRenderStats() {
+  const pendentes = CO_TAREFAS.filter(t => t.estado !== 'Concluída' && t.estado !== 'Cancelada');
+  sv('co-s-total',   CO_REGISTOS.length);
+  sv('co-s-entrada', CO_REGISTOS.filter(r => r.tipo === 'Entrada').length);
+  sv('co-s-saida',   CO_REGISTOS.filter(r => r.tipo === 'Saída').length);
+  sv('co-s-tarefas-pend', pendentes.length);
+}
+
+function coUpdateBadge() {
+  const badge = document.getElementById('co-badge-tarefas');
+  if (!badge) return;
+  const pend = CO_TAREFAS.filter(t => t.estado !== 'Concluída' && t.estado !== 'Cancelada').length;
+  badge.textContent = pend;
+  badge.style.display = pend > 0 ? 'inline' : 'none';
+}
+
+// ── Tabela de registos ────────────────────────────
+function coRenderTabela() {
+  const tbody = document.getElementById('co-tbody');
+  if (!tbody) return;
+  const q    = (document.getElementById('co-q')?.value || '').toLowerCase();
+  const tipo = document.getElementById('co-ff-tipo')?.value || '';
+  const dep  = document.getElementById('co-ff-dep')?.value || '';
+  const from = document.getElementById('co-ff-from')?.value || '';
+  const to   = document.getElementById('co-ff-to')?.value || '';
+
+  const list = CO_REGISTOS.filter(r => {
+    if (q && !r.assunto.toLowerCase().includes(q) && !r.remetente.toLowerCase().includes(q)) return false;
+    if (tipo && r.tipo !== tipo) return false;
+    if (dep  && r.departamento !== dep) return false;
+    if (from && r.data < from) return false;
+    if (to   && r.data > to)   return false;
+    return true;
+  });
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty">Nenhum registo encontrado.</div></td></tr>`;
+    sv('co-tcount', '');
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => {
+    const tipoBadge = r.tipo === 'Entrada'
+      ? `<span class="badge" style="background:var(--blue-l);color:var(--blue-d)">↓ Entrada</span>`
+      : `<span class="badge" style="background:var(--purple-bg);color:var(--purple)">↑ Saída</span>`;
+    const anexo = r.attachments.length
+      ? r.attachments.map(a =>
+          `<a href="javascript:void(0)" onclick="downloadSPFile('${a.url}','${a.name}')" style="font-size:12px;color:var(--blue-d);text-decoration:none">📎 ${a.name}</a>`
+        ).join('<br>')
+      : '<span style="color:var(--text3);font-size:12px">—</span>';
+    const tarefasDeste = CO_TAREFAS.filter(t => t.correioId === r.id && t.estado !== 'Concluída' && t.estado !== 'Cancelada');
+    const tarBadge = tarefasDeste.length
+      ? `<span class="badge" style="background:var(--amber-bg);color:var(--amber);margin-left:4px">📋 ${tarefasDeste.length}</span>`
+      : '';
+    return `<tr>
+      <td>${fd(r.data)}</td>
+      <td>${tipoBadge}</td>
+      <td title="${r.assunto}" style="font-weight:500">${r.assunto}${tarBadge}</td>
+      <td title="${r.remetente}">${r.remetente || '—'}</td>
+      <td>${r.departamento || '—'}</td>
+      <td>${r.respNome || '—'}</td>
+      <td>${anexo}</td>
+      <td><div class="actions">
+        <button class="btn btn-sm" onclick="coOpenDetail(${r.id})">👁 Ver</button>
+        <button class="btn btn-sm btn-danger" onclick="coDeleteRegisto(${r.id})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  sv('co-tcount', `${list.length} de ${CO_REGISTOS.length} registo${CO_REGISTOS.length !== 1 ? 's' : ''}`);
+}
+
+// ── Tabela de tarefas pendentes ───────────────────
+function coRenderTarefas() {
+  const tbody = document.getElementById('co-tbody-tarefas');
+  if (!tbody) return;
+  const q     = (document.getElementById('co-tq')?.value || '').toLowerCase();
+  const prior = document.getElementById('co-tff-prior')?.value || '';
+  const hoje  = today();
+
+  const list = CO_TAREFAS.filter(t => {
+    if (t.estado === 'Concluída' || t.estado === 'Cancelada') return false;
+    if (q     && !t.titulo.toLowerCase().includes(q) && !t.assuntoRef.toLowerCase().includes(q)) return false;
+    if (prior && t.prioridade !== prior) return false;
+    return true;
+  });
+
+  // Stats
+  const pf  = list.filter(t => t.estado === 'Por fazer').length;
+  const ec  = list.filter(t => t.estado === 'Em curso').length;
+  const atr = list.filter(t => t.dataLimite && t.dataLimite < hoje).length;
+  sv('co-t-total',    list.length);
+  sv('co-t-pfazer',   pf);
+  sv('co-t-emcurso',  ec);
+  sv('co-t-atrasadas', atr);
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Sem tarefas pendentes. 🎉</div></td></tr>`;
+    sv('co-tcount-tarefas', '');
+    return;
+  }
+
+  const priorBadge = p => {
+    const m = { Alta: 'b-alta', Média: 'b-media', Baixa: 'b-baixa' };
+    return `<span class="badge ${m[p] || 'b-na'}">${p}</span>`;
+  };
+  const estadoBadge = e => {
+    const m = { 'Por fazer': 'b-pfazer', 'Em curso': 'b-emcurso', 'Concluída': 'b-concluido', 'Cancelada': 'b-cancelado' };
+    return `<span class="badge ${m[e] || 'b-na'}">${e}</span>`;
+  };
+
+  tbody.innerHTML = list.map(t => {
+    const atrasada = t.dataLimite && t.dataLimite < hoje && t.estado !== 'Concluída';
+    const dataStr  = t.dataLimite
+      ? `<span style="${atrasada ? 'color:var(--red);font-weight:600' : ''}">${fd(t.dataLimite)}${atrasada ? ' ⚠️' : ''}</span>`
+      : '—';
+    return `<tr>
+      <td style="font-weight:500" title="${t.titulo}">${t.titulo}</td>
+      <td style="font-size:12px;color:var(--text2)" title="${t.assuntoRef}">${t.assuntoRef || '—'}</td>
+      <td>${t.respNome || '—'}</td>
+      <td>${dataStr}</td>
+      <td>${priorBadge(t.prioridade)}</td>
+      <td>${estadoBadge(t.estado)}</td>
+      <td><div class="actions">
+        <button class="btn btn-sm" onclick="coOpenTarEdit(${t.id})">Editar</button>
+        <button class="btn btn-sm btn-green" onclick="coConcluirTarefa(${t.id})">✓</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  sv('co-tcount-tarefas', `${list.length} tarefa${list.length !== 1 ? 's' : ''} pendente${list.length !== 1 ? 's' : ''}`);
+}
+
+// ── Form de registo — tarefas temporárias ─────────
+function coAddTarefa() {
+  const titulo = document.getElementById('co-tar-titulo').value.trim();
+  if (!titulo) { showNotif('Preenche a descrição da tarefa.', 'error'); return; }
+  const resp     = document.getElementById('co-tar-resp').selectedOptions[0];
+  const respNome = resp?.text !== '— Selecionar —' ? resp?.text || '' : '';
+  const respEmail= document.getElementById('co-tar-email').value || '';
+  _coTarefasTemp.push({
+    _uid:       Date.now() + Math.random(),
+    titulo,
+    respNome,
+    respEmail,
+    dataLimite: document.getElementById('co-tar-data').value || '',
+    prioridade: document.getElementById('co-tar-prior').value || 'Média',
+    estado:     document.getElementById('co-tar-estado').value || 'Por fazer',
+    notas:      document.getElementById('co-tar-notas').value.trim()
+  });
+  // Limpar campos de tarefa
+  document.getElementById('co-tar-titulo').value = '';
+  document.getElementById('co-tar-data').value   = '';
+  document.getElementById('co-tar-notas').value  = '';
+  document.getElementById('co-tar-resp').value   = '';
+  document.getElementById('co-tar-email').value  = '';
+  coRenderTarefasTemp();
+}
+
+function coRemoveTarefaTemp(uid) {
+  _coTarefasTemp = _coTarefasTemp.filter(t => t._uid !== uid);
+  coRenderTarefasTemp();
+}
+
+function coRenderTarefasTemp() {
+  const wrap = document.getElementById('co-tarefas-lista');
+  if (!wrap) return;
+  if (!_coTarefasTemp.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = _coTarefasTemp.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:6px">
+      <span style="font-size:18px">📋</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${t.titulo}</div>
+        <div style="font-size:11px;color:var(--text3)">
+          ${t.respNome || 'Sem responsável'} · ${t.dataLimite ? fd(t.dataLimite) : 'Sem data'} ·
+          <span class="badge ${t.prioridade === 'Alta' ? 'b-alta' : t.prioridade === 'Baixa' ? 'b-baixa' : 'b-media'}" style="font-size:10px">${t.prioridade}</span>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="coRemoveTarefaTemp(${t._uid})">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── Guardar registo ───────────────────────────────
+async function coSaveRegisto() {
+  const assunto = document.getElementById('co-assunto').value.trim();
+  const data    = document.getElementById('co-data').value;
+  if (!assunto) { showNotif('Preenche o assunto / referência do correio.', 'error'); return; }
+  if (!data)    { showNotif('Preenche a data de entrada.', 'error'); return; }
+
+  const btn = document.getElementById('co-save-btn');
+  btn.disabled = true; btn.textContent = 'A guardar...';
+
+  try {
+    // 1) obter tipo OData da lista
+    const meta = await spRead(`${SP}/_api/web/lists/getbytitle('${CO_LIST}')?$select=ListItemEntityTypeFullName`);
+    const listType = meta.d.ListItemEntityTypeFullName;
+
+    const respNome  = document.getElementById('co-responsavel').selectedOptions[0]?.text || '';
+    const respEmail = document.getElementById('co-resp-email').value || '';
+    const projetoId = document.getElementById('co-projeto').value || null;
+
+    const body = {
+      __metadata:      { type: listType },
+      Title:           assunto,
+      TipoCorreio:     document.getElementById('co-tipo').value,
+      DataEntrada:     data,
+      Remetente:       document.getElementById('co-remetente').value.trim(),
+      Departamento:    document.getElementById('co-departamento').value,
+      ResponsavelNome: respNome !== '— Selecionar —' ? respNome : '',
+      ResponsavelEmail:respEmail,
+      ProjetoIdId:     projetoId ? parseInt(projetoId) : null,
+      Notas:           document.getElementById('co-notas').value.trim()
+    };
+
+    const res = await spWrite(`${SP}/_api/web/lists/getbytitle('${CO_LIST}')/items`, body, 'POST');
+    const newId = res.d?.Id;
+
+    // 2) Upload do anexo
+    const fileInput = document.getElementById('co-file');
+    if (newId && fileInput?.files?.length) {
+      try { await uploadAttachment(CO_LIST, newId, fileInput.files[0]); }
+      catch(e) { console.warn('Attach error', e); }
+    }
+
+    // 3) Criar tarefas associadas
+    if (newId && _coTarefasTemp.length) {
+      const tarMeta = await spRead(`${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+      const tarType = tarMeta.d.ListItemEntityTypeFullName;
+      for (const t of _coTarefasTemp) {
+        const tarBody = {
+          __metadata:      { type: tarType },
+          Title:           t.titulo,
+          CorreioIdId:     newId,
+          ResponsavelNome: t.respNome,
+          ResponsavelEmail:t.respEmail,
+          DataLimite:      t.dataLimite || null,
+          Prioridade:      t.prioridade,
+          Estado:          t.estado,
+          Notas:           t.notas
+        };
+        await spWrite(`${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')/items`, tarBody, 'POST');
+      }
+    }
+
+    showNotif(
+      `Registo guardado com sucesso${_coTarefasTemp.length ? ` e ${_coTarefasTemp.length} tarefa(s) criada(s)` : ''}.`,
+      'success'
+    );
+    coResetForm();
+    await coLoadAll();
+  } catch(e) {
+    showNotif('Erro ao guardar: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Guardar Registo';
+  }
+}
+
+function coResetForm() {
+  ['co-assunto','co-remetente','co-notas'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('co-tipo').value         = 'Entrada';
+  document.getElementById('co-departamento').value = '';
+  document.getElementById('co-responsavel').value  = '';
+  document.getElementById('co-resp-email').value   = '';
+  document.getElementById('co-projeto').value      = '';
+  document.getElementById('co-file').value         = '';
+  coSetDataHoje();
+  _coTarefasTemp = [];
+  coRenderTarefasTemp();
+}
+
+// ── Detalhe de registo ────────────────────────────
+function coOpenDetail(id) {
+  const r = CO_REGISTOS.find(x => x.id === id);
+  if (!r) return;
+  const modal = document.getElementById('co-detail-modal');
+  const body  = document.getElementById('co-detail-body');
+  const title = document.getElementById('co-detail-title');
+  title.textContent = r.assunto;
+
+  const tarefas = CO_TAREFAS.filter(t => t.correioId === id);
+  const priorBadge = p => {
+    const m = { Alta: 'b-alta', Média: 'b-media', Baixa: 'b-baixa' };
+    return `<span class="badge ${m[p] || 'b-na'}">${p}</span>`;
+  };
+  const estadoBadge = e => {
+    const m = { 'Por fazer': 'b-pfazer', 'Em curso': 'b-emcurso', 'Concluída': 'b-concluido', 'Cancelada': 'b-cancelado' };
+    return `<span class="badge ${m[e] || 'b-na'}">${e}</span>`;
+  };
+  const tipoBadge = r.tipo === 'Entrada'
+    ? `<span class="badge" style="background:var(--blue-l);color:var(--blue-d)">↓ Entrada</span>`
+    : `<span class="badge" style="background:var(--purple-bg);color:var(--purple)">↑ Saída</span>`;
+
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Tipo</div><div>${tipoBadge}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Data</div><div style="font-size:13px">${fd(r.data)}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Remetente / Entidade</div><div style="font-size:13px">${r.remetente || '—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Departamento</div><div style="font-size:13px">${r.departamento || '—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Responsável</div><div style="font-size:13px">${r.respNome || '—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Projeto</div><div style="font-size:13px">${r.projetoNome || '—'}</div></div>
+    </div>
+    ${r.notas ? `<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:16px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Notas</div><div style="font-size:13px;line-height:1.6">${r.notas.replace(/\n/g,'<br>')}</div></div>` : ''}
+    ${r.attachments.length ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📎 Anexo</div>
+        <div class="attach-list">
+          ${r.attachments.map(a=>`<div class="attach-item"><a href="javascript:void(0)" onclick="downloadSPFile('${a.url}','${a.name}')">📄 ${a.name}</a></div>`).join('')}
+        </div>
+      </div>` : ''}
+    <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-top:4px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">📋 Tarefas associadas ${tarefas.length ? `<span style="background:var(--bg3);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:400;color:var(--text2)">${tarefas.length}</span>` : ''}</div>
+      ${!tarefas.length ? '<div style="color:var(--text3);font-size:13px">Sem tarefas associadas a esta carta.</div>' :
+        tarefas.map(t => `
+          <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500;margin-bottom:3px">${t.titulo}</div>
+              <div style="font-size:11px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <span>${t.respNome || 'Sem responsável'}</span>
+                ${t.dataLimite ? `<span>· ${fd(t.dataLimite)}</span>` : ''}
+                <span>· ${priorBadge(t.prioridade)}</span>
+                <span>· ${estadoBadge(t.estado)}</span>
+              </div>
+              ${t.notas ? `<div style="font-size:11px;color:var(--text2);margin-top:4px;font-style:italic">${t.notas}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="btn btn-sm" onclick="coOpenTarEdit(${t.id})">Editar</button>
+              ${t.estado !== 'Concluída' ? `<button class="btn btn-sm btn-green" onclick="coConcluirTarefa(${t.id});coOpenDetail(${r.id})">✓</button>` : ''}
+            </div>
+          </div>`).join('')}
+    </div>
+  `;
+  modal.style.display = 'block';
+}
+function coCloseDetail() { document.getElementById('co-detail-modal').style.display = 'none'; }
+
+// ── Editar tarefa ─────────────────────────────────
+function coOpenTarEdit(id) {
+  const t = CO_TAREFAS.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('co-edit-tar-id').value      = id;
+  document.getElementById('co-edit-tar-titulo').value  = t.titulo;
+  document.getElementById('co-edit-tar-data').value    = t.dataLimite || '';
+  document.getElementById('co-edit-tar-notas').value   = t.notas || '';
+  sv2('co-edit-tar-prior',  t.prioridade || 'Média');
+  sv2('co-edit-tar-estado', t.estado || 'Por fazer');
+  // set responsavel
+  const sel = document.getElementById('co-edit-tar-resp');
+  if (sel) sel.value = t.respNome || '';
+  document.getElementById('co-tar-modal').style.display = 'block';
+}
+function coCloseTarModal() { document.getElementById('co-tar-modal').style.display = 'none'; }
+
+async function coSaveTarefaEdit() {
+  const id      = parseInt(document.getElementById('co-edit-tar-id').value);
+  const titulo  = document.getElementById('co-edit-tar-titulo').value.trim();
+  if (!titulo)  { showNotif('Preenche a descrição.', 'error'); return; }
+  const btn = document.querySelector('#co-tar-modal .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'A guardar...'; }
+  try {
+    const meta    = await spRead(`${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType = meta.d.ListItemEntityTypeFullName;
+    const respSel = document.getElementById('co-edit-tar-resp');
+    const respNome = respSel?.selectedOptions[0]?.text !== '— Selecionar —' ? respSel?.selectedOptions[0]?.text || '' : '';
+    const respEmail= respSel?.selectedOptions[0]?.dataset?.email || '';
+    const dataVal  = document.getElementById('co-edit-tar-data').value || null;
+    await spWrite(
+      `${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')/items(${id})`,
+      {
+        __metadata:      { type: tarType },
+        Title:           titulo,
+        ResponsavelNome: respNome,
+        ResponsavelEmail:respEmail,
+        DataLimite:      dataVal,
+        Prioridade:      document.getElementById('co-edit-tar-prior').value,
+        Estado:          document.getElementById('co-edit-tar-estado').value,
+        Notas:           document.getElementById('co-edit-tar-notas').value.trim()
+      },
+      'MERGE'
+    );
+    showNotif('Tarefa atualizada.', 'success');
+    coCloseTarModal();
+    await coLoadAll();
+    coRenderTarefas();
+    coUpdateBadge();
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+}
+
+async function coConcluirTarefa(id) {
+  try {
+    const meta    = await spRead(`${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType = meta.d.ListItemEntityTypeFullName;
+    await spWrite(
+      `${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')/items(${id})`,
+      { __metadata: { type: tarType }, Estado: 'Concluída' },
+      'MERGE'
+    );
+    showNotif('Tarefa marcada como concluída! ✓', 'success');
+    await coLoadAll();
+    coRenderTarefas();
+    coRenderStats();
+    coUpdateBadge();
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'error');
+  }
+}
+
+// ── Eliminar registo ──────────────────────────────
+async function coDeleteRegisto(id) {
+  const r = CO_REGISTOS.find(x => x.id === id);
+  if (!confirm(`Eliminar o registo "${r?.assunto}"?\nAs tarefas associadas também serão eliminadas.`)) return;
+  try {
+    await getSPToken();
+    const digest = await getDigest();
+    // Eliminar tarefas associadas primeiro
+    const tarDeste = CO_TAREFAS.filter(t => t.correioId === id);
+    for (const t of tarDeste) {
+      await fetch(
+        `${SP}/_api/web/lists/getbytitle('${CO_TAR_LIST}')/items(${t.id})`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${spToken}`, 'X-RequestDigest': digest, 'IF-MATCH': '*' } }
+      );
+    }
+    // Eliminar registo principal
+    await fetch(
+      `${SP}/_api/web/lists/getbytitle('${CO_LIST}')/items(${id})`,
+      { method: 'DELETE', headers: { Authorization: `Bearer ${spToken}`, 'X-RequestDigest': digest, 'IF-MATCH': '*' } }
+    );
+    showNotif('Registo eliminado.', 'success');
+    await coLoadAll();
+    coRenderTabela();
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════ FIM MÓDULO CORREIO ═══════════════
 
 init();
 </script>
