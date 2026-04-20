@@ -7179,6 +7179,14 @@ const AU_LIST='FJ_Ausencias';
 const AU_SALDO_LIST='FJ_SaldoFerias';
 const AU_FERIADOS_LIST='FJ_Feriados';
 
+// Cache dos tipos OData das listas (evita hardcoding e pedidos repetidos)
+const _auListTypes={};
+async function auGetListType(listTitle){
+  if(_auListTypes[listTitle]) return _auListTypes[listTitle];
+  const r=await spRead(`${SP}/_api/web/lists/getbytitle('${listTitle}')?$select=ListItemEntityTypeFullName`);
+  _auListTypes[listTitle]=r.d.ListItemEntityTypeFullName;
+  return _auListTypes[listTitle];
+}
 // ── Init ──
 async function auInit(){
   // Garantir que FJ_Utilizadores está carregado antes de definir o role
@@ -7615,7 +7623,7 @@ async function auAprovarN1(id){
   if(!confirm('Confirmas a aprovação deste pedido (Nível 1)?'))return;
   try{
     const uid=await getCurrentUserId();
-    const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Aprovado N1',DataAprovN1:new Date().toISOString()};
+    const auType=await auGetListType(AU_LIST);const body={__metadata:{type:auType},Estado:'Aprovado N1',DataAprovN1:new Date().toISOString()};
     if(uid)body.AprovadorN1Id=uid;
     await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
     showNotif('Aprovado. O pedido segue para o Presidente Executivo.','success');
@@ -7633,7 +7641,7 @@ async function auAprovarN2(id){
 
 async function auAprovarN2Single(id){
   const uid=await getCurrentUserId();
-  const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Aprovado',DataAprovN2:new Date().toISOString()};
+  const auType2=await auGetListType(AU_LIST);const body={__metadata:{type:auType2},Estado:'Aprovado',DataAprovN2:new Date().toISOString()};
   if(uid)body.AprovadorN2Id=uid;
   await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
 }
@@ -7656,7 +7664,7 @@ async function auConfirmReject(){
   if(!motivo){showNotif('Preenche o motivo da recusa.','error');return;}
   const [id]=raw.split('|');
   try{
-    const body={__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Recusado',MotivoRecusa:motivo};
+    const auType3=await auGetListType(AU_LIST);const body={__metadata:{type:auType3},Estado:'Recusado',MotivoRecusa:motivo};
     await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,body,'MERGE');
     showNotif('Pedido recusado.','success');
     auCloseReject();
@@ -7669,7 +7677,7 @@ async function auCancelar(id){
   if(!confirm('Tens a certeza que queres cancelar este pedido?'))return;
   try{
     await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_LIST}')/items(${id})`,
-      {__metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},Estado:'Cancelado'},'MERGE');
+      {__metadata:{type:await auGetListType(AU_LIST)},Estado:'Cancelado'},'MERGE');
     showNotif('Pedido cancelado.','success');
     await auLoadAll();
     auRenderPedidos();auRenderDashboard();
@@ -7711,7 +7719,7 @@ async function auSaveForm(){
     // Corpo limpo: sem ColaboradorEmail nem AreaColaborador
     // Área e nome são sempre derivados de FJ_Utilizadores em runtime
     const body={
-      __metadata:{type:'SP.Data.FJ_x005f_AusenciasListItem'},
+      __metadata:{type:await auGetListType(AU_LIST)},
       Title:`${tipo} - ${inicio} - ${emailUser}`,
       TipoAusencia:tipo,
       DataInicio:inicio+'T00:00:00Z',
@@ -7813,8 +7821,6 @@ function auCloseSaldoForm(){document.getElementById('au-saldo-form-wrap').classL
 
 
 async function auSaveSaldo(){
-  // Lê o email directamente do data-email da opção seleccionada
-  // (o campo hidden só é preenchido quando o utilizador muda a selecção via onUserSelChange)
   const selEl=document.getElementById('au-sal-col');
   const emailFromOpt=(selEl?.selectedOptions?.[0]?.dataset?.email||'').toLowerCase();
   const emailFromHidden=(document.getElementById('au-sal-email')?.value||'').toLowerCase();
@@ -7825,9 +7831,19 @@ async function auSaveSaldo(){
   if(!email){showNotif('Seleciona um colaborador.','error');return;}
   if(!ano||isNaN(direito)){showNotif('Preenche o ano e os dias com direito.','error');return;}
   try{
+    // Busca o tipo OData correcto directamente ao SharePoint
+    // evita erros de __metadata.type hardcodado
+    const listMeta=await spRead(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')?$select=ListItemEntityTypeFullName`);
+    const listType=listMeta.d.ListItemEntityTypeFullName;
     const existe=AU_SALDOS.find(s=>s.email===email&&s.ano===ano);
-    const body={__metadata:{type:'SP.Data.FJ_x005f_SaldoFeriasListItem'},
-      Title:`${email} - ${ano}`,ColaboradorEmail:email,Ano:ano,DiasDireito:direito,DiasTransitados:trans};
+    const body={
+      __metadata:{type:listType},
+      Title:`${email} - ${ano}`,
+      ColaboradorEmail:email,
+      Ano:ano,
+      DiasDireito:direito,
+      DiasTransitados:trans
+    };
     if(existe){
       await spWrite(`${SP}/_api/web/lists/getbytitle('${AU_SALDO_LIST}')/items(${existe.id})`,body,'MERGE');
     }else{
@@ -7838,8 +7854,12 @@ async function auSaveSaldo(){
     await auLoadAll();
     auRenderAdmin();
     auRenderAdminTable();
-  }catch(e){showNotif('Erro ao guardar: '+e.message,'error');}
+  }catch(e){
+    console.error('auSaveSaldo erro:',e);
+    showNotif('Erro ao guardar: '+e.message,'error');
+  }
 }
+
 
 // ═══════════════ FIM MÓDULO AUSÊNCIAS ═══════════════
 
