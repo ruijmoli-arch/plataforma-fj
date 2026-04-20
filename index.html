@@ -1685,8 +1685,9 @@ tr:hover td{background:var(--bg3)}
           <textarea id="co-notas" placeholder="Descrição do conteúdo e contexto do correio..."></textarea>
         </div>
         <div class="fg" style="grid-column:1/-1">
-          <label>Anexo (documento digitalizado)</label>
-          <input type="file" id="co-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="padding:6px">
+          <label>Anexos (documentos digitalizados)</label>
+          <input type="file" id="co-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx,.ppt,.pptx" multiple style="padding:6px" onchange="coPreviewFiles()">
+          <div class="attach-list" id="co-attach-preview" style="margin-top:6px"></div>
         </div>
       </div>
 
@@ -2881,15 +2882,22 @@ function renderInlineTarefas(){
     </div>`).join('');
 }
 async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
-  for(const t of feInlineTarefas){
-    const body={__metadata:{type:'SP.Data.FJ_x005f_TarefasListItem'},
-      Title:t.titulo,Departamento:document.getElementById('fe-dep').value,
-      Notas:'Origem: Reunião Externa - '+reuniaoTitulo
-    };
-    if(t.resp)body.Notas=(body.Notas||'')+' | Responsável: '+t.resp;
-    if(t.data)body.DataLimite=t.data+'T00:00:00Z';
-    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
-  }
+  if(!feInlineTarefas.length) return;
+  try{
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')?$select=ListItemEntityTypeFullName`);
+    const listType=meta.d.ListItemEntityTypeFullName;
+    for(const t of feInlineTarefas){
+      const body={__metadata:{type:listType},
+        Title:t.titulo,
+        Departamento:document.getElementById('fe-dep').value,
+        Notas:'Origem: Reunião Externa - '+reuniaoTitulo
+      };
+      if(reuniaoId) body.ReuniaoExternaIdId=parseInt(reuniaoId);
+      if(t.resp)body.Responsavel=t.resp;
+      if(t.data)body.DataLimite=t.data+'T00:00:00Z';
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
+    }
+  }catch(e){console.warn('saveInlineTarefas error:',e.message);}
   feInlineTarefas=[];
   renderInlineTarefas();
 }
@@ -2897,15 +2905,16 @@ async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
 // TAREFAS
 async function loadRnTarefas(){
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*&$orderby=DataLimite asc&$top=500`);
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items?$select=*,ReuniaoExternaId/Title&$expand=ReuniaoExternaId&$orderby=DataLimite asc&$top=500`);
     rnTarefas=d.d.results.map(r=>({
       id:r.Id,etag:r.__metadata?.etag||'*',
       titulo:r.Title||'',notas:r.Notas||'',
       responsavel:r.Responsavel||'',
       data:r.DataLimite?r.DataLimite.split('T')[0]:'',
       estado:r.Estado||'Por fazer',prioridade:r.Prioridade||'Média',
-      departamento:normalizeDep(r.Departamento||''),projetoId:r.ProjetoIdId||null,
-      acaoId:r.AcaoIdId||null
+      departamento:normalizeDep(r.Departamento||''),
+      reuniaoOrigem:r.ReuniaoExternaId?.Title||'',
+      projetoId:null,acaoId:null
     }));
     renderTarefasTable();renderTarefasStats();
   }catch(e){console.warn('Tarefas error',e);}
@@ -2974,16 +2983,18 @@ async function saveTarefa(){
   if(!titulo){alert('Por favor indique o título.');return;}
   const btn=el('save-tar-btn');btn.textContent='A guardar...';btn.disabled=true;
   try{
-    const body={__metadata:{type:'SP.Data.FJ_x005f_TarefasListItem'},
+    // Obter tipo OData correcto da lista
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')?$select=ListItemEntityTypeFullName`);
+    const listType=meta.d.ListItemEntityTypeFullName;
+    const body={__metadata:{type:listType},
       Title:titulo,Notas:gv2t('ft-desc'),Estado:gv('ft-estado'),
       Prioridade:gv('ft-prior'),Departamento:gv('ft-dep')
     };
-    const projId=gv('ft-proj');if(projId)body.ProjetoIdId=parseInt(projId);
     if(gv('ft-data'))body.DataLimite=gv('ft-data')+'T00:00:00Z';
     if(rnEditTarId){
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items(${rnEditTarId})`,body,'MERGE','*');
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items(${rnEditTarId})`,body,'MERGE','*');
     }else{
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items`,body,'POST');
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
     }
     closeRnTarForm();await loadRnTarefas();showNotif('Tarefa guardada!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
@@ -2993,7 +3004,7 @@ async function deleteTar(id){
   if(!confirm('Eliminar esta tarefa?'))return;
   try{
     await getSPToken();const digest=await getDigest();
-    await fetch(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items(${id})`,{method:'DELETE',headers:{Authorization:`Bearer ${spToken}`,'X-RequestDigest':digest,'IF-MATCH':'*'}});
+    await fetch(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items(${id})`,{method:'DELETE',headers:{Authorization:`Bearer ${spToken}`,'X-RequestDigest':digest,'IF-MATCH':'*'}});
     await loadRnTarefas();showNotif('Eliminado.','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
@@ -3758,30 +3769,68 @@ async function loadAcoes(){
 }
 async function loadTarefas(){
   let all=[];
+
+  // ── 1) FJ_Tarefas (Planeamento) ────────────────
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Tarefas')/items?$select=*,AttachmentFiles&$expand=AttachmentFiles&$orderby=Id desc&$top=2000`);
     const ft=d.d.results.map(r=>({
-      id:'f_'+r.Id,spId:r.Id,
+      id:'f_'+r.Id, spId:r.Id, lista:'FJ_Tarefas', origem:'Plano',
       titulo:r.Title||'',
       estado:r.Estado||r.Status||'todo',
       dataLimite:r.DataLimite?r.DataLimite.split('T')[0]:(r.due_on||''),
       dataInicio:r.DataInicio?r.DataInicio.split('T')[0]:'',
-      semana:r.Semana||null,
-      anoFJ:r.AnoFJ||null,
-      notas:r.Notas||'',
+      semana:r.Semana||null, anoFJ:r.AnoFJ||null, notas:r.Notas||'',
       prioridade:r.Prioridade||'Média',
-      projetoId:r.ProjetoIdId||null,
-      acaoId:r.AcaoIdId||null,
-      responsavel:r.Responsavel||'',
+      projetoId:r.ProjetoIdId||null, acaoId:r.AcaoIdId||null,
+      responsavel:r.Responsavel||'', responsavelEmail:'',
       dep:normalizeDep(r.Departamento||''),
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     all=[...all,...ft];
-    showNotif(`✓ ${ft.length} plTarefas carregadas`,'success');
-  }catch(e){
-    showNotif('Erro a carregar plTarefas: '+e.message,'error');
-    console.error('ERRO Factorial_Tarefas:',e.message);
-  }
+    showNotif(`✓ ${ft.length} tarefas de planeamento`,'success');
+  }catch(e){showNotif('Erro FJ_Tarefas: '+e.message,'error');console.error(e);}
+
+  // ── 2) FJ_TarefasReuniao ────────────────────────
+  try{
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items?$select=*,AttachmentFiles,ReuniaoExternaId/Title&$expand=AttachmentFiles,ReuniaoExternaId&$orderby=DataLimite asc&$top=1000`);
+    const rt=d.d.results.map(r=>({
+      id:'r_'+r.Id, spId:r.Id, lista:'FJ_TarefasReuniao', origem:'Reunião',
+      titulo:r.Title||'',
+      estado:r.Estado||'Por fazer',
+      dataLimite:r.DataLimite?r.DataLimite.split('T')[0]:'',
+      dataInicio:'', semana:null, anoFJ:null, notas:r.Notas||'',
+      prioridade:r.Prioridade||'Média',
+      projetoId:null, acaoId:null,
+      responsavel:r.Responsavel||'', responsavelEmail:'',
+      dep:normalizeDep(r.Departamento||''),
+      contexto:r.ReuniaoExternaId?.Title||'',
+      attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
+    }));
+    all=[...all,...rt];
+    showNotif(`✓ ${rt.length} tarefas de reuniões`,'success');
+  }catch(e){console.warn('Erro FJ_TarefasReuniao:',e.message);}
+
+  // ── 3) FJ_CorreioTarefas ────────────────────────
+  try{
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_CorreioTarefas')/items?$select=*,CorreioId/Id,CorreioId/Title&$expand=CorreioId&$orderby=DataLimite asc&$top=1000`);
+    const ct=d.d.results.map(r=>({
+      id:'c_'+r.Id, spId:r.Id, lista:'FJ_CorreioTarefas', origem:'Correio',
+      titulo:r.Title||'',
+      estado:r.Estado||'Por fazer',
+      dataLimite:r.DataLimite?r.DataLimite.split('T')[0]:'',
+      dataInicio:'', semana:null, anoFJ:null, notas:r.Notas||'',
+      prioridade:r.Prioridade||'Média',
+      projetoId:null, acaoId:null,
+      responsavel:r.ResponsavelNome||'', responsavelEmail:(r.ResponsavelEmail||'').toLowerCase(),
+      dep:'',
+      contexto:r.CorreioId?.Title||'',
+      attachments:[]
+    }));
+    all=[...all,...ct];
+    showNotif(`✓ ${ct.length} tarefas de correio`,'success');
+  }catch(e){console.warn('Erro FJ_CorreioTarefas:',e.message);}
+
+  // Calcular semana/ano a partir de dataLimite quando em falta
   all=all.map(t=>{
     if((!t.semana||!t.anoFJ)&&t.dataLimite){
       try{const d=new Date(t.dataLimite+'T12:00:00');t.semana=isoWeek(d);t.anoFJ=d.getFullYear();}catch(e){}
@@ -3882,12 +3931,41 @@ function renderHier(){
   const dep=gv('ff-h-dep');
   const c=el('hier-container');
   const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
-  // Mostrar projeto se o seu dep bate, ou se tiver alguma ação do dep selecionado
-  const projs=plProjetos.filter(p=>!dep||normDep(p.dep)===normDep(dep)||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&normDep(a.dep)===normDep(dep)));
-  if(!projs.length){c.innerHTML='<div class="empty">Sem projetos carregados.</div>';return;}
+
+  // ── Permissões ─────────────────────────────────
+  const isDir=plCanSeeAll();
+  const myEquipas=currentUserFJ?.equipa||[];
+  const myName=(user?.name||'').toLowerCase();
+  const matchMe=nome=>nome&&myName&&nome.toLowerCase().split(/\s+/).some(w=>w.length>2&&myName.split(/\s+/).some(m=>m.includes(w)||w.includes(m)));
+  const myEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
+
+  // Membro pode ver uma ação se: dep dela = seu dept, ou é responsável dela, ou proj dela está no seu dept
+  const canViewAcao=(a,proj)=>{
+    if(isDir) return true;
+    if(myEquipas.some(e=>normDep(e)===normDep(a.dep))) return true;
+    if(matchMe(a.responsavel)) return true;
+    if(proj&&myEquipas.some(e=>normDep(e)===normDep(proj.dep))) return true;
+    return false;
+  };
+  // Membro pode ver um projeto se: dep dele = seu dept, ou é responsável, ou tem pelo menos uma ação visível
+  const canViewProj=p=>{
+    if(isDir) return true;
+    if(myEquipas.some(e=>normDep(e)===normDep(p.dep))) return true;
+    if(matchMe(p.responsavel)) return true;
+    return plAcoes.some(a=>String(a.projetoId)===String(p.id)&&canViewAcao(a,p));
+  };
+
+  // Aplicar filtro de dep do toolbar + permissões
+  const projs=plProjetos.filter(p=>{
+    if(!canViewProj(p)) return false;
+    if(!dep) return true;
+    return normDep(p.dep)===normDep(dep)||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&normDep(a.dep)===normDep(dep));
+  });
+
+  if(!projs.length){c.innerHTML='<div class="empty">Sem projetos para mostrar.</div>';return;}
   c.innerHTML=projs.map(p=>{
-    const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id));
-    // Tarefas não afetas a nenhuma ação mas com projetoId deste projeto, OU sem ação e sem projeto (mostrar em todos)
+    // Filtrar ações visíveis para este membro
+    const pAcoes=plAcoes.filter(a=>String(a.projetoId)===String(p.id)&&canViewAcao(a,p));
     const tarSemAcao=plTarefas.filter(t=>!t.acaoId&&(String(t.projetoId)===String(p.id)));
     const tarTotal=plTarefas.filter(t=>String(t.projetoId)===String(p.id)||pAcoes.some(a=>String(t.acaoId)===String(a.id)));
     const concTotal=tarTotal.filter(t=>t.estado==='Concluída').length;
@@ -3899,7 +3977,7 @@ function renderHier(){
         <span style="font-size:14px;font-weight:700;color:var(--g1);flex:1">${p.nome}</span>
         ${depB(p.dep)}
         <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} tarefas${pct!==null?' · '+pct+'% conc.':''}</span>
-        <button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>
+        ${isDir?`<button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>`:''}
         <svg id="hier-arrow-${p.id}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="transition:transform .2s"><path d="M4 6l4 4 4-4"/></svg>
       </div>
       <div class="hier-acao-wrap" id="hier-plAcoes-${p.id}">
@@ -3912,8 +3990,8 @@ function renderHier(){
             <span class="hier-acao-name">${a.nome}</span>
             ${a.dep?depB(a.dep):''}
             <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} tarefas</span>
-            <button class="btn btn-sm" onclick="event.stopPropagation();openAcaoForm(${p.id},${a.id})">Editar</button>
-            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delAcao(${a.id})">✕</button>
+            ${isDir?`<button class="btn btn-sm" onclick="event.stopPropagation();openAcaoForm(${p.id},${a.id})">Editar</button>`:''}
+            ${isDir?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delAcao(${a.id})">✕</button>`:''}
             <button class="btn btn-sm btn-or" onclick="event.stopPropagation();openTarFormForAcao(${a.id})">+ Tarefa</button>
           </div>
           <div class="hier-tasks" id="hier-t-${a.id}">
@@ -3924,7 +4002,7 @@ function renderHier(){
           <div style="border-top:0.5px solid var(--bd);background:var(--bg2)">
             <div style="padding:8px 16px 6px;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px">
               Tarefas sem ação atribuída (${tarSemAcao.length})
-              <button class="btn btn-sm" onclick="openTarFormForProj(${p.id})" style="font-size:10px">+ Tarefa</button>
+              ${isDir?`<button class="btn btn-sm" onclick="openTarFormForProj(${p.id})" style="font-size:10px">+ Tarefa</button>`:''}
             </div>
             <table style="width:100%;border-collapse:collapse">
               <colgroup><col style="width:4%"><col style="width:36%"><col style="width:20%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:5%"></colgroup>
@@ -3936,12 +4014,12 @@ function renderHier(){
                 <td style="font-size:11px;padding:7px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
                 <td style="padding:7px 4px">${estB(t.prioridade)}</td>
                 <td style="padding:7px 4px">${estB(t.estado)}</td>
-                <td style="padding:7px 4px"><button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button></td>
+                <td style="padding:7px 4px">${isDir?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button>`:''}</td>
               </tr>`).join('')}
               </tbody>
             </table>
           </div>`:''}
-        ${!pAcoes.length&&!tarSemAcao.length?`<div style="padding:12px 24px;font-size:13px;color:var(--tx3)">Sem ações nem plTarefas. <button class="btn btn-sm btn-primary" onclick="openAcaoForm(${p.id})">+ Criar ação</button></div>`:''}
+        ${!pAcoes.length&&!tarSemAcao.length?`<div style="padding:12px 24px;font-size:13px;color:var(--tx3)">Sem ações nem plTarefas.${isDir?` <button class="btn btn-sm btn-primary" onclick="openAcaoForm(${p.id})">+ Criar ação</button>`:''}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3962,7 +4040,7 @@ function renderHier(){
         <td style="font-size:12px;padding:8px 4px">${fd(t.dataLimite)}</td>
         <td style="padding:8px 4px">${estB(t.prioridade)}</td>
         <td style="padding:8px 4px">${estB(t.estado)}</td>
-        <td style="padding:8px 4px"><button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button></td>
+        <td style="padding:8px 4px">${plCanSeeAll()?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button>`:''}</td>
       </tr>`).join('')}</tbody>
     </table>`;
     c.appendChild(div);
@@ -3991,7 +4069,7 @@ function toggleHierAcao(acaoId){
           <td style="font-size:11px;padding:6px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
           <td style="padding:6px 4px">${estB(t.prioridade)}</td>
           <td style="padding:6px 4px">${estB(t.estado)}</td>
-          <td style="padding:6px 4px"><button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')" title="Editar tarefa" style="font-size:13px;padding:3px 8px">✎</button></td>
+          <td style="padding:6px 4px">${plCanSeeAll()?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')" title="Editar tarefa" style="font-size:13px;padding:3px 8px">✎</button>`:''}</td>
         </tr>`).join('')}
       </table>`:'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Sem plTarefas nesta ação.</div>'}
       ${kps.length?`<div style="margin-top:4px;background:#F5F3FF;border-left:4px solid #7C3AED;border-radius:0 6px 6px 0;padding:10px 14px">
@@ -4417,11 +4495,11 @@ function setView(v){
 }
 
 function plInitSemPermissions(){
-  // Oculta os botões de Departamento e Colaborador para membros não-diretores
-  if(!plCanSeeAll()){
-    el('vt-eq')?.style.setProperty('display','none');
-    el('vt-col')?.style.setProperty('display','none');
-  }
+  const canSee = plCanSeeAll();
+  const eq  = el('vt-eq');
+  const col = el('vt-col');
+  if(eq)  eq.style.display  = canSee ? '' : 'none';
+  if(col) col.style.display = canSee ? '' : 'none';
 }
 
 function chgWeek(d){plViewWeek+=d;if(plViewWeek<1){plViewWeek=52;plViewYear--;}else if(plViewWeek>52){plViewWeek=1;plViewYear++;}renderSem();}
@@ -4488,70 +4566,97 @@ function renderSem(){
     return;
   }
 
-  // Obter projetoId efectivo de uma tarefa (via ação se necessário)
   const getProjId=t=>{
     if(t.projetoId) return String(t.projetoId);
     const a=plAcoes.find(x=>String(x.id)===String(t.acaoId));
     return a?.projetoId?String(a.projetoId):null;
   };
 
-  // Agrupar Projeto > Ação > Tarefa
-  const projIds=[...new Set(list.map(getProjId).filter(Boolean))];
+  const planoTasks   = list.filter(t=>t.lista==='FJ_Tarefas');
+  const reuniaoTasks = list.filter(t=>t.lista==='FJ_TarefasReuniao');
+  const correioTasks = list.filter(t=>t.lista==='FJ_CorreioTarefas');
   let html='';
 
-  projIds.forEach(projId=>{
-    const proj=plProjetos.find(p=>String(p.id)===projId);
-    const projNome=proj?.nome||`Projeto #${projId}`;
-    const projDep=proj?.dep||'';
-    const projTarefas=list.filter(t=>getProjId(t)===projId);
-    const atrasadasProj=projTarefas.filter(t=>new Date(t.dataLimite+'T23:59:59')<hoje).length;
-
-    html+=`<tr>
-      <td colspan="7" style="background:var(--bg3);padding:9px 14px;border-top:2px solid var(--mod-planeamento);border-bottom:0.5px solid var(--border)">
+  // ══ BLOCO 1: Planeamento ══
+  if(planoTasks.length){
+    html+=`<tr><td colspan="7" style="background:var(--mod-planeamento);padding:8px 14px">
+      <span style="font-weight:700;font-size:12px;color:#fff;text-transform:uppercase;letter-spacing:.07em">📊 Planeamento</span>
+      <span style="font-size:11px;color:rgba(255,255,255,.7);margin-left:8px">${planoTasks.length} tarefa${planoTasks.length!==1?'s':''}</span>
+    </td></tr>`;
+    const projIds=[...new Set(planoTasks.map(getProjId))];
+    projIds.filter(Boolean).forEach(projId=>{
+      const proj=plProjetos.find(p=>String(p.id)===projId);
+      const projNome=proj?.nome||`Projeto #${projId}`;
+      const projDep=proj?.dep||'';
+      const projTarefas=planoTasks.filter(t=>getProjId(t)===projId);
+      const atr=projTarefas.filter(t=>new Date(t.dataLimite+'T23:59:59')<hoje).length;
+      html+=`<tr><td colspan="7" style="background:var(--bg3);padding:8px 14px;border-top:1.5px solid var(--mod-planeamento-mid)">
         <div style="display:flex;align-items:center;gap:8px">
-          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="var(--mod-planeamento)" stroke-width="2"><rect x="1" y="1" width="6" height="4" rx="1"/><rect x="9" y="1" width="6" height="4" rx="1"/><rect x="5" y="11" width="6" height="4" rx="1"/><line x1="4" y1="5" x2="4" y2="13"/><line x1="12" y1="5" x2="8" y2="13"/><line x1="4" y1="9" x2="8" y2="11"/></svg>
-          <span style="font-weight:700;font-size:13px;color:var(--mod-planeamento)">${projNome}</span>
+          <span style="font-weight:700;font-size:13px;color:var(--mod-planeamento)">📁 ${projNome}</span>
           ${projDep?`<span class="badge" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">${projDep}</span>`:''}
-          <span style="font-size:11px;color:var(--text2);margin-left:4px">${projTarefas.length} tarefa${projTarefas.length!==1?'s':''}</span>
-          ${atrasadasProj?`<span style="font-size:11px;color:var(--red);font-weight:600">· ${atrasadasProj} atrasada${atrasadasProj!==1?'s':''} ⚠️</span>`:''}
+          <span style="font-size:11px;color:var(--text2)">${projTarefas.length} tarefa${projTarefas.length!==1?'s':''}</span>
+          ${atr?`<span style="font-size:11px;color:var(--red);font-weight:600">· ${atr} atrasada${atr!==1?'s':''} ⚠️</span>`:''}
         </div>
-      </td>
-    </tr>`;
-
-    // Agrupar por ação dentro do projeto
-    const acaoIds=[...new Set(projTarefas.map(t=>t.acaoId?String(t.acaoId):null))];
-    acaoIds.filter(Boolean).forEach(acaoId=>{
-      const acao=plAcoes.find(a=>String(a.id)===acaoId);
-      const acaoNome=acao?.nome||`Ação #${acaoId}`;
-      const acaoTarefas=projTarefas.filter(t=>String(t.acaoId)===acaoId);
-      html+=`<tr>
-        <td colspan="7" style="background:#f0fdf4;padding:6px 14px 6px 28px;border-bottom:0.5px solid var(--border)">
-          <span style="font-size:11px;font-weight:600;color:var(--mod-planeamento-mid)">↳ ${acaoNome}</span>
-          <span style="font-size:11px;color:var(--text3);margin-left:6px">(${acaoTarefas.length})</span>
-        </td>
-      </tr>`;
-      acaoTarefas.forEach(t=>{html+=_semTarefaRow(t,hoje);});
-    });
-
-    // Tarefas do projeto sem ação
-    const semAcao=projTarefas.filter(t=>!t.acaoId);
-    if(semAcao.length){
-      html+=`<tr><td colspan="7" style="background:#fafafa;padding:6px 14px 6px 28px;border-bottom:0.5px solid var(--border)">
-        <span style="font-size:11px;font-weight:600;color:var(--text3)">↳ Sem ação atribuída (${semAcao.length})</span>
       </td></tr>`;
-      semAcao.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+      const acaoIds=[...new Set(projTarefas.map(t=>t.acaoId?String(t.acaoId):null))];
+      acaoIds.filter(Boolean).forEach(acaoId=>{
+        const acao=plAcoes.find(a=>String(a.id)===acaoId);
+        const acaoTarefas=projTarefas.filter(t=>String(t.acaoId)===acaoId);
+        html+=`<tr><td colspan="7" style="background:#f0fdf4;padding:5px 14px 5px 28px;border-bottom:0.5px solid var(--border)">
+          <span style="font-size:11px;font-weight:600;color:var(--mod-planeamento-mid)">↳ ${acao?.nome||'Ação #'+acaoId}</span>
+          <span style="font-size:11px;color:var(--text3);margin-left:6px">(${acaoTarefas.length})</span>
+        </td></tr>`;
+        acaoTarefas.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+      });
+      const semAcao=projTarefas.filter(t=>!t.acaoId);
+      if(semAcao.length){
+        html+=`<tr><td colspan="7" style="background:#fafafa;padding:5px 14px 5px 28px;border-bottom:0.5px solid var(--border)">
+          <span style="font-size:11px;color:var(--text3)">↳ Sem ação (${semAcao.length})</span>
+        </td></tr>`;
+        semAcao.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+      }
+    });
+    const semProj=planoTasks.filter(t=>!getProjId(t));
+    if(semProj.length){
+      html+=`<tr><td colspan="7" style="background:#fafafa;padding:6px 14px;border-top:1px solid var(--border)">
+        <span style="font-size:11px;font-weight:600;color:var(--text3)">📋 Sem projeto (${semProj.length})</span>
+      </td></tr>`;
+      semProj.forEach(t=>{html+=_semTarefaRow(t,hoje);});
     }
-  });
+  }
 
-  // Tarefas sem projeto
-  const semProj=list.filter(t=>!getProjId(t));
-  if(semProj.length){
-    html+=`<tr>
-      <td colspan="7" style="background:var(--bg3);padding:9px 14px;border-top:2px solid var(--border2);border-bottom:0.5px solid var(--border)">
-        <span style="font-weight:700;font-size:13px;color:var(--text2)">📋 Sem projeto (${semProj.length})</span>
-      </td>
-    </tr>`;
-    semProj.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+  // ══ BLOCO 2: Reuniões ══
+  if(reuniaoTasks.length){
+    html+=`<tr><td colspan="7" style="background:var(--mod-reunioes);padding:8px 14px">
+      <span style="font-weight:700;font-size:12px;color:#fff;text-transform:uppercase;letter-spacing:.07em">🤝 Reuniões</span>
+      <span style="font-size:11px;color:rgba(255,255,255,.7);margin-left:8px">${reuniaoTasks.length} tarefa${reuniaoTasks.length!==1?'s':''}</span>
+    </td></tr>`;
+    const origens=[...new Set(reuniaoTasks.map(t=>t.contexto||''))];
+    origens.forEach(orig=>{
+      const grupo=reuniaoTasks.filter(t=>(t.contexto||'')===orig);
+      if(orig) html+=`<tr><td colspan="7" style="background:#eff6ff;padding:5px 14px 5px 28px;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:11px;font-weight:600;color:var(--mod-reunioes)">↳ ${orig}</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:6px">(${grupo.length})</span>
+      </td></tr>`;
+      grupo.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+    });
+  }
+
+  // ══ BLOCO 3: Correio ══
+  if(correioTasks.length){
+    html+=`<tr><td colspan="7" style="background:var(--mod-correio);padding:8px 14px">
+      <span style="font-weight:700;font-size:12px;color:#fff;text-transform:uppercase;letter-spacing:.07em">📬 Correio</span>
+      <span style="font-size:11px;color:rgba(255,255,255,.7);margin-left:8px">${correioTasks.length} tarefa${correioTasks.length!==1?'s':''}</span>
+    </td></tr>`;
+    const assuntos=[...new Set(correioTasks.map(t=>t.contexto||''))];
+    assuntos.forEach(assunto=>{
+      const grupo=correioTasks.filter(t=>(t.contexto||'')===assunto);
+      if(assunto) html+=`<tr><td colspan="7" style="background:#eef2ff;padding:5px 14px 5px 28px;border-bottom:0.5px solid var(--border)">
+        <span style="font-size:11px;font-weight:600;color:var(--mod-correio-mid)">↳ ${assunto}</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:6px">(${grupo.length})</span>
+      </td></tr>`;
+      grupo.forEach(t=>{html+=_semTarefaRow(t,hoje);});
+    });
   }
 
   tbody.innerHTML=html;
@@ -4566,8 +4671,9 @@ function _semTarefaRow(t,hoje){
     ?`<span style="${atrasada?'color:var(--red);font-weight:600':''}">${atrasada?'⚠️ ':''}${fd(t.dataLimite)}</span>`
     :'—';
   const attHtml=t.attachments?.length
-    ?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`
+    ?`<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px">${t.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\'")}');event.stopPropagation()" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`
     :'';
+  const canEdit=t.lista==='FJ_Tarefas';
   return`<tr class="${t.estado==='Concluída'?'done-row':''}" style="${atrasada?'background:#fff8f8':''}">
     <td style="padding:7px 12px 7px 44px"><input type="checkbox" ${t.estado==='Concluída'?'checked':''} onchange="toggleTar('${t.id}',this.checked)" style="cursor:pointer;accent-color:var(--g5);width:14px;height:14px"></td>
     <td style="font-weight:500;padding:7px 4px;font-size:13px">${t.titulo}${attHtml}</td>
@@ -4575,14 +4681,21 @@ function _semTarefaRow(t,hoje){
     <td style="padding:7px 4px">${dataStr}</td>
     <td style="padding:7px 4px">${estB(t.prioridade)}</td>
     <td style="padding:7px 4px">${estB(t.estado)}</td>
-    <td style="padding:7px 4px"><button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">Editar</button></td>
+    <td style="padding:7px 4px">${canEdit?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">Editar</button>`:''}</td>
   </tr>`;
 }
+
 async function toggleTar(compId,checked){
   const t=plTarefas.find(x=>x.id===compId);if(!t)return;
   const novoEst=checked?'Concluída':'Em curso';
+  const typeMap={
+    'FJ_Tarefas':        'SP.Data.FJ_x005f_TarefasListItem',
+    'FJ_TarefasReuniao': 'SP.Data.FJ_x005f_TarefasReuniaoListItem',
+    'FJ_CorreioTarefas': 'SP.Data.FJ_x005f_CorreioTarefasListItem'
+  };
   try{
-    const body={__metadata:{type:`SP.Data.${t.lista==='FJ_Tarefas'?'FJ_x005f_TarefasListItem':'FJ_x005f_TarefasListItem'}`},Estado:novoEst};
+    const listType = typeMap[t.lista] || typeMap['FJ_Tarefas'];
+    const body={__metadata:{type:listType},Estado:novoEst};
     await spWrite(`${SP}/_api/web/lists/getbytitle('${t.lista}')/items(${t.spId})`,body,'MERGE','*');
     t.estado=novoEst;renderSem();renderHier();renderDash();showNotif('✓ Atualizado!','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
@@ -8670,6 +8783,37 @@ async function coSaveRegisto() {
   }
 }
 
+// ── Preview de ficheiros selecionados ─────────────
+function coPreviewFiles() {
+  const input   = document.getElementById('co-file');
+  const preview = document.getElementById('co-attach-preview');
+  if (!preview) return;
+  const files   = Array.from(input?.files || []);
+  if (!files.length) { preview.innerHTML = ''; return; }
+  const icons = { pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📑', pptx:'📑', jpg:'🖼️', jpeg:'🖼️', png:'🖼️' };
+  preview.innerHTML = files.map((f, i) => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    const icon = icons[ext] || '📎';
+    const size = f.size < 1024*1024 ? `${(f.size/1024).toFixed(0)} KB` : `${(f.size/1024/1024).toFixed(1)} MB`;
+    return `<div class="attach-item" style="display:flex;align-items:center;gap:6px">
+      <span>${icon}</span>
+      <span style="font-weight:500">${f.name}</span>
+      <span style="color:var(--text3);font-size:11px">${size}</span>
+      <button class="attach-remove" title="Remover" onclick="coRemoveFile(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function coRemoveFile(indexToRemove) {
+  const input = document.getElementById('co-file');
+  if (!input) return;
+  // Recriar FileList sem o ficheiro removido usando DataTransfer
+  const dt = new DataTransfer();
+  Array.from(input.files).forEach((f, i) => { if (i !== indexToRemove) dt.items.add(f); });
+  input.files = dt.files;
+  coPreviewFiles();
+}
+
 function coResetForm() {
   ['co-assunto','co-remetente','co-notas'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('co-tipo').value         = 'Entrada';
@@ -8678,6 +8822,8 @@ function coResetForm() {
   document.getElementById('co-resp-email').value   = '';
   document.getElementById('co-projeto').value      = '';
   document.getElementById('co-file').value         = '';
+  const preview = document.getElementById('co-attach-preview');
+  if (preview) preview.innerHTML = '';
   coSetDataHoje();
   _coTarefasTemp = [];
   coRenderTarefasTemp();
