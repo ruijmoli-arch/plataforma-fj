@@ -1951,7 +1951,7 @@ function determinarFinanceRole(u){
   const equipas = u.equipa || [];
   
   // Calcular departamentos operacionais onde é Diretor de Área
-  const DEPTS_OPERACIONAIS = ['Op. Norte', 'Op. Sul', 'Impacto', 'INOV', 'Financeiro'];
+  const DEPTS_OPERACIONAIS = ['Op.Norte', 'Op.Sul', 'Impacto', 'INOV', 'Financeiro'];
   _financeDepts = [];
   
   if(cargo === 'Diretor'){
@@ -1969,11 +1969,14 @@ function determinarFinanceRole(u){
 }
 
 // Verificar se utilizador pode ver um projeto financeiro
+// ── HELPERS DE PERMISSÃO (fonte de verdade: FJ_Utilizadores) ──
+function userEquipas(){ return currentUserFJ?.equipa || []; }
+function userCargo(){   return currentUserFJ?.cargo  || ''; }
+function userHasEquipa(equipa){ return userEquipas().includes(equipa); }
+
 // Verifica se o utilizador pertence à equipa Financeiro (independentemente do cargo)
-// Usado para dar visibilidade total em modo leitura aos membros da equipa financeira
 function isFinanceiroEquipa(){
-  if(userGroups.includes(GROUPS.Financeiro)) return true;
-  return (currentUserFJ?.equipa || []).includes('Financeiro');
+  return userHasEquipa('Financeiro');
 }
 
 function canViewFinanceProject(projetoId){
@@ -2090,34 +2093,38 @@ function getUserName(email){
   return u?.name||email||'—';
 }
 
-// Determinar role do utilizador atual baseado nos grupos
+// Determinar role do utilizador atual (fonte: FJ_Utilizadores)
 function getCurrentUserRole(){
-  if(userGroups.includes(GROUPS.CA))return'pca';
-  if(userGroups.includes(GROUPS.Gestao))return'pe';
-  if(userGroups.includes(GROUPS.Financeiro))return'df';
-  if([GROUPS.OpNorte,GROUPS.OpSul,GROUPS.Impacto].some(g=>userGroups.includes(g)))return'area_director';
-  return'worker';
+  const cargo = userCargo();
+  const equipas = userEquipas();
+  if(cargo === 'Presidente Executivo') return 'pe';
+  if(equipas.includes('CAdm') && cargo === 'Diretor') return 'pca';
+  if(cargo === 'Diretor' && equipas.includes('Financeiro')) return 'df';
+  if(cargo === 'Diretor') return 'area_director';
+  return 'worker';
 }
 
-// Verificar se utilizador atual é admin (apenas CAdm pode gerir utilizadores)
+// Verificar se utilizador atual é admin (apenas CAdm)
 function isAdmin(){
-  return userGroups.includes(GROUPS.CA);
+  return userHasEquipa('CAdm');
 }
 
-function hasGroupAccess(groupId){return userGroups.includes(groupId)||userGroups.includes(GROUPS.CA);}
+// Verificar se utilizador tem acesso a uma equipa (ou é CAdm)
+function hasEquipaAccess(equipa){ return userHasEquipa(equipa) || userHasEquipa('CAdm'); }
 function canSeeReuniao(tipoReuniao){
-  // Cada utilizador só vê as reuniões da(s) sua(s) própria(s) equipa(s)
-  const REUNIAO_TEAM_MAP={
-    'Reunião com CAdm': GROUPS.CA,
-    'Reunião Gestão':   GROUPS.Gestao,
-    'Reunião O.Norte':  GROUPS.OpNorte,
-    'Reunião O.Sul':    GROUPS.OpSul,
-    'Reunião Financeiro': GROUPS.Financeiro,
-    'Reunião Impacto':  GROUPS.Impacto
+  // Fonte de verdade: FJ_Utilizadores (equipa do utilizador)
+  // Valores de equipa conforme checkboxes do admin: CAdm, Gestão, Op.Norte, Op.Sul, Financeiro, Impacto, INOV
+  const REUNIAO_EQUIPA_MAP = {
+    'Reunião com CAdm':   'CAdm',
+    'Reunião Gestão':     'Gestão',
+    'Reunião O.Norte':    'Op.Norte',
+    'Reunião O.Sul':      'Op.Sul',
+    'Reunião Financeiro': 'Financeiro',
+    'Reunião Impacto':    'Impacto'
   };
-  const requiredGroup = REUNIAO_TEAM_MAP[tipoReuniao];
-  if(!requiredGroup) return true;
-  return userGroups.includes(requiredGroup);
+  const equipa = REUNIAO_EQUIPA_MAP[tipoReuniao];
+  if(!equipa) return true;
+  return userHasEquipa(equipa);
 }
 
 // Devolve a lista de tipos de reunião acessíveis ao utilizador atual
@@ -2160,8 +2167,10 @@ function showApp(){
   document.getElementById('user-initials').textContent=initials;
   document.getElementById('dd-name').textContent=name;
   document.getElementById('dd-email').textContent=user.username;
-  const groupNames=Object.entries(GROUPS).filter(([k,v])=>userGroups.includes(v)).map(([k])=>k).join(', ')||'Sem grupos';
-  document.getElementById('dd-groups').textContent=groupNames;
+  // Mostrar equipas e cargo da lista FJ_Utilizadores (fonte de verdade)
+  const fjEquipas=(currentUserFJ?.equipa||[]).join(', ')||'—';
+  const fjCargo=currentUserFJ?.cargo||'—';
+  document.getElementById('dd-groups').textContent=fjEquipas ? `${fjCargo} · ${fjEquipas}` : fjCargo;
   
   // Carregar utilizadores do SharePoint e determinar permissões
   loadFJUtilizadores().then(()=>{
@@ -2278,7 +2287,7 @@ function renderCATopics(){
   const panel=el('ca-topics-panel');
   if(!panel)return;
   // Show to Gestao group (not CA, they see everything already)
-  if(!userGroups.includes(GROUPS.Gestao)||userGroups.includes(GROUPS.CA)){panel.innerHTML='';return;}
+  if(!userHasEquipa('Gestão')||userHasEquipa('CAdm')){panel.innerHTML='';return;}
   const caItems=items.filter(i=>i.reuniao==='Reunião com CAdm'&&i.estado!=='Concluído'&&i.estado!=='Cancelado');
   if(!caItems.length){panel.innerHTML='';return;}
   panel.innerHTML=`<div style="margin-top:1.5rem">
@@ -7188,8 +7197,11 @@ async function auInit(){
 }
 
 function auSetRole(){
-  if(userGroups.includes(GROUPS.CA)||userGroups.includes(GROUPS.Gestao)){_auRole='pe';}
-  else if([GROUPS.OpNorte,GROUPS.OpSul,GROUPS.Impacto,GROUPS.Financeiro].some(g=>userGroups.includes(g))){_auRole='director';}
+  // Fonte: FJ_Utilizadores
+  const cargo = userCargo();
+  const equipas = userEquipas();
+  if(cargo === 'Presidente Executivo' || equipas.includes('CAdm')){_auRole='pe';}
+  else if(cargo === 'Diretor'){_auRole='director';}
   else{_auRole='worker';}
 }
 
@@ -7708,13 +7720,9 @@ async function auSaveForm(){
 }
 
 function auGetUserArea(){
-  if(userGroups.includes(GROUPS.OpNorte))return'Op.Norte';
-  if(userGroups.includes(GROUPS.OpSul))return'Op.Sul';
-  if(userGroups.includes(GROUPS.Impacto))return'Impacto';
-  if(userGroups.includes(GROUPS.Financeiro))return'Financeiro';
-  if(userGroups.includes(GROUPS.Gestao))return'Gestão';
-  if(userGroups.includes(GROUPS.CA))return'CAdm';
-  return'';
+  // Fonte: FJ_Utilizadores — primeira equipa operacional encontrada
+  const ORDEM = ['Op.Norte','Op.Sul','Impacto','Financeiro','Gestão','CAdm'];
+  return ORDEM.find(e => userHasEquipa(e)) || '';
 }
 
 // ── Admin ──
