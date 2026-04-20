@@ -1948,18 +1948,28 @@ function determinarFinanceRole(u){
 }
 
 // Verificar se utilizador pode ver um projeto financeiro
+// Verifica se o utilizador pertence à equipa Financeiro (independentemente do cargo)
+// Usado para dar visibilidade total em modo leitura aos membros da equipa financeira
+function isFinanceiroEquipa(){
+  if(userGroups.includes(GROUPS.Financeiro)) return true;
+  return (currentUserFJ?.equipa || []).includes('Financeiro');
+}
+
 function canViewFinanceProject(projetoId){
   if(!currentUserFJ) return true; // Fallback: se não está na lista, vê tudo
-  
+
   const equipas=currentUserFJ.equipa||[];
   const cargo=currentUserFJ.cargo||'';
-  
+
   // CAdm, Gestão e todos os Diretores vêem tudo
   if(equipas.includes('CAdm')) return true;
   if(equipas.includes('Gestão')) return true;
   if(cargo === 'Diretor') return true;
-  
-  // Membros: apenas projetos do seu departamento
+
+  // Membros da equipa Financeiro vêem todos os projetos (só leitura)
+  if(isFinanceiroEquipa()) return true;
+
+  // Outros membros: apenas projetos do seu departamento
   const proj = GF_PROJETOS.find(p => p.id === projetoId);
   if(!proj) return false;
   return equipas.some(e => e === proj.dep);
@@ -1968,21 +1978,24 @@ function canViewFinanceProject(projetoId){
 // Filtrar projetos financeiros que o utilizador pode ver
 function filterFinanceProjects(projects){
   if(!currentUserFJ) return projects;
-  
+
   const equipas=currentUserFJ.equipa||[];
   const cargo=currentUserFJ.cargo||'';
-  
+
   // Presidente Executivo vê TUDO
   if(_financeRole === 'pe') return projects;
-  
+
   // TODOS os Diretores vêem TUDO (incluindo Diretores de Área)
   if(cargo === 'Diretor') return projects;
-  
+
   // CAdm e Gestão vêem tudo
   if(equipas.includes('CAdm')) return projects;
   if(equipas.includes('Gestão')) return projects;
-  
-  // Membros: apenas projetos do seu departamento
+
+  // Membros da equipa Financeiro vêem todos os projetos (só leitura)
+  if(isFinanceiroEquipa()) return projects;
+
+  // Outros membros: apenas projetos do seu departamento
   return projects.filter(p => equipas.some(e => e === p.dep));
 }
 
@@ -4876,7 +4889,7 @@ function gfRenderHome() {
         <div style="font-size:13px;color:var(--text3)">Transferências entre rúbricas</div>
       </div>
       
-      ${gfCanApprove() ? `
+      ${gfCanViewAprovacoes() ? `
       <div class="card" onclick="gfNav('aprovacoes')" style="cursor:pointer;${pendAprov > 0 ? 'border-color:#FCD34D;background:#FFFBEB' : ''}" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
           <div style="width:44px;height:44px;background:#FEF3C7;border-radius:10px;display:flex;align-items:center;justify-content:center">
@@ -4893,6 +4906,8 @@ function gfRenderHome() {
 }
 
 function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_financeRole); }
+// Podem VER aprovações (sem botões de ação): aprovadores + membros da equipa Financeiro
+function gfCanViewAprovacoes() { return gfCanApprove() || isFinanceiroEquipa(); }
 
 // Encontra o Diretor de Área de um departamento dinamicamente:
 // = utilizador com cargo 'Diretor' cuja equipa inclui esse departamento (excluindo CAdm)
@@ -6559,10 +6574,12 @@ function gfRenderAprovacoes() {
   const userEquipas = currentUserFJ?.equipa || [];
   
   // SOLICITAÇÕES - Mostrar todas as pendentes, filtradas por departamento
+  // Membros da equipa Financeiro vêem tudo em modo leitura
   let solsPend = GF_SOLICITACOES.filter(s => {
     const estadosPendentes = ['Submetido', 'Aprovado Dir.'];
     if (!estadosPendentes.includes(s.estado)) return false;
     if (_financeRole === 'df') return true;
+    if (isFinanceiroEquipa()) return true; // leitura total para equipa Financeiro
     const solProj = GF_PROJETOS.find(p => p.id === s.projetoId);
     const projDep = solProj?.dep || solProj?.departamento || '';
     return gfIsMyDepartamento(projDep); // pe→true, pca/area_director→verifica _financeDepts
@@ -6574,6 +6591,7 @@ function gfRenderAprovacoes() {
     const estadosPendentes = ['Pendente', 'Aprovado Dir.'];
     if (!estadosPendentes.includes(a.estado)) return false;
     if (_financeRole === 'df') return true;
+    if (isFinanceiroEquipa()) return true; // leitura total para equipa Financeiro
     const altProj = GF_PROJETOS.find(p => p.id === a.destProjetoId);
     const altDep = altProj?.dep || altProj?.departamento || '';
     return gfIsMyDepartamento(altDep);
