@@ -21,6 +21,12 @@
   --amber:#633806;--amber-bg:#FAEEDA;
   --gray:#5F5E5A;--gray-bg:#F1EFE8;
   --r:10px;--r-lg:14px;
+  /* Aliases curtos usados no módulo Planeamento */
+  --g1:#1E4D3A;--g5:#639922;
+  --tx2:#5a6278;--tx3:#9aa0b4;
+  --bd:#dde2ee;--bd2:#c8d0e0;
+  --bl:#E6F1FB;--bld:#0C447C;
+  --rl:14px;--or:#FF6B00;
   /* Cores por módulo - tons suaves */
   --mod-reunioes:#1E3A5F;--mod-reunioes-bg:#EFF6FF;--mod-reunioes-mid:#3B6B9A;
   --mod-planeamento:#1E4D3A;--mod-planeamento-bg:#F0FDF4;--mod-planeamento-mid:#3A7D5F;
@@ -316,9 +322,10 @@ tr:hover td{background:var(--bg3)}
 /* WEEK NAV */
 .week-nav{display:flex;align-items:center;gap:12px;background:var(--bg2);border:0.5px solid var(--bd);border-radius:var(--r);padding:10px 16px;flex:1}
 .week-nav-title{font-size:14px;font-weight:600;color:var(--g1);flex:1;text-align:center}
-.view-toggle{display:flex;background:var(--bg3);border-radius:var(--r);padding:3px;border:0.5px solid var(--bd)}
-.vt-btn{padding:5px 12px;border:none;background:none;border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;color:var(--tx2);transition:all .12s}
-.vt-btn.active{background:var(--g1);color:#fff;font-weight:600}
+.view-toggle{display:flex;background:var(--bg3);border-radius:var(--r);padding:3px;border:0.5px solid var(--border2);gap:2px}
+.vt-btn{padding:6px 14px;border:none;background:none;border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit;color:var(--text2);transition:all .12s;white-space:nowrap}
+.vt-btn:hover{background:var(--bg2);color:var(--text)}
+.vt-btn.active{background:var(--mod-planeamento);color:#fff;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 
 /* TABS */
 .tabs{display:flex;border-bottom:0.5px solid var(--bd);margin-bottom:1rem}
@@ -1351,7 +1358,7 @@ tr:hover td{background:var(--bg3)}
         <div id="col-picker" style="display:none;margin-bottom:1rem">
           <div class="fg people-wrap" style="max-width:320px">
             <label>Colaborador</label>
-            <input id="col-input" placeholder="Nome do colaborador..." autocomplete="off" oninput="searchPeople(this.value,'col-sug','col-input','col-email')">
+            <input id="col-input" placeholder="Nome do colaborador..." autocomplete="off" oninput="searchFJUsers(this.value,'col-sug','col-input','col-email')">
             <input id="col-email" type="hidden">
             <div id="col-sug" class="people-sugg"></div>
           </div>
@@ -2544,6 +2551,31 @@ function selectPerson(inputId,suggestId,name,emailId,email){
   document.getElementById(suggestId).classList.remove('open');
 }
 
+// Pesquisa colaboradores na lista FJ_Utilizadores (sem chamar Graph API)
+function searchFJUsers(q,suggestId,inputId,emailId){
+  const s=document.getElementById(suggestId);
+  if(!s) return;
+  if(!q||q.length<2){s.classList.remove('open');return;}
+  const ql=q.toLowerCase();
+  const matches=(fjUtilizadores||[]).filter(u=>
+    u.nome&&u.nome.toLowerCase().includes(ql)||
+    (u.email&&u.email.toLowerCase().includes(ql))
+  ).slice(0,8);
+  if(!matches.length){s.classList.remove('open');return;}
+  s.innerHTML=matches.map(u=>{
+    const initials=(u.nome||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const safe=name=>name.replace(/'/g,"\\'");
+    return`<div class="people-item" onclick="selectPerson('${inputId}','${suggestId}','${safe(u.nome||'')}','${emailId}','${safe(u.email||'')}')">
+      <div class="people-avatar">${initials}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500">${u.nome||'—'}</div>
+        <div style="font-size:11px;color:var(--text3)">${u.cargo||''}${u.equipa?.length?' · '+(u.equipa[0]||''):''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  s.classList.add('open');
+}
+
 // ═══ REUNIÕES MODULE ═══
 // ASSUNTOS
 async function loadItems(){
@@ -2888,12 +2920,11 @@ async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
     const listType=meta.d.ListItemEntityTypeFullName;
     for(const t of feInlineTarefas){
       const body={__metadata:{type:listType},
-        Title:t.titulo,
-        Departamento:document.getElementById('fe-dep').value,
-        Notas:'Origem: Reunião Externa - '+reuniaoTitulo
+        Title:t.titulo
       };
       if(reuniaoId) body.ReuniaoExternaIdId=parseInt(reuniaoId);
       if(t.resp)body.Responsavel=t.resp;
+      const depVal=document.getElementById('fe-dep')?.value;if(depVal)body.Departamento=depVal;
       if(t.data)body.DataLimite=t.data+'T00:00:00Z';
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
     }
@@ -2987,9 +3018,11 @@ async function saveTarefa(){
     const meta=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')?$select=ListItemEntityTypeFullName`);
     const listType=meta.d.ListItemEntityTypeFullName;
     const body={__metadata:{type:listType},
-      Title:titulo,Notas:gv2t('ft-desc'),Estado:gv('ft-estado'),
-      Prioridade:gv('ft-prior'),Departamento:gv('ft-dep')
+      Title:titulo,Estado:gv('ft-estado'),
+      Prioridade:gv('ft-prior')
     };
+    const respVal=gv('ft-resp');if(respVal)body.Responsavel=respVal;
+    const depVal=gv('ft-dep');if(depVal)body.Departamento=depVal;
     if(gv('ft-data'))body.DataLimite=gv('ft-data')+'T00:00:00Z';
     if(rnEditTarId){
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items(${rnEditTarId})`,body,'MERGE','*');
@@ -4519,6 +4552,7 @@ function renderSem(){
 
   // Utilitário: verifica se nome coincide com o utilizador atual
   const matchesMe=nome=>nome&&myName&&nome.toLowerCase().split(/\s+/).some(w=>w.length>2&&myName.split(/\s+/).some(m=>m.includes(w)||w.includes(m)));
+  const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
 
   // Inclui tarefas NÃO concluídas cuja dataLimite <= fim desta semana
   const list=plTarefas.filter(t=>{
@@ -4543,8 +4577,13 @@ function renderSem(){
     }
 
     // Filtros de equipa/colaborador (apenas Diretores+)
-    if(isDir&&plSemView==='equipa'&&dep&&t.dep!==dep) return false;
-    if(isDir&&plSemView==='colaborador'&&colEmail&&(t.responsavelEmail||'').toLowerCase()!==colEmail.toLowerCase()) return false;
+    if(isDir&&plSemView==='equipa'&&dep&&normDep(t.dep)!==normDep(dep)) return false;
+    if(isDir&&plSemView==='colaborador'&&colEmail){
+      const colNome=(gv('col-input')||'').toLowerCase();
+      const emailMatch=(t.responsavelEmail||'').toLowerCase()===colEmail.toLowerCase();
+      const nameMatch=colNome.length>1&&(t.responsavel||'').toLowerCase().includes(colNome);
+      if(!emailMatch&&!nameMatch) return false;
+    }
 
     if(q&&!t.titulo.toLowerCase().includes(q)) return false;
     return true;
@@ -8401,6 +8440,7 @@ const CO_TAR_LIST    = 'FJ_CorreioTarefas';
 let CO_REGISTOS   = [];   // registos de correio
 let CO_TAREFAS    = [];   // tarefas de correio
 let _coTarefasTemp = [];  // tarefas ainda não guardadas (form de novo registo)
+let _coSelectedFiles = []; // ficheiros acumulados entre aberturas do picker
 
 // ── Navegação ──────────────────────────────────────
 function coNav(page) {
@@ -8742,9 +8782,8 @@ async function coSaveRegisto() {
     const newId = resData.d?.Id;
 
     // 2) Upload do(s) anexo(s)
-    const fileInput = document.getElementById('co-file');
-    if (newId && fileInput?.files?.length) {
-      for (const f of Array.from(fileInput.files)) {
+    if (newId && _coSelectedFiles.length) {
+      for (const f of _coSelectedFiles) {
         try { await uploadAttachment(CO_LIST, newId, f); }
         catch(e) { console.warn('Attach error', e); }
       }
@@ -8787,11 +8826,25 @@ async function coSaveRegisto() {
 function coPreviewFiles() {
   const input   = document.getElementById('co-file');
   const preview = document.getElementById('co-attach-preview');
+  if (!preview || !input) return;
+
+  // Acumular novos ficheiros — ignorar duplicados pelo nome
+  const existingNames = new Set(_coSelectedFiles.map(f => f.name));
+  Array.from(input.files || []).forEach(f => {
+    if (!existingNames.has(f.name)) { _coSelectedFiles.push(f); existingNames.add(f.name); }
+  });
+  // Limpar o input para que a próxima abertura não re-adicione os mesmos
+  input.value = '';
+
+  _coRenderAttachPreview(preview);
+}
+
+function _coRenderAttachPreview(preview) {
+  if (!preview) preview = document.getElementById('co-attach-preview');
   if (!preview) return;
-  const files   = Array.from(input?.files || []);
-  if (!files.length) { preview.innerHTML = ''; return; }
+  if (!_coSelectedFiles.length) { preview.innerHTML = ''; return; }
   const icons = { pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📑', pptx:'📑', jpg:'🖼️', jpeg:'🖼️', png:'🖼️' };
-  preview.innerHTML = files.map((f, i) => {
+  preview.innerHTML = _coSelectedFiles.map((f, i) => {
     const ext = f.name.split('.').pop().toLowerCase();
     const icon = icons[ext] || '📎';
     const size = f.size < 1024*1024 ? `${(f.size/1024).toFixed(0)} KB` : `${(f.size/1024/1024).toFixed(1)} MB`;
@@ -8805,13 +8858,8 @@ function coPreviewFiles() {
 }
 
 function coRemoveFile(indexToRemove) {
-  const input = document.getElementById('co-file');
-  if (!input) return;
-  // Recriar FileList sem o ficheiro removido usando DataTransfer
-  const dt = new DataTransfer();
-  Array.from(input.files).forEach((f, i) => { if (i !== indexToRemove) dt.items.add(f); });
-  input.files = dt.files;
-  coPreviewFiles();
+  _coSelectedFiles.splice(indexToRemove, 1);
+  _coRenderAttachPreview();
 }
 
 function coResetForm() {
@@ -8822,6 +8870,7 @@ function coResetForm() {
   document.getElementById('co-resp-email').value   = '';
   document.getElementById('co-projeto').value      = '';
   document.getElementById('co-file').value         = '';
+  _coSelectedFiles = [];
   const preview = document.getElementById('co-attach-preview');
   if (preview) preview.innerHTML = '';
   coSetDataHoje();
