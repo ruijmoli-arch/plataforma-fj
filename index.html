@@ -3900,9 +3900,9 @@ async function rhLoadRegistos(){
     const canSeeAll=(userCargo()==='Presidente Executivo'||userCargo()==='Diretor');
     let url;
     if(canSeeAll){
-      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*,Projeto/Id,Acao/Id&$expand=Projeto,Acao&$orderby=Data desc&$top=5000`;
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*&$orderby=Data desc&$top=5000`;
     } else {
-      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*,Projeto/Id,Acao/Id&$expand=Projeto,Acao&$filter=TrabalhadorEmail eq '${userEmail}'&$orderby=Data desc&$top=5000`;
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*&$filter=TrabalhadorEmail eq '${userEmail}'&$orderby=Data desc&$top=5000`;
     }
     const d=await spRead(url);
     rhRegistos=(d.d?.results||[]).map(r=>({
@@ -3910,10 +3910,10 @@ async function rhLoadRegistos(){
       trabalhador:r.Title||'',
       trabalhadorEmail:(r.TrabalhadorEmail||'').toLowerCase(),
       data:r.Data?r.Data.split('T')[0]:'',
-      projetoId:r.ProjetoId?.Id||null,
-      projetoNome:plProjetos.find(p=>p.id===(r.ProjetoId?.Id))?.nome||'—',
-      acaoId:r.AcaoId?.Id||null,
-      acaoNome:plAcoes.find(a=>a.id===(r.AcaoId?.Id))?.nome||'—',
+      projetoId:r.ProjetoId||null,
+      projetoNome:plProjetos.find(p=>String(p.id)===String(r.ProjetoId))?.nome||'—',
+      acaoId:r.AcaoId||null,
+      acaoNome:plAcoes.find(a=>String(a.id)===String(r.AcaoId))?.nome||'—',
       tarefaId:r.TarefaRef||null,
       tarefaNome:r.TarefaRef?plTarefas.find(t=>String(t.id)===r.TarefaRef)?.titulo||'':'',
       horaInicio:r.HoraInicio||'',
@@ -4130,49 +4130,67 @@ function rhRenderVerRegistos(){
   regs.forEach(r=>{if(!byDate[r.data])byDate[r.data]=[];byDate[r.data].push(r);});
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
   if(!dates.length){cont.innerHTML='<div class="empty" style="padding:2rem">Sem registos para os filtros selecionados.</div>';return;}
-  cont.innerHTML=dates.map(d=>{
-    const recs=byDate[d];
-    const totalMin=recs.reduce((s,r)=>s+(r.totalMinutos||0),0);
-    const extraCol=isManager?'<th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Trabalhador</th>':'';
-    return`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);margin-bottom:10px;overflow:hidden">
-      <div onclick="this.nextElementSibling.classList.toggle('hidden')" style="padding:12px 16px;background:var(--bg3);display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:13px;font-weight:600">${fd(d)}</span>
-          <span style="font-size:12px;color:var(--text3)">${recs.length} registo${recs.length!==1?'s':''}</span>
-          <span style="background:var(--mod-planeamento-bg);color:var(--mod-planeamento);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${rhFmtH(totalMin)}</span>
-        </div>
-        <span style="color:var(--text3)">▾</span>
-      </div>
-      <div>
-        <table style="width:100%;border-collapse:collapse">
-          <colgroup>${isManager?'<col style="width:15%">':''}<col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:9%"><col style="width:9%"><col style="width:9%"></colgroup>
-          <thead><tr style="background:var(--bg3)">${extraCol}
-            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Projeto</th>
-            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Ação</th>
-            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Tarefa</th>
-            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase;text-align:center">Início</th>
-            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase;text-align:center">Fim</th>
-            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase;text-align:center">Dur.</th>
-          </tr></thead>
-          <tbody>
-          ${recs.map(r=>`<tr style="border-top:0.5px solid var(--border)">
-            ${isManager?`<td style="padding:8px 10px;font-size:12px;color:var(--text2)">${r.trabalhador}</td>`:''}
-            <td style="padding:8px 10px;font-size:12px">${r.projetoNome||'—'}</td>
-            <td style="padding:8px 10px;font-size:12px">${r.acaoNome||'—'}</td>
-            <td style="padding:8px 10px;font-size:12px;color:var(--text3)">${r.tarefaNome||'—'}</td>
-            <td style="padding:8px 10px;font-size:12px;text-align:center">${r.horaInicio}</td>
-            <td style="padding:8px 10px;font-size:12px;text-align:center">${r.horaFim}</td>
-            <td style="padding:8px 10px;text-align:center">
-              ${r.trabalhadorEmail===userEmail
-                ?`<button class="btn btn-sm" onclick="rhOpenEdit(${r.id})" style="font-size:11px;padding:2px 8px">✎ ${rhFmtH(r.totalMinutos)}</button>`
-                :`<span style="font-size:12px;font-weight:600;color:var(--text2)">${rhFmtH(r.totalMinutos)}</span>`}
-            </td>
-          </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-  }).join('');
+
+  cont.innerHTML=`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+    ${dates.map((d,idx)=>{
+      const recs=byDate[d];
+      const totalMin=recs.reduce((s,r)=>s+(r.totalMinutos||0),0);
+      const uid='rh-day-'+d.replace(/-/g,'');
+      // Projetos distintos do dia
+      const projetos=[...new Set(recs.map(r=>r.projetoNome).filter(n=>n&&n!=='—'))].join(', ')||'—';
+      const extraTh=isManager?'<th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase">Trabalhador</th>':'';
+      const detail=`
+        <div id="${uid}" style="display:none;border-top:0.5px solid var(--border)">
+          <table style="width:100%;border-collapse:collapse">
+            <thead style="background:var(--bg3)"><tr>
+              ${extraTh}
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase">Projeto</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase">Ação</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase">Tarefa</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;text-align:center">Início</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;text-align:center">Fim</th>
+              <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;text-align:right">Duração</th>
+              <th style="width:60px"></th>
+            </tr></thead>
+            <tbody>
+              ${recs.map(r=>`
+                <tr style="border-top:0.5px solid var(--border)">
+                  ${isManager?`<td style="padding:9px 12px;font-size:13px">${r.trabalhador}</td>`:''}
+                  <td style="padding:9px 12px;font-size:13px;font-weight:500">${r.projetoNome||'—'}</td>
+                  <td style="padding:9px 12px;font-size:13px">${r.acaoNome||'—'}</td>
+                  <td style="padding:9px 12px;font-size:12px;color:var(--text3)">${r.tarefaNome||'—'}</td>
+                  <td style="padding:9px 12px;font-size:13px;text-align:center">${r.horaInicio}</td>
+                  <td style="padding:9px 12px;font-size:13px;text-align:center">${r.horaFim}</td>
+                  <td style="padding:9px 12px;font-size:13px;font-weight:600;text-align:right;color:var(--mod-planeamento)">${rhFmtH(r.totalMinutos)}</td>
+                  <td style="padding:9px 8px;text-align:center">
+                    ${r.trabalhadorEmail===userEmail
+                      ?`<button class="btn btn-sm" onclick="rhOpenEdit(${r.id})" style="font-size:11px;padding:3px 8px">✎</button>`
+                      :''}
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      return `
+        <div style="${idx>0?'border-top:0.5px solid var(--border)':''}">
+          <div style="display:flex;align-items:center;padding:12px 16px;gap:16px">
+            <div style="font-size:13px;font-weight:600;min-width:100px">${fd(d)}</div>
+            <div style="font-size:12px;color:var(--text3)">${recs.length} registo${recs.length!==1?'s':''}</div>
+            <div style="flex:1;font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${projetos}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--mod-planeamento);min-width:50px;text-align:right">${rhFmtH(totalMin)}</div>
+            <button class="btn btn-sm" onclick="rhToggleDia('${uid}',this)" style="min-width:60px">Ver ▸</button>
+          </div>
+          ${detail}
+        </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function rhToggleDia(uid,btn){
+  const div=el(uid);if(!div)return;
+  const open=div.style.display==='none';
+  div.style.display=open?'':'none';
+  btn.textContent=open?'Fechar ▴':'Ver ▸';
 }
 
 function rhOpenEdit(id){
