@@ -5395,7 +5395,8 @@ function gfCalcDespesa(rubricaId) {
     solicitadaPura: solicitada, // Sem bloqueio (para exibição)
     bloqueio: bloqueio, // Valor bloqueado por alterações
     aprovada: sols.filter(s => ['Aprovado Dir.', 'Aprovado DF', 'Aprovado', 'Processado', 'Pago'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
-    processada: sols.filter(s => ['Processado','Pago'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0)
+    processada: sols.filter(s => ['Processado','Pago'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
+    pago: sols.filter(s => s.estado === 'Pago').reduce((a, s) => a + (s.valor || 0), 0)
   };
 }
 
@@ -5405,7 +5406,8 @@ function gfCalcReceita(rubricaId) {
   return {
     solicitada: sols.filter(s => s.estado !== 'Rejeitado').reduce((a, s) => a + (s.valor || 0), 0),
     aprovada: sols.filter(s => ['Aprovado Dir.', 'Aprovado DF', 'Aprovado', 'Processado', 'Pago'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
-    processada: sols.filter(s => ['Processado','Pago'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0)
+    processada: sols.filter(s => ['Processado','Pago'].includes(s.estado)).reduce((a, s) => a + (s.valor || 0), 0),
+    pago: sols.filter(s => s.estado === 'Pago').reduce((a, s) => a + (s.valor || 0), 0)
   };
 }
 
@@ -5919,39 +5921,70 @@ function gfRenderRubricas() {
         const hasWarning = desp.processada > desp.solicitada;
         
         return `
-          <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden${hasWarning ? ';background:#FEF3C7;border-color:#FCD34D' : ''}">
+          <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden${hasWarning ? ';border-color:#FCD34D' : ''}">
             ${hasWarning ? `<div style="padding:8px 16px;background:#FEF3C7;color:#92400E;font-size:12px">⚠ Despesa processada (${gfFmt(desp.processada)}) é superior à solicitada (${gfFmt(desp.solicitada)})</div>` : ''}
             
             <!-- Header da rúbrica -->
-            <div style="padding:16px;cursor:pointer;display:grid;grid-template-columns:1.5fr repeat(6,auto) 40px;gap:12px;align-items:center;border-bottom:1px solid var(--border)" onclick="this.parentElement.classList.toggle('rubrica-expanded')">
+            <div style="padding:14px 16px;cursor:pointer;display:grid;grid-template-columns:200px 1fr 1fr 36px;gap:14px;align-items:center;border-bottom:1px solid var(--border)" onclick="this.parentElement.classList.toggle('rubrica-expanded')">
+              <!-- Nome + tipo -->
               <div>
-                <div style="font-weight:600">${r.titulo}</div>
-                <div style="font-size:12px;color:var(--text3)">${r.tipo || 'Despesa'}</div>
+                <div style="font-weight:600;font-size:14px">${r.titulo}</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px">${r.tipo || 'Despesa'}</div>
               </div>
-              <div style="text-align:right">
-                <div style="font-size:10px;color:#2563EB">DESP. ORÇ.</div>
-                <div style="font-weight:600;color:#1E40AF">${gfFmt(despOrc)}</div>
+              
+              <!-- DESPESAS mini-panel -->
+              <div style="padding:10px 14px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
+                <div style="font-size:10px;font-weight:700;color:#1E40AF;letter-spacing:.04em;margin-bottom:7px">DESPESAS</div>
+                ${progressBarDesp(desp.solicitada, desp.aprovada, desp.processada, despOrc)}
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:9px">
+                  <div>
+                    <div style="font-size:9px;color:#1E40AF;font-weight:500">Orç.</div>
+                    <div style="font-weight:600;font-size:12px;color:#1E3A8A">${gfFmt(despOrc)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#1E40AF;font-weight:500">Aprov.</div>
+                    <div style="font-weight:600;font-size:12px;color:#2563EB">${gfFmt(desp.aprovada)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#1E40AF;font-weight:500">Proce.</div>
+                    <div style="font-weight:600;font-size:12px;color:#3B82F6">${gfFmt(desp.processada)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#1E40AF;font-weight:500">Pago</div>
+                    <div style="font-weight:600;font-size:12px;color:#60A5FA">${gfFmt(desp.pago)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#1E40AF;font-weight:500">Disp.</div>
+                    <div style="font-weight:600;font-size:12px;color:${despDisp >= 0 ? '#059669' : '#DC2626'}">${gfFmt(despDisp)}</div>
+                  </div>
+                </div>
               </div>
-              <div style="text-align:right">
-                <div style="font-size:10px;color:#2563EB">DESP. SOL.</div>
-                <div style="font-weight:600;color:#3B82F6">${gfFmt(desp.solicitada)}</div>
+              
+              <!-- RECEITA mini-panel -->
+              <div style="padding:10px 14px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
+                <div style="font-size:10px;font-weight:700;color:#C2410C;letter-spacing:.04em;margin-bottom:7px">RECEITA</div>
+                ${progressBarRec(rec.solicitada, rec.processada, recOrc)}
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:9px">
+                  <div>
+                    <div style="font-size:9px;color:#C2410C;font-weight:500">Orç.</div>
+                    <div style="font-weight:600;font-size:12px;color:#9A3412">${gfFmt(recOrc)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#C2410C;font-weight:500">Aprov.</div>
+                    <div style="font-weight:600;font-size:12px;color:#EA580C">${gfFmt(rec.aprovada)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#C2410C;font-weight:500">Proce.</div>
+                    <div style="font-weight:600;font-size:12px;color:#F97316">${gfFmt(rec.processada)}</div>
+                  </div>
+                  <div>
+                    <div style="font-size:9px;color:#C2410C;font-weight:500">Pago</div>
+                    <div style="font-weight:600;font-size:12px;color:#FB923C">${gfFmt(rec.pago)}</div>
+                  </div>
+                </div>
               </div>
-              <div style="text-align:right">
-                <div style="font-size:10px;color:#2563EB">DESP. PROC.</div>
-                <div style="font-weight:600;color:#60A5FA">${gfFmt(desp.processada)}</div>
-              </div>
-              <div style="text-align:right">
-                <div style="font-size:10px;color:#EA580C">REC. ORÇ.</div>
-                <div style="font-weight:500;color:#C2410C">${gfFmt(recOrc)}</div>
-              </div>
-              <div style="text-align:right">
-                <div style="font-size:10px;color:#EA580C">REC. SOL.</div>
-                <div style="font-weight:500;color:#F97316">${gfFmt(rec.solicitada)}</div>
-              </div>
-              <div style="text-align:right">
-                <div style="font-size:10px;color:#EA580C">REC. PROC.</div>
-                <div style="font-weight:500;color:#FB923C">${gfFmt(rec.processada)}</div>
-              </div>
+              
+              <!-- Seta -->
               <div class="rubrica-arrow" style="text-align:center;font-size:14px;color:var(--text3);transition:transform 0.2s">▼</div>
             </div>
             
@@ -5962,18 +5995,22 @@ function gfRenderRubricas() {
                 <div style="padding:16px;background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE">
                   <div style="font-size:12px;font-weight:600;color:#1E40AF;margin-bottom:12px">DESPESAS</div>
                   ${progressBarDesp(desp.solicitada, desp.aprovada, desp.processada, despOrc)}
-                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
+                  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px">
                     <div>
                       <div style="font-size:10px;color:#1E40AF">Orçamentada</div>
                       <div style="font-weight:600;color:#1E3A8A">${gfFmt(despOrc)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:#1E40AF">Solicitada</div>
-                      <div style="font-weight:600;color:#2563EB">${gfFmt(desp.solicitada)}</div>
+                      <div style="font-size:10px;color:#1E40AF">Aprovada</div>
+                      <div style="font-weight:600;color:#2563EB">${gfFmt(desp.aprovada)}</div>
                     </div>
                     <div>
                       <div style="font-size:10px;color:#1E40AF">Processada</div>
                       <div style="font-weight:600;color:#3B82F6">${gfFmt(desp.processada)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:#1E40AF">Pago</div>
+                      <div style="font-weight:600;color:#60A5FA">${gfFmt(desp.pago)}</div>
                     </div>
                     <div>
                       <div style="font-size:10px;color:#1E40AF">Disponível</div>
@@ -5986,18 +6023,22 @@ function gfRenderRubricas() {
                 <div style="padding:16px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
                   <div style="font-size:12px;font-weight:600;color:#C2410C;margin-bottom:12px">RECEITA</div>
                   ${progressBarRec(rec.solicitada, rec.processada, recOrc)}
-                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+                  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">
                     <div>
                       <div style="font-size:10px;color:#C2410C">Orçamentada</div>
                       <div style="font-weight:600;color:#9A3412">${gfFmt(recOrc)}</div>
                     </div>
                     <div>
-                      <div style="font-size:10px;color:#C2410C">Solicitada</div>
-                      <div style="font-weight:600;color:#EA580C">${gfFmt(rec.solicitada)}</div>
+                      <div style="font-size:10px;color:#C2410C">Aprovada</div>
+                      <div style="font-weight:600;color:#EA580C">${gfFmt(rec.aprovada)}</div>
                     </div>
                     <div>
                       <div style="font-size:10px;color:#C2410C">Processada</div>
                       <div style="font-weight:600;color:#F97316">${gfFmt(rec.processada)}</div>
+                    </div>
+                    <div>
+                      <div style="font-size:10px;color:#C2410C">Pago</div>
+                      <div style="font-weight:600;color:#FB923C">${gfFmt(rec.pago)}</div>
                     </div>
                   </div>
                 </div>
