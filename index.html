@@ -3903,9 +3903,9 @@ async function rhLoadRegistos(){
     const canSeeAll=(userCargo()==='Presidente Executivo'||userCargo()==='Diretor');
     let url;
     if(canSeeAll){
-      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$orderby=Data desc&$top=5000`;
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*,Projeto/Id,Acao/Id&$expand=Projeto,Acao&$orderby=Data desc&$top=5000`;
     } else {
-      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$filter=TrabalhadorEmail eq '${userEmail}'&$orderby=Data desc&$top=5000`;
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*,Projeto/Id,Acao/Id&$expand=Projeto,Acao&$filter=TrabalhadorEmail eq '${userEmail}'&$orderby=Data desc&$top=5000`;
     }
     const d=await spRead(url);
     rhRegistos=(d.d?.results||[]).map(r=>({
@@ -3913,10 +3913,10 @@ async function rhLoadRegistos(){
       trabalhador:r.Title||'',
       trabalhadorEmail:(r.TrabalhadorEmail||'').toLowerCase(),
       data:r.Data?r.Data.split('T')[0]:'',
-      projetoId:r.ProjetoIdId||null,
-      projetoNome:plProjetos.find(p=>p.id===r.ProjetoIdId)?.nome||'—',
-      acaoId:r.AcaoIdId||null,
-      acaoNome:plAcoes.find(a=>a.id===r.AcaoIdId)?.nome||'—',
+      projetoId:r.ProjetoId?.Id||null,
+      projetoNome:plProjetos.find(p=>p.id===(r.ProjetoId?.Id))?.nome||'—',
+      acaoId:r.AcaoId?.Id||null,
+      acaoNome:plAcoes.find(a=>a.id===(r.AcaoId?.Id))?.nome||'—',
       tarefaId:r.TarefaRef||null,
       tarefaNome:r.TarefaRef?plTarefas.find(t=>String(t.id)===r.TarefaRef)?.titulo||'':'',
       horaInicio:r.HoraInicio||'',
@@ -3937,7 +3937,9 @@ function rhInitForm(){
 
 function rhAdicionarBloco(){
   rhBlocoCounter++;
-  rhBlocos.push({id:rhBlocoCounter,projetoId:'',projetoNome:'',acaoId:null,acaoNome:'',tarefaId:null,tarefaNome:'',horaInicio:'',horaFim:''});
+  // Hora de início = hora de fim do último bloco, se existir
+  const ultimoFim=rhBlocos.length?rhBlocos[rhBlocos.length-1].horaFim:'';
+  rhBlocos.push({id:rhBlocoCounter,projetoId:'',projetoNome:'',acaoId:null,acaoNome:'',tarefaId:null,tarefaNome:'',horaInicio:ultimoFim,horaFim:''});
   rhRenderBlocos();
   setTimeout(()=>{const d=el(`rh-bloco-${rhBlocoCounter}`);if(d)d.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
 }
@@ -4096,9 +4098,9 @@ async function rhGuardar(){
         HoraInicio:b.horaInicio,HoraFim:b.horaFim,TotalMinutos:totalMin,
         AlteracoesAntigas:'[]'
       };
-      if(b.projetoId)body.ProjetoIdId=parseInt(b.projetoId);
-      if(b.acaoId)body.AcaoIdId=parseInt(b.acaoId);
-      if(b.tarefaId)body.TarefaRef=String(b.tarefaId); // ID composto: f_123 / r_456 / c_789
+      if(b.projetoId)body.ProjetoId=parseInt(b.projetoId);
+      if(b.acaoId)body.AcaoId=parseInt(b.acaoId);
+      if(b.tarefaId)body.TarefaRef=String(b.tarefaId);
       await spWrite(`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items`,body,'POST');
     }
     showNotif(`${rhBlocos.length} registo(s) guardado(s) com sucesso! ✓`,'success');
