@@ -1195,6 +1195,7 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option></select>
+          <select class="flt" id="ff-h-col" onchange="renderHier()"><option value="">Todos os colaboradores</option></select>
           <button class="btn btn-primary" onclick="openProjetoForm()">+ Novo projeto</button>
         </div>
         <div id="hier-container"></div>
@@ -1205,6 +1206,7 @@ tr:hover td{background:var(--bg3)}
         <div class="page-title">Gantt</div>
         <div class="toolbar">
           <select class="flt" id="ff-g-dep" onchange="renderGantt()"><option value="">Todos os departamentos</option></select>
+          <select class="flt" id="ff-g-col" onchange="renderGantt()"><option value="">Todos os colaboradores</option></select>
           <select class="flt" id="ff-g-proj" onchange="renderGantt()"><option value="">Todos os projetos</option></select>
           <select class="flt" id="ff-g-ano" onchange="renderGantt()"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option></select>
           <select class="flt" id="ff-g-modo" onchange="renderGantt()"><option value="mensal">Vista mensal</option><option value="trimestral">Vista trimestral</option><option value="semanal">Vista semanal</option><option value="diario">Vista diária</option></select>
@@ -1353,7 +1355,6 @@ tr:hover td{background:var(--bg3)}
             <button class="vt-btn" id="vt-eq" onclick="setView('equipa')" style="display:none">Departamento</button>
             <button class="vt-btn" id="vt-col" onclick="setView('colaborador')" style="display:none">Colaborador</button>
           </div>
-        </div>
         <div id="col-picker" style="display:none;margin-bottom:1rem">
           <div class="fg people-wrap" style="max-width:320px">
             <label>Colaborador</label>
@@ -2192,6 +2193,7 @@ async function loadFJUtilizadores(){
     }));
     console.log('FJ_Utilizadores carregados:', fjUtilizadores);
     populateUserSelects();
+    populateCollabSelects();
     
     const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
     currentUserFJ=fjUtilizadores.find(u=>u.email===userEmail);
@@ -3966,6 +3968,21 @@ function populateDrops(){
   // Utilizadores
   populateUserSelects();
 }
+// ── Popula selects de colaborador (Hierarquia + Gantt + etc.) ─────────────
+function populateCollabSelects(){
+  if(!fjUtilizadores.length) return;
+  const sorted=[...fjUtilizadores].sort((a,b)=>a.titulo.localeCompare(b.titulo));
+  const opts='<option value="">Todos os colaboradores</option>'+
+    sorted.map(u=>`<option value="${u.email}">${u.titulo}</option>`).join('');
+  ['ff-h-col','ff-g-col'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML=opts;
+    if(cur)sel.value=cur;
+  });
+}
+
 function loadAcoesForProj(projId,targetId,currId=null){
   const e=el(targetId);if(!e)return;
   const list=projId?plAcoes.filter(a=>String(a.projetoId)===String(projId)):plAcoes;
@@ -4026,6 +4043,7 @@ function kn(kpiId){
 /* ===== HIERARQUIA ===== */
 function renderHier(){
   const dep=gv('ff-h-dep');
+  const colEmail=(gv('ff-h-col')||'').toLowerCase();
   const c=el('hier-container');
   const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
 
@@ -4052,11 +4070,29 @@ function renderHier(){
     return plAcoes.some(a=>String(a.projetoId)===String(p.id)&&canViewAcao(a,p));
   };
 
-  // Aplicar filtro de dep do toolbar + permissões
+  // Aplicar filtro de dep + colaborador do toolbar + permissões
+  const emailOfUser=(email)=>{
+    const u=fjUtilizadores.find(u=>u.email===email);
+    return u?u.titulo:'';
+  };
+  const colMatches=(responsavel,respEmail)=>{
+    if(!colEmail) return true;
+    if(respEmail&&respEmail.toLowerCase()===colEmail) return true;
+    const u=fjUtilizadores.find(u=>u.email===colEmail);
+    if(u&&responsavel&&responsavel.toLowerCase()===u.titulo.toLowerCase()) return true;
+    return false;
+  };
   const projs=plProjetos.filter(p=>{
     if(!canViewProj(p)) return false;
-    if(!dep) return true;
-    return normDep(p.dep)===normDep(dep)||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&normDep(a.dep)===normDep(dep));
+    if(dep&&normDep(p.dep)!==normDep(dep)&&!plAcoes.some(a=>String(a.projetoId)===String(p.id)&&normDep(a.dep)===normDep(dep))) return false;
+    if(colEmail){
+      // projeto inclui-se se o seu responsável bate, ou alguma ação/tarefa do projeto bate
+      const projMatch=colMatches(p.responsavel,p.responsavelEmail);
+      const acaoMatch=plAcoes.some(a=>String(a.projetoId)===String(p.id)&&colMatches(a.responsavel,a.responsavelEmail));
+      const tarMatch=plTarefas.some(t=>(String(t.projetoId)===String(p.id)||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&String(t.acaoId)===String(a.id)))&&colMatches(t.responsavel,t.responsavelEmail));
+      if(!projMatch&&!acaoMatch&&!tarMatch) return false;
+    }
+    return true;
   });
 
   if(!projs.length){c.innerHTML='<div class="empty">Sem projetos para mostrar.</div>';return;}
@@ -4343,7 +4379,25 @@ const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov',
 const GANTT_COLORS=['#1A5E3B','#2E7D52','#0F6E56','#534AB7','#D85A30','#0C447C','#639922','#BA7517'];
 function renderGantt(){
   const dep=gv('ff-g-dep'),ano=parseInt(gv('ff-g-ano')||new Date().getFullYear()),modo=gv('ff-g-modo')||'mensal';
-  const projs=plProjetos.filter(p=>!dep||p.dep===dep);
+  const colEmail=(gv('ff-g-col')||'').toLowerCase();
+  const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
+  const gColMatches=(responsavel,respEmail)=>{
+    if(!colEmail) return true;
+    if(respEmail&&respEmail.toLowerCase()===colEmail) return true;
+    const u=fjUtilizadores.find(u=>u.email===colEmail);
+    if(u&&responsavel&&responsavel.toLowerCase()===u.titulo.toLowerCase()) return true;
+    return false;
+  };
+  const projs=plProjetos.filter(p=>{
+    if(dep&&normDep(p.dep)!==normDep(dep)) return false;
+    if(colEmail){
+      const projMatch=gColMatches(p.responsavel,p.responsavelEmail);
+      const acaoMatch=plAcoes.some(a=>String(a.projetoId)===String(p.id)&&gColMatches(a.responsavel,a.responsavelEmail));
+      const tarMatch=plTarefas.some(t=>(String(t.projetoId)===String(p.id)||plAcoes.some(a=>String(a.projetoId)===String(p.id)&&String(t.acaoId)===String(a.id)))&&gColMatches(t.responsavel,t.responsavelEmail));
+      if(!projMatch&&!acaoMatch&&!tarMatch) return false;
+    }
+    return true;
+  });
   const lblW=220;
   let cols,colW,labels,unitMs,rangeStart,rangeEnd;
   const today=new Date();today.setHours(0,0,0,0);
