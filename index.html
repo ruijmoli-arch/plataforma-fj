@@ -1345,26 +1345,14 @@ tr:hover td{background:var(--bg3)}
       <!-- PLANO SEMANAL -->
       <div id="pl-page-semanal" class="page active">
         <div class="page-title">Plano Semanal</div>
-          <div class="week-nav">
-            <button class="btn btn-sm" onclick="chgWeek(-1)">← Anterior</button>
-            <span class="week-nav-title" id="week-label">—</span>
-            <button class="btn btn-sm" onclick="chgWeek(1)">Seguinte →</button>
-          </div>
-          <div class="view-toggle">
-            <button class="vt-btn active" id="vt-pes" onclick="setView('pessoal')">A minha semana</button>
-            <button class="vt-btn" id="vt-eq" onclick="setView('equipa')" style="display:none">Departamento</button>
-            <button class="vt-btn" id="vt-col" onclick="setView('colaborador')" style="display:none">Colaborador</button>
-          </div>
-        <div id="col-picker" style="display:none;margin-bottom:1rem">
-          <div class="fg people-wrap" style="max-width:320px">
-            <label>Colaborador</label>
-            <input id="col-input" placeholder="Nome do colaborador..." autocomplete="off" oninput="searchFJUsers(this.value,'col-sug','col-input','col-email')">
-            <input id="col-email" type="hidden">
-            <div id="col-sug" class="people-sugg"></div>
-          </div>
+        <div class="week-nav">
+          <button class="btn btn-sm" onclick="chgWeek(-1)">← Anterior</button>
+          <span class="week-nav-title" id="week-label">—</span>
+          <button class="btn btn-sm" onclick="chgWeek(1)">Seguinte →</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
-          <select class="flt" id="ff-s-dep" onchange="renderSem()" style="display:none"><option value="">Todos os departamentos</option></select>
+        <div class="toolbar">
+          <select class="flt" id="ff-s-dep" onchange="renderSem()"><option value="">Todos os departamentos</option></select>
+          <select class="flt" id="ff-s-col" onchange="renderSem()"><option value="">Todos os colaboradores</option></select>
           <div class="search-wrap" style="max-width:220px">
             <svg class="si" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><line x1="11" y1="11" x2="15" y2="15"/></svg>
             <input placeholder="Pesquisar tarefa..." oninput="renderSem()" id="q-sem">
@@ -3974,7 +3962,7 @@ function populateCollabSelects(){
   const sorted=[...fjUtilizadores].sort((a,b)=>a.titulo.localeCompare(b.titulo));
   const opts='<option value="">Todos os colaboradores</option>'+
     sorted.map(u=>`<option value="${u.email}">${u.titulo}</option>`).join('');
-  ['ff-h-col','ff-g-col'].forEach(id=>{
+  ['ff-h-col','ff-g-col','ff-s-col'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel) return;
     const cur=sel.value;
@@ -4633,25 +4621,9 @@ function plCanSeeAll(){
   return cargo==='Presidente Executivo'||cargo==='Diretor'||equipas.includes('CAdm')||equipas.includes('Gestão');
 }
 
-function setView(v){
-  // Só Diretores e superiores podem usar os filtros de Departamento e Colaborador
-  if((v==='equipa'||v==='colaborador')&&!plCanSeeAll()) return;
-  plSemView=v;
-  el('vt-pes').classList.toggle('active',v==='pessoal');
-  el('vt-eq').classList.toggle('active',v==='equipa');
-  el('vt-col').classList.toggle('active',v==='colaborador');
-  el('ff-s-dep').style.display=v==='equipa'?'block':'none';
-  el('col-picker').style.display=v==='colaborador'?'block':'none';
-  renderSem();
-}
-
-function plInitSemPermissions(){
-  const canSee = plCanSeeAll();
-  const eq  = el('vt-eq');
-  const col = el('vt-col');
-  if(eq)  eq.style.display  = canSee ? '' : 'none';
-  if(col) col.style.display = canSee ? '' : 'none';
-}
+// setView e plInitSemPermissions mantidos como stubs para compatibilidade
+function setView(v){ renderSem(); }
+function plInitSemPermissions(){ /* filtros agora são selects, sem lógica de visibilidade */ }
 
 function chgWeek(d){plViewWeek+=d;if(plViewWeek<1){plViewWeek=52;plViewYear--;}else if(plViewWeek>52){plViewWeek=1;plViewYear++;}renderSem();}
 
@@ -4662,22 +4634,28 @@ function renderSem(){
   const wr=weekRange(plViewWeek,plViewYear); // start=Monday, end=Sunday 23:59:59
   const q=(gv('q-sem')||'').toLowerCase();
   const dep=gv('ff-s-dep')||'';
-  const colEmail=gv('col-email')||'';
+  const colEmail=(gv('ff-s-col')||'').toLowerCase();
   const hoje=new Date(); hoje.setHours(0,0,0,0);
   const isDir=plCanSeeAll();
   const myEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
   const myName=(user?.name||'').toLowerCase();
 
-  // Utilitário: verifica se nome coincide com o utilizador atual
   const matchesMe=nome=>nome&&myName&&nome.toLowerCase().split(/\s+/).some(w=>w.length>2&&myName.split(/\s+/).some(m=>m.includes(w)||w.includes(m)));
   const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
+  const semColMatch=(responsavel,respEmail)=>{
+    if(!colEmail) return true;
+    if(respEmail&&respEmail.toLowerCase()===colEmail) return true;
+    const u=fjUtilizadores.find(u=>u.email===colEmail);
+    if(u&&responsavel&&responsavel.toLowerCase()===u.titulo.toLowerCase()) return true;
+    return false;
+  };
 
   // Inclui tarefas NÃO concluídas cuja dataLimite <= fim desta semana
   const list=plTarefas.filter(t=>{
     if(t.estado==='Concluída') return false;
     if(!t.dataLimite) return false;
     const dl=new Date(t.dataLimite+'T23:59:59');
-    if(dl>wr.end) return false; // só mostra até ao fim da semana atual
+    if(dl>wr.end) return false;
 
     // Permissões: membros vêem apenas as suas responsabilidades
     if(!isDir){
@@ -4694,13 +4672,10 @@ function renderSem(){
       }
     }
 
-    // Filtros de equipa/colaborador (apenas Diretores+)
-    if(isDir&&plSemView==='equipa'&&dep&&normDep(t.dep)!==normDep(dep)) return false;
-    if(isDir&&plSemView==='colaborador'&&colEmail){
-      const colNome=(gv('col-input')||'').toLowerCase();
-      const emailMatch=(t.responsavelEmail||'').toLowerCase()===colEmail.toLowerCase();
-      const nameMatch=colNome.length>1&&(t.responsavel||'').toLowerCase().includes(colNome);
-      if(!emailMatch&&!nameMatch) return false;
+    // Filtros Departamento + Colaborador (visíveis para todos mas só efetivos para Diretores+)
+    if(isDir){
+      if(dep&&normDep(t.dep)!==normDep(dep)) return false;
+      if(colEmail&&!semColMatch(t.responsavel,t.responsavelEmail)) return false;
     }
 
     if(q&&!t.titulo.toLowerCase().includes(q)) return false;
@@ -5267,7 +5242,7 @@ async function plSearchPeople(q,sugId,inputId,emailId){
 function plSelPerson(inputId,sugId,name,emailId,email){
   sv2(inputId,name);if(emailId)sv2(emailId,email);
   el(sugId)?.classList.remove('open');
-  if(emailId==='col-email')renderSem();
+  // ff-s-col select now handles collaborator filter - no callback needed
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.people-wrap'))document.querySelectorAll('.people-sugg').forEach(s=>s.classList.remove('open'));});
 
