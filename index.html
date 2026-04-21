@@ -668,6 +668,19 @@ tr:hover td{background:var(--bg3)}
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
         Relatórios
       </div>
+      <div class="sidebar-lbl">Registo Horas</div>
+      <div class="nav-item" id="pl-nav-reg-horas" onclick="plShowPage('reg-horas')" style="color:rgba(255,255,255,.75)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="9" r="5"/><path d="M8 6v3l2 1.5"/><path d="M5.5 1.5L3 4M10.5 1.5L13 4"/></svg>
+        Registar Horas
+      </div>
+      <div class="nav-item" id="pl-nav-ver-reg-horas" onclick="plShowPage('ver-reg-horas')" style="color:rgba(255,255,255,.75)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1" width="12" height="14" rx="1"/><line x1="5" y1="5" x2="11" y2="5"/><line x1="5" y1="8" x2="11" y2="8"/><line x1="5" y1="11" x2="8" y2="11"/></svg>
+        Ver Registos
+      </div>
+      <div class="nav-item" id="pl-nav-analise-horas" onclick="plShowPage('analise-horas')" style="color:rgba(255,255,255,.75)">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,13 5,8 9,10 15,3"/><line x1="1" y1="15" x2="15" y2="15"/></svg>
+        Análise de Horas
+      </div>
     </div>
     <div class="sidebar" id="sidebar-gf" style="display:none">
       <div class="sidebar-label" style="color:rgba(255,255,255,.4)">Financeiro</div>
@@ -1451,6 +1464,106 @@ tr:hover td{background:var(--bg3)}
           </div>
         </div>
       </div>
+    </div>
+
+      <!-- ══ REGISTAR HORAS ════════════════════════════════════════ -->
+      <div id="pl-page-reg-horas" class="page">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem">
+          <div style="width:44px;height:44px;background:var(--mod-planeamento-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px">⏱</div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:var(--mod-planeamento)">REGISTO DE HORAS</div>
+            <div style="font-size:12px;color:var(--text3)">Registe o tempo gasto em cada tarefa/projeto</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);padding:1.25rem;margin-bottom:1rem">
+          <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:1.25rem">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <label style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Data *</label>
+              <input type="date" id="rh-data" style="padding:8px 12px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2)">
+            </div>
+            <button class="btn btn-primary" onclick="rhAdicionarBloco()" style="background:var(--mod-planeamento);border-color:var(--mod-planeamento)">+ Adicionar bloco de horas</button>
+          </div>
+          <div id="rh-blocos-container"></div>
+          <div id="rh-footer" style="display:none;justify-content:flex-end;gap:8px;margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border)">
+            <button class="btn" onclick="rhLimpar()">Limpar tudo</button>
+            <button class="btn" id="rh-guardar-btn" onclick="rhGuardar()" style="background:var(--mod-planeamento);color:#fff;border-color:var(--mod-planeamento)">Guardar registos</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VER REGISTOS ══════════════════════════════════════════ -->
+      <div id="pl-page-ver-reg-horas" class="page">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+          <div style="font-size:18px;font-weight:600">📋 Ver Registos</div>
+          <button class="btn btn-sm" onclick="rhLoaded=false;rhLoadRegistos().then(rhRenderVerRegistos)" style="font-size:12px">↻ Atualizar</button>
+        </div>
+        <div class="toolbar" style="margin-bottom:1rem">
+          <input type="date" id="rh-ff-data-ini" onchange="rhRenderVerRegistos()" style="padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px">
+          <input type="date" id="rh-ff-data-fim" onchange="rhRenderVerRegistos()" style="padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px">
+          <select id="rh-ff-ver-proj" class="flt" onchange="rhRenderVerRegistos()"><option value="">Todos os projetos</option></select>
+        </div>
+        <div id="rh-ver-container"><div class="empty" style="padding:2rem">A carregar registos...</div></div>
+      </div>
+
+      <!-- Modal de edição -->
+      <div id="rh-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
+        <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:1rem">
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:16px;font-weight:600">✎ Editar Registo</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">Data: <strong id="rh-edit-data"></strong></div>
+            </div>
+            <button onclick="rhCloseEdit()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3)">×</button>
+          </div>
+          <div style="padding:20px 24px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:8px;font-size:12px">
+              <div><div style="color:var(--text3);margin-bottom:2px">Projeto</div><strong id="rh-edit-proj-nome"></strong></div>
+              <div><div style="color:var(--text3);margin-bottom:2px">Ação</div><strong id="rh-edit-acao-nome"></strong></div>
+              <div><div style="color:var(--text3);margin-bottom:2px">Tarefa</div><strong id="rh-edit-tar-nome"></strong></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <label style="font-size:12px;color:var(--text2);font-weight:500">Hora de início *</label>
+                <input type="time" id="rh-edit-ini" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <label style="font-size:12px;color:var(--text2);font-weight:500">Hora de fim *</label>
+                <input type="time" id="rh-edit-fim" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px">
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px">
+              <label style="font-size:12px;color:var(--text2);font-weight:500">Motivo da alteração</label>
+              <textarea id="rh-edit-motivo" rows="2" placeholder="Descreva brevemente o motivo..." style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;resize:vertical"></textarea>
+            </div>
+            <div style="margin-bottom:4px">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Histórico de alterações</div>
+              <div id="rh-edit-hist"></div>
+            </div>
+          </div>
+          <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn" onclick="rhCloseEdit()">Cancelar</button>
+            <button id="rh-edit-save-btn" class="btn" onclick="rhSaveEdit()" style="background:var(--mod-planeamento);color:#fff;border-color:var(--mod-planeamento)">Guardar alteração</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ANÁLISE DE HORAS ══════════════════════════════════════ -->
+      <div id="pl-page-analise-horas" class="page">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+          <div style="font-size:18px;font-weight:600">📊 Análise de Horas</div>
+          <button class="btn btn-sm" onclick="rhLoaded=false;rhLoadRegistos().then(()=>{rhPopulateAnaliseFilters();rhRenderAnalise();})" style="font-size:12px">↻ Atualizar</button>
+        </div>
+        <div class="toolbar" style="margin-bottom:1.25rem">
+          <select id="rh-ff-worker" class="flt" onchange="rhRenderAnalise()"><option value="">Todos os colaboradores</option></select>
+          <select id="rh-ff-proj" class="flt" onchange="rhRenderAnalise()"><option value="">Todos os projetos</option></select>
+          <input type="date" id="rh-ff-ini" onchange="rhRenderAnalise()" style="padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px">
+          <input type="date" id="rh-ff-fim" onchange="rhRenderAnalise()" style="padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px">
+        </div>
+        <div id="rh-analise-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem"></div>
+        <div id="rh-analise-container"><div class="empty" style="padding:2rem">A carregar análise...</div></div>
+      </div>
+
     </div>
 </div><!-- /module-pl -->
 
@@ -3767,7 +3880,463 @@ function plShowPage(p){
   document.getElementById('pl-page-'+p)?.classList.add('active');
   document.getElementById('pl-nav-'+p)?.classList.add('active');
   if(p==='gantt') renderGantt();
+  if(p==='reg-horas'){rhInit().then(()=>rhInitForm());}
+  if(p==='ver-reg-horas'){rhInit().then(()=>{rhPopulateVerFiltros();rhRenderVerRegistos();});}
+  if(p==='analise-horas'){rhInit().then(()=>{rhPopulateAnaliseFilters();rhRenderAnalise();});}
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══ MÓDULO: REGISTO DE HORAS ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+const RH_LIST='FJ_RegistoHoras';
+let rhRegistos=[],rhBlocos=[],rhBlocoCounter=0,rhLoaded=false,rhEditRecord=null;
+
+async function rhInit(){
+  if(rhLoaded)return;
+  await rhLoadRegistos();
+  rhLoaded=true;
+}
+
+async function rhLoadRegistos(){
+  try{
+    const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
+    const canSeeAll=(userCargo()==='Presidente Executivo'||userCargo()==='Diretor');
+    let url;
+    if(canSeeAll){
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$orderby=Data desc&$top=5000`;
+    } else {
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$filter=TrabalhadorEmail eq '${userEmail}'&$orderby=Data desc&$top=5000`;
+    }
+    const d=await spRead(url);
+    rhRegistos=(d.d?.results||[]).map(r=>({
+      id:r.Id,
+      trabalhador:r.Title||'',
+      trabalhadorEmail:(r.TrabalhadorEmail||'').toLowerCase(),
+      data:r.Data?r.Data.split('T')[0]:'',
+      projetoId:r.ProjetoIdId||null,
+      projetoNome:plProjetos.find(p=>p.id===r.ProjetoIdId)?.nome||'—',
+      acaoId:r.AcaoIdId||null,
+      acaoNome:plAcoes.find(a=>a.id===r.AcaoIdId)?.nome||'—',
+      tarefaId:r.TarefaRef||null,
+      tarefaNome:r.TarefaRef?plTarefas.find(t=>String(t.id)===r.TarefaRef)?.titulo||'':'',
+      horaInicio:r.HoraInicio||'',
+      horaFim:r.HoraFim||'',
+      totalMinutos:r.TotalMinutos||0,
+      alteracoesAntigas:(()=>{try{return JSON.parse(r.AlteracoesAntigas||'[]');}catch(e){return[];}})()
+    }));
+  }catch(e){console.warn('rhLoadRegistos:',e);rhRegistos=[];}
+}
+
+// ── FORM: REGISTAR ──
+function rhInitForm(){
+  const inp=el('rh-data');
+  if(inp&&!inp.value)inp.value=today();
+  rhBlocos=[];rhBlocoCounter=0;
+  rhRenderBlocos();
+}
+
+function rhAdicionarBloco(){
+  rhBlocoCounter++;
+  rhBlocos.push({id:rhBlocoCounter,projetoId:'',projetoNome:'',acaoId:null,acaoNome:'',tarefaId:null,tarefaNome:'',horaInicio:'',horaFim:''});
+  rhRenderBlocos();
+  setTimeout(()=>{const d=el(`rh-bloco-${rhBlocoCounter}`);if(d)d.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+}
+
+function rhRemoverBloco(id){rhBlocos=rhBlocos.filter(b=>b.id!==id);rhRenderBlocos();}
+
+function rhCalcMin(ini,fim){
+  if(!ini||!fim)return 0;
+  const[ih,im]=ini.split(':').map(Number);
+  const[fh,fm]=fim.split(':').map(Number);
+  const t=(fh*60+fm)-(ih*60+im);
+  return t>0?t:0;
+}
+
+function rhFmtH(min){
+  if(!min)return'—';
+  const h=Math.floor(min/60),m=min%60;
+  return h>0?(m>0?`${h}h ${m}m`:`${h}h`):(m>0?`${m}m`:'—');
+}
+
+function rhRenderBlocos(){
+  const cont=el('rh-blocos-container'),footer=el('rh-footer');
+  if(!cont)return;
+  if(!rhBlocos.length){
+    cont.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:13px;border:2px dashed var(--border);border-radius:var(--r)">Clique em <strong>+ Adicionar bloco de horas</strong> para registar o tempo numa tarefa</div>`;
+    if(footer)footer.style.display='none';
+    return;
+  }
+  if(footer)footer.style.display='flex';
+  cont.innerHTML=rhBlocos.map((b,i)=>{
+    const min=rhCalcMin(b.horaInicio,b.horaFim);
+    const durStr=min>0?`<span style="background:var(--mod-planeamento-bg);color:var(--mod-planeamento);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${rhFmtH(min)}</span>`:'';
+    return`<div id="rh-bloco-${b.id}" style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:600;color:var(--text2)">Bloco ${i+1}</span>
+          ${durStr}
+        </div>
+        <button onclick="rhRemoverBloco(${b.id})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding:0 4px" title="Remover">×</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Projeto *</label>
+          <select id="rh-proj-${b.id}" onchange="rhOnProjChange(${b.id})" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2)">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Ação *</label>
+          <select id="rh-acao-${b.id}" onchange="rhOnAcaoChange(${b.id})" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2)">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Tarefa</label>
+          <select id="rh-tar-${b.id}" onchange="rhOnTarChange(${b.id})" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2)">
+            <option value="">— Sem tarefa —</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Hora início *</label>
+          <input type="time" id="rh-ini-${b.id}" value="${b.horaInicio}" onchange="rhOnTimeChange(${b.id},'ini')" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2)">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Hora fim *</label>
+          <input type="time" id="rh-fim-${b.id}" value="${b.horaFim}" onchange="rhOnTimeChange(${b.id},'fim')" style="padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;color:var(--text);background:var(--bg2)">
+        </div>
+        <div style="padding-bottom:2px;min-width:60px;text-align:center">
+          <span style="font-size:15px;font-weight:700;color:${min>0?'var(--mod-planeamento)':'var(--text3)'}">${min>0?rhFmtH(min):'—'}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  rhBlocos.forEach(b=>rhPopulateProjSelect(b.id));
+}
+
+function rhPopulateProjSelect(bid){
+  const s=el(`rh-proj-${bid}`);if(!s)return;
+  const b=rhBlocos.find(x=>x.id===bid);
+  s.innerHTML=`<option value="">— Selecionar —</option>`+
+    plProjetos.map(p=>`<option value="${p.id}" ${String(b?.projetoId)===String(p.id)?'selected':''}>${p.nome}</option>`).join('');
+  rhPopulateAcaoSelect(bid);
+}
+
+function rhPopulateAcaoSelect(bid){
+  const b=rhBlocos.find(x=>x.id===bid);
+  const sA=el(`rh-acao-${bid}`);if(!sA)return;
+  const acoes=plAcoes.filter(a=>String(a.projetoId)===String(b?.projetoId));
+  sA.innerHTML=`<option value="">— Selecionar —</option>`+acoes.map(a=>`<option value="${a.id}" ${String(b?.acaoId)===String(a.id)?'selected':''}>${a.nome}</option>`).join('');
+  rhPopulateTarSelect(bid);
+}
+
+function rhPopulateTarSelect(bid){
+  const b=rhBlocos.find(x=>x.id===bid);
+  const sT=el(`rh-tar-${bid}`);if(!sT)return;
+  const tarefas=plTarefas.filter(t=>String(t.acaoId)===String(b?.acaoId));
+  const origemLabel={Plano:'📋',Reunião:'🤝',Correio:'📬'};
+  sT.innerHTML=`<option value="">— Sem tarefa —</option>`+
+    tarefas.map(t=>`<option value="${t.id}" ${String(b?.tarefaId)===String(t.id)?'selected':''}>${origemLabel[t.origem]||'📋'} ${t.titulo}</option>`).join('');
+}
+
+function rhOnProjChange(bid){
+  const b=rhBlocos.find(x=>x.id===bid);if(!b)return;
+  const v=el(`rh-proj-${bid}`)?.value;
+  b.projetoId=parseInt(v)||null;
+  b.acaoId=null;b.acaoNome='';b.tarefaId=null;b.tarefaNome='';
+  rhPopulateAcaoSelect(bid);
+}
+
+function rhOnAcaoChange(bid){
+  const b=rhBlocos.find(x=>x.id===bid);if(!b)return;
+  const v=el(`rh-acao-${bid}`)?.value;
+  b.acaoId=parseInt(v)||null;
+  b.tarefaId=null;b.tarefaNome='';
+  rhPopulateTarSelect(bid);
+}
+
+function rhOnTarChange(bid){
+  const b=rhBlocos.find(x=>x.id===bid);if(!b)return;
+  const v=el(`rh-tar-${bid}`)?.value;
+  b.tarefaId=v||null;
+  b.tarefaNome=plTarefas.find(t=>String(t.id)===v)?.titulo||'';
+}
+
+function rhOnTimeChange(bid,field){
+  const b=rhBlocos.find(x=>x.id===bid);if(!b)return;
+  const v=el(`rh-${field==='ini'?'ini':'fim'}-${bid}`)?.value;
+  if(field==='ini')b.horaInicio=v;else b.horaFim=v;
+  rhRenderBlocos();
+}
+
+function rhLimpar(){if(!confirm('Limpar todos os blocos?'))return;rhBlocos=[];rhRenderBlocos();}
+
+async function rhGuardar(){
+  const data=el('rh-data')?.value;
+  if(!data){showNotif('Seleciona uma data','error');return;}
+  if(!rhBlocos.length){showNotif('Adiciona pelo menos um bloco','error');return;}
+  for(const b of rhBlocos){
+    if(!b.projetoId){showNotif('Seleciona o projeto em todos os blocos','error');return;}
+    if(!b.acaoNome&&!b.acaoId){showNotif('Seleciona a ação em todos os blocos','error');return;}
+    if(!b.horaInicio||!b.horaFim){showNotif('Preenche as horas em todos os blocos','error');return;}
+    if(rhCalcMin(b.horaInicio,b.horaFim)<=0){showNotif('A hora de fim deve ser depois da hora de início','error');return;}
+  }
+  const btn=el('rh-guardar-btn');btn.disabled=true;btn.textContent='A guardar...';
+  const userName=user.name||user.username;
+  const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
+  try{
+    for(const b of rhBlocos){
+      const totalMin=rhCalcMin(b.horaInicio,b.horaFim);
+      const body={
+        __metadata:{type:'SP.Data.FJ_x005f_RegistoHorasListItem'},
+        Title:userName,TrabalhadorEmail:userEmail,
+        Data:data+'T00:00:00Z',
+        HoraInicio:b.horaInicio,HoraFim:b.horaFim,TotalMinutos:totalMin,
+        AlteracoesAntigas:'[]'
+      };
+      if(b.projetoId)body.ProjetoIdId=parseInt(b.projetoId);
+      if(b.acaoId)body.AcaoIdId=parseInt(b.acaoId);
+      if(b.tarefaId)body.TarefaRef=String(b.tarefaId); // ID composto: f_123 / r_456 / c_789
+      await spWrite(`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items`,body,'POST');
+    }
+    showNotif(`${rhBlocos.length} registo(s) guardado(s) com sucesso! ✓`,'success');
+    rhBlocos=[];rhRenderBlocos();
+    rhLoaded=false;await rhLoadRegistos();
+  }catch(e){showNotif('Erro ao guardar: '+e.message,'error');}
+  btn.disabled=false;btn.textContent='Guardar registos';
+}
+
+// ── VER REGISTOS ──
+function rhPopulateVerFiltros(){
+  const s=el('rh-ff-ver-proj');if(!s)return;
+  const projs=[...new Set(rhRegistos.map(r=>r.projetoNome).filter(Boolean))].sort();
+  s.innerHTML='<option value="">Todos os projetos</option>'+projs.map(p=>`<option value="${p}">${p}</option>`).join('');
+}
+
+function rhRenderVerRegistos(){
+  const cont=el('rh-ver-container');if(!cont)return;
+  const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
+  const isManager=userCargo()==='Presidente Executivo'||userCargo()==='Diretor';
+  const fDI=el('rh-ff-data-ini')?.value||'';
+  const fDF=el('rh-ff-data-fim')?.value||'';
+  const fProj=el('rh-ff-ver-proj')?.value||'';
+  let regs=rhRegistos;
+  if(!isManager)regs=regs.filter(r=>r.trabalhadorEmail===userEmail);
+  if(fDI)regs=regs.filter(r=>r.data>=fDI);
+  if(fDF)regs=regs.filter(r=>r.data<=fDF);
+  if(fProj)regs=regs.filter(r=>r.projetoNome===fProj);
+  const byDate={};
+  regs.forEach(r=>{if(!byDate[r.data])byDate[r.data]=[];byDate[r.data].push(r);});
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  if(!dates.length){cont.innerHTML='<div class="empty" style="padding:2rem">Sem registos para os filtros selecionados.</div>';return;}
+  cont.innerHTML=dates.map(d=>{
+    const recs=byDate[d];
+    const totalMin=recs.reduce((s,r)=>s+(r.totalMinutos||0),0);
+    const extraCol=isManager?'<th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Trabalhador</th>':'';
+    return`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);margin-bottom:10px;overflow:hidden">
+      <div onclick="this.nextElementSibling.classList.toggle('hidden')" style="padding:12px 16px;background:var(--bg3);display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;font-weight:600">${fd(d)}</span>
+          <span style="font-size:12px;color:var(--text3)">${recs.length} registo${recs.length!==1?'s':''}</span>
+          <span style="background:var(--mod-planeamento-bg);color:var(--mod-planeamento);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${rhFmtH(totalMin)}</span>
+        </div>
+        <span style="color:var(--text3)">▾</span>
+      </div>
+      <div>
+        <table style="width:100%;border-collapse:collapse">
+          <colgroup>${isManager?'<col style="width:15%">':''}<col style="width:20%"><col style="width:20%"><col style="width:18%"><col style="width:9%"><col style="width:9%"><col style="width:9%"></colgroup>
+          <thead><tr style="background:var(--bg3)">${extraCol}
+            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Projeto</th>
+            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Ação</th>
+            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase">Tarefa</th>
+            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase;text-align:center">Início</th>
+            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase;text-align:center">Fim</th>
+            <th style="padding:7px 10px;font-size:11px;color:var(--text2);text-transform:uppercase;text-align:center">Dur.</th>
+          </tr></thead>
+          <tbody>
+          ${recs.map(r=>`<tr style="border-top:0.5px solid var(--border)">
+            ${isManager?`<td style="padding:8px 10px;font-size:12px;color:var(--text2)">${r.trabalhador}</td>`:''}
+            <td style="padding:8px 10px;font-size:12px">${r.projetoNome||'—'}</td>
+            <td style="padding:8px 10px;font-size:12px">${r.acaoNome||'—'}</td>
+            <td style="padding:8px 10px;font-size:12px;color:var(--text3)">${r.tarefaNome||'—'}</td>
+            <td style="padding:8px 10px;font-size:12px;text-align:center">${r.horaInicio}</td>
+            <td style="padding:8px 10px;font-size:12px;text-align:center">${r.horaFim}</td>
+            <td style="padding:8px 10px;text-align:center">
+              ${r.trabalhadorEmail===userEmail
+                ?`<button class="btn btn-sm" onclick="rhOpenEdit(${r.id})" style="font-size:11px;padding:2px 8px">✎ ${rhFmtH(r.totalMinutos)}</button>`
+                :`<span style="font-size:12px;font-weight:600;color:var(--text2)">${rhFmtH(r.totalMinutos)}</span>`}
+            </td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function rhOpenEdit(id){
+  const r=rhRegistos.find(x=>x.id===id);if(!r)return;
+  rhEditRecord=r;
+  el('rh-edit-proj-nome').textContent=r.projetoNome||'—';
+  el('rh-edit-acao-nome').textContent=r.acaoNome||'—';
+  el('rh-edit-tar-nome').textContent=r.tarefaNome||'—';
+  el('rh-edit-data').textContent=fd(r.data);
+  el('rh-edit-ini').value=r.horaInicio;
+  el('rh-edit-fim').value=r.horaFim;
+  el('rh-edit-motivo').value='';
+  rhRenderEditHist(r.alteracoesAntigas||[]);
+  el('rh-edit-modal').style.display='flex';
+}
+
+function rhCloseEdit(){el('rh-edit-modal').style.display='none';rhEditRecord=null;}
+
+function rhRenderEditHist(hist){
+  const cont=el('rh-edit-hist');if(!cont)return;
+  if(!hist.length){cont.innerHTML='<div style="color:var(--text3);font-size:12px;font-style:italic">Sem alterações anteriores</div>';return;}
+  cont.innerHTML=hist.map(h=>`
+    <div style="background:var(--bg3);border:0.5px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:5px;font-size:12px">
+      <div style="font-weight:500;margin-bottom:3px">${h.data} · <span style="color:var(--text3)">por ${h.editadoPor}</span></div>
+      <div>Início: <strong>${h.iniAntigo}</strong> → <strong>${h.iniNovo}</strong> &nbsp;|&nbsp; Fim: <strong>${h.fimAntigo}</strong> → <strong>${h.fimNovo}</strong></div>
+      ${h.motivo?`<div style="color:var(--text3);font-style:italic;margin-top:2px">"${h.motivo}"</div>`:''}
+    </div>`).join('');
+}
+
+async function rhSaveEdit(){
+  if(!rhEditRecord)return;
+  const ini=el('rh-edit-ini').value,fim=el('rh-edit-fim').value;
+  if(!ini||!fim){showNotif('Preenche as horas','error');return;}
+  if(rhCalcMin(ini,fim)<=0){showNotif('A hora de fim deve ser depois da hora de início','error');return;}
+  const motivo=(el('rh-edit-motivo').value||'').trim();
+  const userName=user.name||user.username;
+  const histEntry={
+    data:new Date().toLocaleString('pt-PT'),editadoPor:userName,
+    iniAntigo:rhEditRecord.horaInicio,iniNovo:ini,
+    fimAntigo:rhEditRecord.horaFim,fimNovo:fim,
+    motivo
+  };
+  const newHist=[...(rhEditRecord.alteracoesAntigas||[]),histEntry];
+  const btn=el('rh-edit-save-btn');btn.disabled=true;btn.textContent='A guardar...';
+  try{
+    await spWrite(
+      `${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items(${rhEditRecord.id})`,
+      {__metadata:{type:'SP.Data.FJ_x005f_RegistoHorasListItem'},HoraInicio:ini,HoraFim:fim,TotalMinutos:rhCalcMin(ini,fim),AlteracoesAntigas:JSON.stringify(newHist)},
+      'MERGE','*'
+    );
+    showNotif('Registo atualizado! ✓','success');
+    rhCloseEdit();rhLoaded=false;
+    await rhLoadRegistos();rhRenderVerRegistos();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+  btn.disabled=false;btn.textContent='Guardar alteração';
+}
+
+// ── ANÁLISE DE HORAS ──
+function rhPopulateAnaliseFilters(){
+  const isManager=userCargo()==='Presidente Executivo'||userCargo()==='Diretor';
+  const selW=el('rh-ff-worker');
+  if(selW){
+    if(isManager){
+      const workers=rhRegistos
+        .filter((r,i,a)=>a.findIndex(x=>x.trabalhadorEmail===r.trabalhadorEmail)===i)
+        .sort((a,b)=>a.trabalhador.localeCompare(b.trabalhador));
+      selW.innerHTML='<option value="">Todos os colaboradores</option>'+workers.map(u=>`<option value="${u.trabalhadorEmail}">${u.trabalhador}</option>`).join('');
+      selW.parentElement.style.display='';
+    }else{
+      selW.parentElement.style.display='none';
+    }
+  }
+  const selP=el('rh-ff-proj');
+  if(selP){
+    const projs=[...new Set(rhRegistos.map(r=>r.projetoNome).filter(Boolean))].sort();
+    selP.innerHTML='<option value="">Todos os projetos</option>'+projs.map(p=>`<option value="${p}">${p}</option>`).join('');
+  }
+}
+
+function rhRenderAnalise(){
+  const cont=el('rh-analise-container'),statsCont=el('rh-analise-stats');if(!cont)return;
+  const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
+  const isManager=userCargo()==='Presidente Executivo'||userCargo()==='Diretor';
+  const fWorker=el('rh-ff-worker')?.value||'';
+  const fProj=el('rh-ff-proj')?.value||'';
+  const fIni=el('rh-ff-ini')?.value||'';
+  const fFim=el('rh-ff-fim')?.value||'';
+  let regs=rhRegistos;
+  if(!isManager)regs=regs.filter(r=>r.trabalhadorEmail===userEmail);
+  if(fWorker)regs=regs.filter(r=>r.trabalhadorEmail===fWorker);
+  if(fProj)regs=regs.filter(r=>r.projetoNome===fProj);
+  if(fIni)regs=regs.filter(r=>r.data>=fIni);
+  if(fFim)regs=regs.filter(r=>r.data<=fFim);
+
+  // Stats cards
+  const totalMin=regs.reduce((s,r)=>s+(r.totalMinutos||0),0);
+  const nWorkers=new Set(regs.map(r=>r.trabalhadorEmail)).size;
+  const nProjs=new Set(regs.map(r=>r.projetoNome)).size;
+  const nDias=new Set(regs.map(r=>r.data)).size;
+  if(statsCont)statsCont.innerHTML=`
+    <div class="stat"><span class="stat-n" style="color:var(--mod-planeamento)">${rhFmtH(totalMin)}</span><span class="stat-l">Total registado</span></div>
+    <div class="stat"><span class="stat-n">${nDias}</span><span class="stat-l">Dias com registo</span></div>
+    <div class="stat"><span class="stat-n">${nProjs}</span><span class="stat-l">Projetos</span></div>
+    <div class="stat"><span class="stat-n">${nWorkers}</span><span class="stat-l">Colaboradores</span></div>`;
+
+  // Aggregate: projeto → acao → tarefa
+  const projMap={};
+  regs.forEach(r=>{
+    const pk=r.projetoNome||'Sem projeto';
+    if(!projMap[pk])projMap[pk]={totalMin:0,acoes:{}};
+    projMap[pk].totalMin+=r.totalMinutos;
+    const ak=r.acaoNome||'Sem ação';
+    if(!projMap[pk].acoes[ak])projMap[pk].acoes[ak]={totalMin:0,tarefas:{},workers:{}};
+    projMap[pk].acoes[ak].totalMin+=r.totalMinutos;
+    const we=r.trabalhador||r.trabalhadorEmail;
+    projMap[pk].acoes[ak].workers[we]=(projMap[pk].acoes[ak].workers[we]||0)+r.totalMinutos;
+    const tk=r.tarefaNome||null;
+    if(tk){
+      if(!projMap[pk].acoes[ak].tarefas[tk])projMap[pk].acoes[ak].tarefas[tk]={totalMin:0,workers:{}};
+      projMap[pk].acoes[ak].tarefas[tk].totalMin+=r.totalMinutos;
+      projMap[pk].acoes[ak].tarefas[tk].workers[we]=(projMap[pk].acoes[ak].tarefas[tk].workers[we]||0)+r.totalMinutos;
+    }
+  });
+
+  const pills=ws=>Object.entries(ws).map(([n,m])=>`<span style="display:inline-block;padding:2px 8px;background:var(--blue-l);color:var(--blue-d);border-radius:10px;font-size:11px;margin:1px">${n} · ${rhFmtH(m)}</span>`).join('');
+
+  if(!Object.keys(projMap).length){cont.innerHTML='<div class="empty" style="padding:2rem">Sem dados para os filtros selecionados.</div>';return;}
+
+  cont.innerHTML=Object.entries(projMap).sort((a,b)=>b[1].totalMin-a[1].totalMin).map(([projNome,pd])=>{
+    return`<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);margin-bottom:12px;overflow:hidden">
+      <div onclick="this.nextElementSibling.classList.toggle('hidden')" style="padding:14px 16px;background:var(--mod-planeamento-bg);display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <div style="font-size:14px;font-weight:700;color:var(--mod-planeamento)">📁 ${projNome}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--text3)">${Object.keys(pd.acoes).length} ações</span>
+          <span style="font-size:16px;font-weight:700;color:var(--mod-planeamento)">${rhFmtH(pd.totalMin)}</span>
+        </div>
+      </div>
+      <div>
+        ${Object.entries(pd.acoes).sort((a,b)=>b[1].totalMin-a[1].totalMin).map(([acaoNome,ad])=>`
+          <div style="border-bottom:0.5px solid var(--border)">
+            <div onclick="this.nextElementSibling.classList.toggle('hidden')" style="padding:10px 16px 10px 28px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--bg)">
+              <div>
+                <div style="font-size:13px;font-weight:600">⚡ ${acaoNome}</div>
+                <div style="margin-top:4px">${pills(ad.workers)}</div>
+              </div>
+              <span style="font-size:14px;font-weight:700;color:var(--text2);min-width:60px;text-align:right">${rhFmtH(ad.totalMin)}</span>
+            </div>
+            <div ${Object.keys(ad.tarefas).length?'':'class="hidden"'} style="padding:0 16px 10px 42px">
+              ${Object.entries(ad.tarefas).sort((a,b)=>b[1].totalMin-a[1].totalMin).map(([tarNome,td])=>`
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:6px;margin-top:5px">
+                  <div>
+                    <div style="font-size:12px;font-weight:500;color:var(--text)">📌 ${tarNome}</div>
+                    <div style="margin-top:3px">${pills(td.workers)}</div>
+                  </div>
+                  <span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;padding-left:10px">${rhFmtH(td.totalMin)}</span>
+                </div>`).join('')}
+              ${Object.keys(ad.tarefas).length===0?`<div style="font-size:11px;color:var(--text3);padding:4px 0;font-style:italic">Sem tarefas associadas (tempo registado diretamente na ação)</div>`:''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');}
+// ══ FIM MÓDULO REGISTO HORAS ═══════════════════════════════════════
 /* ===== STATE ===== */
 
 let plProjetos=[],plAcoes=[],plTarefas=[],plKpdefs=[],plKpregs=[],plPlanoTrim=[],plDepartamentos=[];
@@ -9586,8 +10155,8 @@ async function gfSubmitPago() {
   }
 }
 
+
 init();
-</script>
 
 <!-- ══ MODAL + PROCESSADO ══════════════════════════════════════ -->
 <div id="gf-proc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
