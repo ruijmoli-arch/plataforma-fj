@@ -688,9 +688,17 @@ tr:hover td{background:var(--bg3)}
       <div class="sidebar-lbl" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:.6rem .75rem .15rem">Solicitações</div>
       <div class="nav-item" id="gf-nav-sol-nova" onclick="GF.solicitacao=null;gfNav('solicitacao-form')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
-        + Nova Solicitação
+        Nova Solicitação
       </div>
-      <div class="nav-item" id="gf-nav-sol-lista" onclick="gfNav('solicitacoes')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
+      <div class="nav-item" id="gf-nav-sol-processado" onclick="gfOpenProcessadoModal()" style="color:rgba(255,255,255,.75);padding-left:1.25rem;display:none">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><polyline points="5,8 7,10 11,6"/></svg>
+        + Processado
+      </div>
+      <div class="nav-item" id="gf-nav-sol-pago" onclick="gfOpenPagoModal()" style="color:rgba(255,255,255,.75);padding-left:1.25rem;display:none">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+        + Pago
+      </div>
+      <div class="nav-item" id="gf-nav-sol-lista" onclick="GF.tab.sol='realizadas';gfNav('solicitacoes')" style="color:rgba(255,255,255,.75);padding-left:1.25rem">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="10" x2="9" y2="10"/></svg>
         Solicitações realizadas
       </div>
@@ -715,6 +723,10 @@ tr:hover td{background:var(--bg3)}
       <div class="nav-item" id="gf-nav-direcao" onclick="gfNav('direcao')" style="color:rgba(255,255,255,.75);display:none">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-8 4 4 4-6"/></svg>
         Vista Direção
+      </div>
+      <div class="nav-item" id="gf-nav-configuracoes" onclick="gfNav('configuracoes')" style="color:rgba(255,255,255,.75);display:none">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+        Configurações
       </div>
     </div>
 <div class="sidebar" id="sidebar-au" style="display:none">
@@ -5429,6 +5441,7 @@ function gfNav(screen, params = {}) {
     'alteracoes':           'gf-nav-alt-lista',
     'aprovacoes':           'gf-nav-aprovacoes',
     'direcao':              'gf-nav-direcao',
+    'configuracoes':        'gf-nav-configuracoes',
   };
   const navId = NAV_MAP[screen] || NAV_MAP[screen.split('-')[0]];
   const navEl = navId ? gfEl(navId) : null;
@@ -5436,8 +5449,24 @@ function gfNav(screen, params = {}) {
 }
 
 // ── INIT ──
+function gfCanProcessar() {
+  return _financeRole === 'pe' || _financeRole === 'pca' || _financeRole === 'df' || isFinanceiroEquipa();
+}
+
 function gfInit() {
-  gfLoadAll();
+  gfLoadAll().then(() => gfUpdateSidebarNav());
+}
+
+function gfUpdateSidebarNav() {
+  const show = gfCanProcessar();
+  const ids = ['gf-nav-sol-processado', 'gf-nav-sol-pago'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+  });
+  // Configurações: apenas PE
+  const cfg = document.getElementById('gf-nav-configuracoes');
+  if (cfg) cfg.style.display = _financeRole === 'pe' ? 'flex' : 'none';
 }
 
 // ── MAIN RENDER ──
@@ -5458,6 +5487,7 @@ function gfRender() {
     case 'alteracao-form': html = gfRenderAlteracaoForm(); break;
     case 'aprovacoes': html = gfRenderAprovacoes(); break;
     case 'faturas': html = gfRenderFaturas(); break;
+    case 'configuracoes': html = gfRenderConfiguracoes(); break;
     default: html = gfRenderHome();
   }
   
@@ -6286,7 +6316,7 @@ function gfRenderSolicitacoes() {
       <div style="font-size:20px;font-weight:600">Solicitações</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" style="background:var(--mod-financeiro);border-color:var(--mod-financeiro)" onclick="GF.solicitacao=null;gfNav('solicitacao-form')">+ Nova Solicitação</button>
-        ${_financeRole === 'df' ? '<button class="btn" style="background:#10B981;color:#fff;border-color:#10B981" onclick="gfOpenProcessadoModal()">+ Processado</button><button class="btn" style="background:#6366F1;color:#fff;border-color:#6366F1" onclick="gfOpenPagoModal()">+ Pago</button>' : ''}
+        ${gfCanProcessar() ? '<button class="btn" style="background:#10B981;color:#fff;border-color:#10B981" onclick="gfOpenProcessadoModal()">+ Processado</button><button class="btn" style="background:#6366F1;color:#fff;border-color:#6366F1" onclick="gfOpenPagoModal()">+ Pago</button>' : ''}
       </div>
     </div>
     
@@ -7592,8 +7622,8 @@ async function getCurrentUserId() {
 
 // ═══════════════ BLOQUEIO ORÇAMENTO ═══════════════
 async function toggleBloqueioOrcamento() {
-  if (_financeRole !== 'df') {
-    showNotif('Apenas a Diretora Financeira pode alterar o bloqueio.', 'error');
+  if (_financeRole !== 'df' && _financeRole !== 'pe') {
+    showNotif('Apenas a Diretora Financeira ou o Presidente Executivo podem alterar o bloqueio.', 'error');
     return;
   }
   const novoEstado = !GF.bloqueado;
@@ -9057,6 +9087,69 @@ async function coDeleteRegisto(id) {
   } catch(e) {
     showNotif('Erro: ' + e.message, 'error');
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CONFIGURAÇÕES (Presidente Executivo)
+// ══════════════════════════════════════════════════════════════
+function gfRenderConfiguracoes() {
+  if (_financeRole !== 'pe') return '<div style="padding:60px;text-align:center;color:var(--text3)">Acesso restrito.</div>';
+
+  const bloqueadoLabel = GF.bloqueado
+    ? { icon: '🔒', txt: 'Bloqueado', sub: 'Apenas a DF pode editar valores orçamentados.', bg: '#FEE2E2', cor: '#991B1B', btnTxt: 'Desbloquear edições', btnBg: '#10B981' }
+    : { icon: '🔓', txt: 'Desbloqueado', sub: 'Todos os utilizadores autorizados podem editar o orçamento.', bg: '#D1FAE5', cor: '#065F46', btnTxt: 'Bloquear edições', btnBg: '#EF4444' };
+
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text3)">
+      <a onclick="gfNav('home')" style="color:var(--mod-financeiro);cursor:pointer">Início</a>
+      <span>›</span><span>Configurações</span>
+    </div>
+
+    <div style="font-size:20px;font-weight:600;margin-bottom:4px">⚙️ Configurações</div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Definições globais da plataforma financeira. Visível apenas ao Presidente Executivo.</div>
+
+    <!-- Bloco: Orçamento -->
+    <div style="background:#fff;border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px">
+      <div style="padding:16px 20px;border-bottom:0.5px solid var(--border);background:var(--bg3)">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">📊 Orçamento ${GF.year}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Controla quem pode editar valores orçamentados e criar rúbricas</div>
+      </div>
+      <div style="padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:48px;height:48px;border-radius:10px;background:${bloqueadoLabel.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${bloqueadoLabel.icon}</div>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:${bloqueadoLabel.cor}">${bloqueadoLabel.txt}</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">${bloqueadoLabel.sub}</div>
+            </div>
+          </div>
+          <button class="btn" style="background:${bloqueadoLabel.btnBg};color:#fff;border-color:${bloqueadoLabel.btnBg};white-space:nowrap" onclick="gfToggleBloqueioEAtualizar()">
+            ${bloqueadoLabel.btnTxt}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Anos disponíveis (informação) -->
+    <div style="background:#fff;border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:0.5px solid var(--border);background:var(--bg3)">
+        <div style="font-size:13px;font-weight:600;color:var(--text)">📅 Ano orçamental ativo</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Ano atualmente selecionado na plataforma</div>
+      </div>
+      <div style="padding:20px;display:flex;gap:8px;flex-wrap:wrap">
+        ${[2024, 2025, 2026, 2027].map(y => `
+          <button class="btn ${y === GF.year ? 'btn-primary' : ''}" style="${y === GF.year ? 'background:var(--mod-financeiro);color:#fff;border-color:var(--mod-financeiro)' : ''}" onclick="GF.year=${y};gfRender()">
+            ${y}${y === GF.year ? ' ✓' : ''}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function gfToggleBloqueioEAtualizar() {
+  await toggleBloqueioOrcamento();
+  gfNav('configuracoes');
 }
 
 // ═══════════════ FIM MÓDULO CORREIO ═══════════════
