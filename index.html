@@ -1345,12 +1345,21 @@ tr:hover td{background:var(--bg3)}
       <!-- PLANO SEMANAL -->
       <div id="pl-page-semanal" class="page active">
         <div class="page-title">Plano Semanal</div>
-        <div class="week-nav">
-          <button class="btn btn-sm" onclick="chgWeek(-1)">← Anterior</button>
-          <span class="week-nav-title" id="week-label">—</span>
-          <button class="btn btn-sm" onclick="chgWeek(1)">Seguinte →</button>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+          <div class="week-nav" style="flex:1">
+            <button class="btn btn-sm" onclick="chgWeek(-1)">← Anterior</button>
+            <span class="week-nav-title" id="week-label">—</span>
+            <button class="btn btn-sm" onclick="chgWeek(1)">Seguinte →</button>
+          </div>
+          <!-- toggle "Minhas tarefas" — apenas visível para Diretores+ -->
+          <div id="sem-my-toggle-wrap" style="display:none">
+            <div class="view-toggle">
+              <button class="vt-btn active" id="sem-btn-mine" onclick="setSemView('mine')">Minhas tarefas</button>
+              <button class="vt-btn" id="sem-btn-all" onclick="setSemView('all')">Todos</button>
+            </div>
+          </div>
         </div>
-        <div class="toolbar">
+        <div class="toolbar" id="sem-filters-bar">
           <select class="flt" id="ff-s-dep" onchange="renderSem()"><option value="">Todos os departamentos</option></select>
           <select class="flt" id="ff-s-col" onchange="renderSem()"><option value="">Todos os colaboradores</option></select>
           <div class="search-wrap" style="max-width:220px">
@@ -2182,6 +2191,7 @@ async function loadFJUtilizadores(){
     console.log('FJ_Utilizadores carregados:', fjUtilizadores);
     populateUserSelects();
     populateCollabSelects();
+    plInitSemPermissions();
     
     const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
     currentUserFJ=fjUtilizadores.find(u=>u.email===userEmail);
@@ -3762,6 +3772,7 @@ function plShowPage(p){
 
 let plProjetos=[],plAcoes=[],plTarefas=[],plKpdefs=[],plKpregs=[],plPlanoTrim=[],plDepartamentos=[];
 let plSemView='pessoal',plViewWeek,plViewYear;
+let plSemMyTasks=true; // true = mostrar só tarefas do utilizador; false = filtros dept/colab
 let plEditTrimId=null,plEditKdefId=null,plEditKregId=null,plEditTarId=null;
 let plHierOpen={};
 
@@ -3959,9 +3970,19 @@ function populateDrops(){
 // ── Popula selects de colaborador (Hierarquia + Gantt + etc.) ─────────────
 function populateCollabSelects(){
   if(!fjUtilizadores.length) return;
-  const sorted=[...fjUtilizadores].sort((a,b)=>a.titulo.localeCompare(b.titulo));
+  let list=[...fjUtilizadores].sort((a,b)=>a.titulo.localeCompare(b.titulo));
+
+  // Diretores de Área só vêem colaboradores do(s) seu(s) departamento(s)
+  // PE e CAdm vêem todos
+  if(_financeRole==='area_director' && _financeDepts.length){
+    list=list.filter(u=>u.equipa.some(e=>_financeDepts.some(d=>
+      e.toLowerCase().replace(/[\s.]/g,'')===d.toLowerCase().replace(/[\s.]/g,'')
+    )));
+  }
+
   const opts='<option value="">Todos os colaboradores</option>'+
-    sorted.map(u=>`<option value="${u.email}">${u.titulo}</option>`).join('');
+    list.map(u=>`<option value="${u.email}">${u.titulo}</option>`).join('');
+
   ['ff-h-col','ff-g-col','ff-s-col'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel) return;
@@ -4621,9 +4642,50 @@ function plCanSeeAll(){
   return cargo==='Presidente Executivo'||cargo==='Diretor'||equipas.includes('CAdm')||equipas.includes('Gestão');
 }
 
-// setView e plInitSemPermissions mantidos como stubs para compatibilidade
-function setView(v){ renderSem(); }
-function plInitSemPermissions(){ /* filtros agora são selects, sem lógica de visibilidade */ }
+// ── Vista do Plano Semanal ──────────────────────────────────────────────
+function setSemView(v){
+  plSemMyTasks = (v === 'mine');
+  el('sem-btn-mine')?.classList.toggle('active', plSemMyTasks);
+  el('sem-btn-all')?.classList.toggle('active', !plSemMyTasks);
+  // Oculta/mostra filtros dept+colab (só quando "Todos" está ativo)
+  const bar = el('sem-filters-bar');
+  if(bar){
+    const depSel = el('ff-s-dep');
+    const colSel = el('ff-s-col');
+    if(depSel) depSel.style.display = plSemMyTasks ? 'none' : '';
+    if(colSel) colSel.style.display = plSemMyTasks ? 'none' : '';
+  }
+  renderSem();
+}
+
+// Inicializa permissões do plano semanal após carregar utilizadores
+function plInitSemPermissions(){
+  const isDir = plCanSeeAll();
+  const toggleWrap = el('sem-my-toggle-wrap');
+  const depSel = el('ff-s-dep');
+  const colSel = el('ff-s-col');
+
+  if(isDir){
+    // Diretores+ vêem o toggle e os filtros
+    if(toggleWrap) toggleWrap.style.display = '';
+    // Por defeito: "Minhas tarefas" ativo → filtros ocultos
+    plSemMyTasks = true;
+    if(depSel) depSel.style.display = 'none';
+    if(colSel) colSel.style.display = 'none';
+    el('sem-btn-mine')?.classList.add('active');
+    el('sem-btn-all')?.classList.remove('active');
+    // Colaboradores: diretores de área só vêem o seu dept; PE/PCA vêem todos
+    populateCollabSelects();
+  } else {
+    // Membros: sem toggle, sem filtros dept/colab
+    if(toggleWrap) toggleWrap.style.display = 'none';
+    if(depSel) depSel.style.display = 'none';
+    if(colSel) colSel.style.display = 'none';
+    plSemMyTasks = true; // membros sempre vêem só as suas tarefas
+  }
+}
+
+function setView(v){ renderSem(); } // stub legacy
 
 function chgWeek(d){plViewWeek+=d;if(plViewWeek<1){plViewWeek=52;plViewYear--;}else if(plViewWeek>52){plViewWeek=1;plViewYear++;}renderSem();}
 
@@ -4633,8 +4695,8 @@ function renderSem(){
   elWl.textContent=weekLabel(plViewWeek,plViewYear);
   const wr=weekRange(plViewWeek,plViewYear); // start=Monday, end=Sunday 23:59:59
   const q=(gv('q-sem')||'').toLowerCase();
-  const dep=gv('ff-s-dep')||'';
-  const colEmail=(gv('ff-s-col')||'').toLowerCase();
+  const dep=plSemMyTasks?'':(gv('ff-s-dep')||'');
+  const colEmail=plSemMyTasks?'':(gv('ff-s-col')||'').toLowerCase();
   const hoje=new Date(); hoje.setHours(0,0,0,0);
   const isDir=plCanSeeAll();
   const myEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
@@ -4653,22 +4715,16 @@ function renderSem(){
     return normDep(p?.dep||'');
   };
 
-  // Verifica se uma tarefa pertence ao colaborador selecionado
-  // Regra cascata: proj responsável → vê todas tarefas do projeto
-  //                ação responsável → vê todas tarefas da ação
-  //                tarefa responsável → vê a tarefa
+  // Verifica se uma tarefa pertence ao colaborador selecionado (cascata)
   const colMatchesTarefa=t=>{
     if(!colEmail) return true;
     const colU=fjUtilizadores.find(u=>u.email===colEmail);
     const colNome=(colU?.titulo||'').toLowerCase();
     const nameEq=(nome)=>nome&&colNome&&nome.toLowerCase()===colNome;
     const emailEq=(email)=>email&&email.toLowerCase()===colEmail;
-    // nível tarefa
     if(emailEq(t.responsavelEmail)||nameEq(t.responsavel)) return true;
-    // nível ação → todas as tarefas dessa ação
     const acao=t.acaoId?plAcoes.find(a=>String(a.id)===String(t.acaoId)):null;
     if(acao&&(emailEq(acao.responsavelEmail)||nameEq(acao.responsavel))) return true;
-    // nível projeto → todas as tarefas desse projeto
     const projId=t.projetoId||(acao?.projetoId)||null;
     const proj=projId?plProjetos.find(p=>String(p.id)===String(projId)):null;
     if(proj&&(emailEq(proj.responsavelEmail)||nameEq(proj.responsavel))) return true;
@@ -4682,8 +4738,8 @@ function renderSem(){
     const dl=new Date(t.dataLimite+'T23:59:59');
     if(dl>wr.end) return false;
 
-    // Permissões: membros vêem apenas as suas responsabilidades
-    if(!isDir){
+    // Modo "Minhas tarefas" (membros sempre; diretores quando toggled)
+    if(!isDir || plSemMyTasks){
       const byTask=matchesMe(t.responsavel)||(t.responsavelEmail&&t.responsavelEmail.toLowerCase()===myEmail);
       if(!byTask){
         const acao=plAcoes.find(a=>String(a.id)===String(t.acaoId));
@@ -4697,11 +4753,11 @@ function renderSem(){
       }
     }
 
-    // Filtro Departamento: resolve dep efetivo via tarefa → ação → projeto
-    if(dep && getEffDep(t)!==normDep(dep)) return false;
-
-    // Filtro Colaborador com regra cascata (para Diretores+)
-    if(isDir && colEmail && !colMatchesTarefa(t)) return false;
+    // Modo "Todos" (apenas Diretores+): filtros dept + colaborador
+    if(isDir && !plSemMyTasks){
+      if(dep && getEffDep(t)!==normDep(dep)) return false;
+      if(colEmail && !colMatchesTarefa(t)) return false;
+    }
 
     if(q&&!t.titulo.toLowerCase().includes(q)) return false;
     return true;
