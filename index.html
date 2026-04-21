@@ -5804,8 +5804,8 @@ function gfRenderRubricas() {
   const rubs = GF_RUBRICAS.filter(r => r.projetoId === proj.id && r.ano === GF.year);
   
   // Calcular totais dinamicamente
-  let totDespOrc = 0, totDespSol = 0, totDespAprov = 0, totDespProc = 0;
-  let totRecOrc = 0, totRecSol = 0, totRecProc = 0;
+  let totDespOrc = 0, totDespSol = 0, totDespAprov = 0, totDespProc = 0, totDespPago = 0;
+  let totRecOrc = 0, totRecSol = 0, totRecAprov = 0, totRecProc = 0, totRecPago = 0;
   
   rubs.forEach(r => {
     const desp = gfCalcDespesa(r.id);
@@ -5814,9 +5814,12 @@ function gfRenderRubricas() {
     totDespSol += desp.solicitada;
     totDespAprov += desp.aprovada;
     totDespProc += desp.processada;
+    totDespPago += desp.pago;
     totRecOrc += r.recOrc || 0;
     totRecSol += rec.solicitada;
+    totRecAprov += rec.aprovada;
     totRecProc += rec.processada;
+    totRecPago += rec.pago;
   });
   
   const totDisp = totDespOrc - totDespSol;
@@ -5886,24 +5889,77 @@ function gfRenderRubricas() {
       </div>
     </div>
     
-    <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-      <div class="card" style="padding:16px">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Desp. Orçamentada</div>
-        <div style="font-size:22px;font-weight:700">${gfFmt(totDespOrc)}</div>
+    <!-- KPIs - sumário do projeto com gráfico -->
+    <div class="card" style="padding:20px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- DESPESAS totais -->
+      <div style="padding:16px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0">
+        <div style="font-size:11px;font-weight:700;color:#475569;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px">DESPESAS</div>
+        ${(() => {
+          if (totDespOrc <= 0) return `<div style="width:100%;height:10px;background:#E2E8F0;border-radius:5px"></div>`;
+          const pctProc = Math.min((totDespProc / totDespOrc) * 100, 100);
+          const pctAprov = Math.min(((totDespAprov - totDespProc) / totDespOrc) * 100, 100 - pctProc);
+          const pctSol = Math.min(((totDespSol - totDespAprov) / totDespOrc) * 100, 100 - pctProc - pctAprov);
+          return `<div style="position:relative;width:100%;height:10px;background:#E2E8F0;border-radius:5px;overflow:hidden">
+            <div style="position:absolute;left:0;top:0;height:100%;width:${pctProc}%;background:#64748B" title="Processado"></div>
+            <div style="position:absolute;left:${pctProc}%;top:0;height:100%;width:${pctAprov > 0 ? pctAprov : 0}%;background:#94A3B8" title="Aprovado"></div>
+            <div style="position:absolute;left:${pctProc + pctAprov}%;top:0;height:100%;width:${pctSol > 0 ? pctSol : 0}%;background:#CBD5E1" title="Solicitado"></div>
+          </div>`;
+        })()}
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px">
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Orç.</div>
+            <div style="font-weight:700;font-size:13px;color:#1E293B">${gfFmt(totDespOrc)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Aprov.</div>
+            <div style="font-weight:700;font-size:13px;color:#334155">${gfFmt(totDespAprov)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Proce.</div>
+            <div style="font-weight:700;font-size:13px;color:#475569">${gfFmt(totDespProc)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Pago</div>
+            <div style="font-weight:700;font-size:13px;color:#64748B">${gfFmt(totDespPago)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Disp.</div>
+            <div style="font-weight:700;font-size:13px;color:${totDisp >= 0 ? '#059669' : '#DC2626'}">${gfFmt(totDisp)}</div>
+          </div>
+        </div>
       </div>
-      <div class="card" style="padding:16px">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Desp. Solicitada</div>
-        <div style="font-size:22px;font-weight:700">${gfFmt(totDespSol)}</div>
-      </div>
-      <div class="card" style="padding:16px">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Desp. Processada</div>
-        <div style="font-size:22px;font-weight:700;color:var(--mod-financeiro)">${gfFmt(totDespProc)}</div>
-      </div>
-      <div class="card" style="padding:16px;background:#F0FDF4">
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Disponível</div>
-        <div style="font-size:22px;font-weight:700;color:${totDisp >= 0 ? '#10B981' : '#EF4444'}">${gfFmt(totDisp)}</div>
-        ${totRecOrc > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:4px">Rec: ${gfFmt(totRecProc)} proc. / ${gfFmt(totRecOrc)} orç.</div>` : ''}
+      <!-- RECEITA totais -->
+      <div style="padding:16px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0">
+        <div style="font-size:11px;font-weight:700;color:#475569;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px">RECEITA</div>
+        ${(() => {
+          if (totRecOrc <= 0) return `<div style="width:100%;height:10px;background:#E2E8F0;border-radius:5px"></div>`;
+          const pctProc = Math.min((totRecProc / totRecOrc) * 100, 100);
+          const pctAprov = Math.min(((totRecAprov - totRecProc) / totRecOrc) * 100, 100 - pctProc);
+          const pctSol = Math.min(((totRecSol - totRecAprov) / totRecOrc) * 100, 100 - pctProc - pctAprov);
+          return `<div style="position:relative;width:100%;height:10px;background:#E2E8F0;border-radius:5px;overflow:hidden">
+            <div style="position:absolute;left:0;top:0;height:100%;width:${pctProc}%;background:#64748B" title="Processado"></div>
+            <div style="position:absolute;left:${pctProc}%;top:0;height:100%;width:${pctAprov > 0 ? pctAprov : 0}%;background:#94A3B8" title="Aprovado"></div>
+            <div style="position:absolute;left:${pctProc + pctAprov}%;top:0;height:100%;width:${pctSol > 0 ? pctSol : 0}%;background:#CBD5E1" title="Solicitado"></div>
+          </div>`;
+        })()}
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px">
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Orç.</div>
+            <div style="font-weight:700;font-size:13px;color:#1E293B">${gfFmt(totRecOrc)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Aprov.</div>
+            <div style="font-weight:700;font-size:13px;color:#334155">${gfFmt(totRecAprov)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Proce.</div>
+            <div style="font-weight:700;font-size:13px;color:#475569">${gfFmt(totRecProc)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#64748B;font-weight:500;margin-bottom:3px">Pago</div>
+            <div style="font-weight:700;font-size:13px;color:#64748B">${gfFmt(totRecPago)}</div>
+          </div>
+        </div>
       </div>
     </div>
     
