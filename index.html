@@ -929,7 +929,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Data *</label><input type="date" id="fe-data"></div>
               <div class="fg"><label>Local</label><input type="text" id="fe-local" placeholder="Presencial ou Online"></div>
               <div class="fg"><label>Departamento</label>
-                <select id="fe-dep"><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
+                <select id="fe-dep"></select>
               </div>
               <div class="fg"><label>Responsável FJ</label>
                 <select id="fe-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fe-resp-email')" style="width:100%"><option value="">— Selecionar —</option></select>
@@ -962,7 +962,7 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qe" placeholder="Pesquisar entidade ou assunto..." oninput="renderExtTable()"></div>
-          <select class="flt" id="ffe-dep" onchange="renderExtTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
+          <select class="flt" id="ffe-dep" onchange="renderExtTable()"><option value="">Departamento: todos</option></select>
           <input type="date" class="flt" id="ffe-from" onchange="renderExtTable()" style="font-size:13px;padding:8px">
           <input type="date" class="flt" id="ffe-to" onchange="renderExtTable()" style="font-size:13px;padding:8px">
           <button class="btn" onclick="loadExtItems()">&#8635;</button>
@@ -1009,7 +1009,7 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="toolbar">
           <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qt" placeholder="Pesquisar..." oninput="renderTarefasTable()"></div>
-          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>CA</option></select>
+          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option></select>
           <select class="flt" id="fft-est" onchange="renderTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
           <select class="flt" id="fft-prior" onchange="renderTarefasTable()"><option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
           <button class="btn" onclick="loadRnTarefas()">&#8635;</button>
@@ -1038,12 +1038,6 @@ tr:hover td{background:var(--bg3)}
           <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="admin-search" placeholder="Pesquisar..." oninput="renderFJUtilizadores()"></div>
           <select class="flt" id="admin-filter-equipa" onchange="renderFJUtilizadores()">
             <option value="">Todas as equipas</option>
-            <option>CAdm</option>
-            <option>Gestão</option>
-            <option>Op.Norte</option>
-            <option>Op.Sul</option>
-            <option>Financeiro</option>
-            <option>Impacto</option><option>INOV</option>
           </select>
           <select class="flt" id="admin-filter-cargo" onchange="renderFJUtilizadores()">
             <option value="">Todos os cargos</option>
@@ -1088,13 +1082,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg">
                 <label>Equipas</label>
                 <div id="admin-edit-equipas" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:var(--bg);border-radius:6px">
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="CAdm"> CAdm</label>
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Gestão"> Gestão</label>
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Op.Norte"> Op.Norte</label>
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Op.Sul"> Op.Sul</label>
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Financeiro"> Financeiro</label>
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="Impacto"> Impacto</label>
-                  <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" name="equipa" value="INOV"> INOV</label>
+                  <!-- populado dinamicamente por populateDeptSelects() a partir de FJ_Departamentos -->
                 </div>
               </div>
               <div class="fg" style="grid-column:1/-1">
@@ -1153,7 +1141,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg" style="grid-column:span 2"><label>Nome da ação *</label><input id="fa-nome" placeholder="Nome da ação"></div>
               <div class="fg"><label>Projeto (Factorial) *</label><select id="fa-proj"><option value="">Selecionar...</option></select></div>
               <div class="fg"><label>Tipo</label><select id="fa-tipo"><option value="Recorrente">Recorrente</option><option value="INOV">INOV</option></select></div>
-              <div class="fg"><label>Departamento</label><select id="fa-dep"><option value="">—</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select></div>
+              <div class="fg"><label>Departamento</label><select id="fa-dep"><option value="">—</option></select></div>
               <div class="fg"><label>Estado</label><select id="fa-estado"><option>Ativo</option><option>Concluído</option><option>Pausado</option><option>Cancelado</option></select></div>
               <div class="fg"><label>Data de início</label><input id="fa-inicio" type="date"></div>
               <div class="fg"><label>Data de fim</label><input id="fa-fim" type="date"></div>
@@ -1181,7 +1169,6 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Departamento</label>
                 <select id="fp-dep">
                   <option value="">Selecionar...</option>
-                  <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
                 </select>
               </div>
               <div class="fg"><label>Data de início</label><input id="fp-inicio" type="date"></div>
@@ -1207,7 +1194,7 @@ tr:hover td{background:var(--bg3)}
           </div>
         </div>
         <div class="toolbar">
-          <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
+          <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option></select>
           <button class="btn btn-primary" onclick="openProjetoForm()">+ Novo projeto</button>
         </div>
         <div id="hier-container"></div>
@@ -1217,7 +1204,7 @@ tr:hover td{background:var(--bg3)}
       <div id="pl-page-gantt" class="page">
         <div class="page-title">Gantt</div>
         <div class="toolbar">
-          <select class="flt" id="ff-g-dep" onchange="renderGantt()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option><option>INOV</option></select>
+          <select class="flt" id="ff-g-dep" onchange="renderGantt()"><option value="">Todos os departamentos</option></select>
           <select class="flt" id="ff-g-proj" onchange="renderGantt()"><option value="">Todos os projetos</option></select>
           <select class="flt" id="ff-g-ano" onchange="renderGantt()"><option value="2025">2025</option><option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option></select>
           <select class="flt" id="ff-g-modo" onchange="renderGantt()"><option value="mensal">Vista mensal</option><option value="trimestral">Vista trimestral</option><option value="semanal">Vista semanal</option><option value="diario">Vista diária</option></select>
@@ -1237,7 +1224,7 @@ tr:hover td{background:var(--bg3)}
               <div class="fg"><label>Ação</label><select id="ft-acao" onchange="genTrimTit()"><option value="">Nenhuma</option></select></div>
               <div class="fg"><label>Trimestre</label><select id="ft-trim" onchange="genTrimTit()"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select></div>
               <div class="fg"><label>Ano</label><select id="ft-ano" onchange="genTrimTit()"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option><option>2030</option></select></div>
-              <div class="fg"><label>Departamento</label><select id="ft-dep"><option value="">—</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select></div>
+              <div class="fg"><label>Departamento</label><select id="ft-dep"><option value="">—</option></select></div>
               <div class="fg"><label>Estado</label><select id="ft-est"><option>Previsto</option><option>Em curso</option><option>Concluído</option><option>Adiado</option></select></div>
               <div class="fg"><label>Tarefas previstas</label><input id="ft-tarprev" type="number" placeholder="0" min="0"></div>
               <div class="fg"><label>Título (auto)</label><input id="ft-titulo" readonly style="background:var(--bg3);color:var(--tx2)"></div>
@@ -1252,7 +1239,7 @@ tr:hover td{background:var(--bg3)}
         <div class="toolbar">
           <select class="flt" id="ff-t-q" onchange="renderTrim()"><option value="">Todos os trimestres</option><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
           <select class="flt" id="ff-t-ano" onchange="renderTrim()"><option value="">Ano atual</option><option>2025</option><option>2026</option><option>2027</option><option>2028</option></select>
-          <select class="flt" id="ff-t-dep" onchange="renderTrim()"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
+          <select class="flt" id="ff-t-dep" onchange="renderTrim()"><option value="">Todos os departamentos</option></select>
           <select class="flt" id="ff-t-aprov" onchange="renderTrim()"><option value="">Todos os tipos</option><option value="Recorrente">Recorrente</option><option value="INOV">Inovação</option></select>
         </div>
         <div class="table-wrap">
@@ -1376,7 +1363,7 @@ tr:hover td{background:var(--bg3)}
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
-          <select class="flt" id="ff-s-dep" onchange="renderSem()" style="display:none"><option value="">Todos os departamentos</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option></select>
+          <select class="flt" id="ff-s-dep" onchange="renderSem()" style="display:none"><option value="">Todos os departamentos</option></select>
           <div class="search-wrap" style="max-width:220px">
             <svg class="si" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><line x1="11" y1="11" x2="15" y2="15"/></svg>
             <input placeholder="Pesquisar tarefa..." oninput="renderSem()" id="q-sem">
@@ -1583,7 +1570,7 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div class="toolbar">
       <select class="flt" id="au-ff-n1-tipo" onchange="auRenderN1()"><option value="">Tipo: todos</option><option>Férias</option><option>Doença</option><option>Outro</option></select>
-      <select class="flt" id="au-ff-n1-area" onchange="auRenderN1()"><option value="">Área: todas</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+      <select class="flt" id="au-ff-n1-area" onchange="auRenderN1()"><option value="">Área: todas</option></select>
       <button class="btn" onclick="auLoadAll().then(()=>auRenderN1())">&#8635; Atualizar</button>
     </div>
     <div id="au-n1-list"></div>
@@ -1603,7 +1590,7 @@ tr:hover td{background:var(--bg3)}
     </div>
     <div class="toolbar">
       <select class="flt" id="au-ff-n2-tipo" onchange="auRenderN2()"><option value="">Tipo: todos</option><option>Férias</option><option>Doença</option><option>Outro</option></select>
-      <select class="flt" id="au-ff-n2-area" onchange="auRenderN2()"><option value="">Área: todas</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+      <select class="flt" id="au-ff-n2-area" onchange="auRenderN2()"><option value="">Área: todas</option></select>
     </div>
     <div id="au-n2-list"></div>
   </div>
@@ -1613,7 +1600,7 @@ tr:hover td{background:var(--bg3)}
     <div class="page-title">Gestão de Ausências — RH</div>
     <div class="toolbar">
       <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="au-q-admin" placeholder="Pesquisar colaborador..." oninput="auRenderAdmin()"></div>
-      <select class="flt" id="au-ff-adm-area" onchange="auRenderAdmin()"><option value="">Área: todas</option><option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option></select>
+      <select class="flt" id="au-ff-adm-area" onchange="auRenderAdmin()"><option value="">Área: todas</option></select>
       <select class="flt" id="au-ff-adm-ano" onchange="auRenderAdmin()"><option value="2025">2025</option><option selected value="2026">2026</option><option value="2027">2027</option></select>
       <button class="btn btn-primary" onclick="auOpenSaldoForm()">+ Gerir saldo</button>
     </div>
@@ -1682,8 +1669,6 @@ tr:hover td{background:var(--bg3)}
           <label>Departamento destinatário</label>
           <select id="co-departamento">
             <option value="">— Selecionar —</option>
-            <option>CAdm</option><option>Gestão</option><option>Op.Norte</option>
-            <option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
           </select>
         </div>
         <div class="fg">
@@ -1783,8 +1768,6 @@ tr:hover td{background:var(--bg3)}
       </select>
       <select class="flt" id="co-ff-dep" onchange="coRenderTabela()">
         <option value="">Departamento: todos</option>
-        <option>CAdm</option><option>Gestão</option><option>Op.Norte</option>
-        <option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
       </select>
       <input type="date" class="flt" id="co-ff-from" onchange="coRenderTabela()" style="font-size:13px;padding:8px">
       <input type="date" class="flt" id="co-ff-to" onchange="coRenderTabela()" style="font-size:13px;padding:8px">
@@ -1920,8 +1903,7 @@ tr:hover td{background:var(--bg3)}
       <div class="fg"><label>Departamento</label>
         <select id="fp-dep-g">
           <option value="">Selecionar...</option>
-          <option>CAdm</option><option>Gestão</option><option>Op.Norte</option><option>Op.Sul</option><option>Financeiro</option><option>Impacto</option><option>INOV</option>
-        </select>
+                  </select>
       </div>
       <div class="fg"><label>Data de início</label><input id="fp-inicio-g" type="date"></div>
       <div class="fg"><label>Data de fim</label><input id="fp-fim-g" type="date"></div>
@@ -1994,19 +1976,28 @@ const SCOPES=['https://fjuventude.sharepoint.com/AllSites.Write','https://fjuven
 const GRAPH_SCOPES=['User.Read','GroupMember.Read.All'];
 
 // ── Normalização de departamentos ──────────────────
-// Garante que variantes do SharePoint (ex: "OP. Norte", "op norte") ficam todas iguais
+// Usa FJ_Departamentos como fonte de verdade; fallback estático se ainda não carregou
 function normalizeDep(dep) {
   if (!dep) return '';
+  const key = dep.toLowerCase().trim();
+  // Lookup dinâmico — usa exatamente os Titles da lista FJ_Departamentos
+  if (plDepartamentos && plDepartamentos.length) {
+    const exact = plDepartamentos.find(d => d.Title.toLowerCase() === key);
+    if (exact) return exact.Title;
+    // Fuzzy: ignora espaços e pontos para tolerar variantes (ex: "Op.Norte" ↔ "Op. Norte")
+    const fuzzy = key.replace(/[\s.]/g, '');
+    const approx = plDepartamentos.find(d => d.Title.toLowerCase().replace(/[\s.]/g, '') === fuzzy);
+    if (approx) return approx.Title;
+  }
+  // Fallback estático (antes dos departamentos carregarem)
   const map = {
-    'op. norte':'Op.Norte','op norte':'Op.Norte','opnorte':'Op.Norte','op.norte':'Op.Norte','operações norte':'Op.Norte','operacoes norte':'Op.Norte',
-    'op. sul':  'Op.Sul',  'op sul':  'Op.Sul',  'opsul':  'Op.Sul',  'op.sul':  'Op.Sul',  'operações sul':'Op.Sul','operacoes sul':'Op.Sul',
-    'cadm':     'CAdm',    'c adm':   'CAdm',    'c.adm':  'CAdm',    'conselho administração':'CAdm','conselho de administração':'CAdm',
-    'gestao':   'Gestão',  'gestão':  'Gestão',  'gestao ':'Gestão',
-    'financeiro':'Financeiro',
-    'impacto':  'Impacto',
-    'inov':     'INOV',    'inovação':'INOV',    'inovacao':'INOV'
+    'gestao':'Gestão','gestão':'Gestão',
+    'cadm':'CAdm','c adm':'CAdm','c.adm':'CAdm',
+    'financeiro':'Financeiro','impacto':'Impacto',
+    'inov':'INOV','inovação':'INOV','inovacao':'INOV',
+    'pe':'P. Executivo','p.executivo':'P. Executivo','p. executivo':'P. Executivo',
   };
-  return map[dep.toLowerCase().trim()] || dep.trim();
+  return map[key] || dep.trim();
 }
 
 // GROUP IDs
@@ -2487,6 +2478,8 @@ function showApp(){
     }
   });
   
+  // Carrega departamentos globalmente (fonte de verdade para todos os módulos)
+  loadDepartamentos();
   loadSharedProjetos();
   loadItems();loadExtItems();loadRnTarefas();loadHistReunioes();loadSavedSessions();
 }
@@ -3794,9 +3787,68 @@ async function plLoadAll(){
 }
 async function loadDepartamentos(){
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Departamentos')/items?$select=Id,Title,Codigo&$top=500`);
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Departamentos')/items?$select=Id,Title,Codigo&$orderby=Title asc&$top=500`);
     plDepartamentos=d.d.results.map(r=>({id:r.Id,ID:r.Id,Title:r.Title||'',nome:r.Title||'',codigo:r.Codigo||''}));
+    populateDeptSelects(); // atualiza todos os dropdowns com a lista real
   }catch(e){console.warn('Departamentos list error:',e.message);plDepartamentos=[];}
+}
+
+// ── Popula TODOS os <select> de departamentos a partir de FJ_Departamentos ──
+// Chamado sempre que loadDepartamentos() termina, garantindo consistência total.
+function populateDeptSelects(){
+  if(!plDepartamentos.length) return;
+  const depts = plDepartamentos.map(d => d.Title);
+
+  // Selects de filtro: têm uma primeira opção "todos" que é preservada
+  const filterCfg = [
+    {id:'ffe-dep',       label:'Departamento: todos'},
+    {id:'fft-dep',       label:'Departamento: todos'},
+    {id:'ff-h-dep',      label:'Todos os departamentos'},
+    {id:'ff-g-dep',      label:'Todos os departamentos'},
+    {id:'ff-t-dep',      label:'Todos os departamentos'},
+    {id:'ff-s-dep',      label:'Todos os departamentos'},
+    {id:'au-ff-n1-area', label:'Área: todas'},
+    {id:'au-ff-n2-area', label:'Área: todas'},
+    {id:'au-ff-adm-area',label:'Área: todas'},
+    {id:'co-ff-dep',     label:'Departamento: todos'},
+    {id:'admin-filter-equipa', label:'Todas as equipas'},
+  ];
+  filterCfg.forEach(({id, label}) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${label}</option>` +
+      depts.map(d => `<option value="${d}">${d}</option>`).join('');
+    if (cur && depts.includes(cur)) sel.value = cur;
+  });
+
+  // Selects de formulário: têm opção em branco inicial própria
+  const formCfg = [
+    {id:'fe-dep',        first: null},                         // sem opção em branco
+    {id:'fa-dep',        first: {v:'', t:'—'}},
+    {id:'ft-dep',        first: {v:'', t:'—'}},
+    {id:'fp-dep',        first: {v:'', t:'Selecionar...'}},
+    {id:'fp-dep-g',      first: {v:'', t:'Selecionar...'}},
+    {id:'co-departamento', first: {v:'', t:'— Selecionar —'}},
+  ];
+  formCfg.forEach(({id, first}) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = (first ? `<option value="${first.v}">${first.t}</option>` : '') +
+      depts.map(d => `<option value="${d}">${d}</option>`).join('');
+    if (cur && depts.includes(cur)) sel.value = cur;
+  });
+
+  // Grupo de checkboxes de equipas (admin modal)
+  const cbWrap = document.getElementById('admin-edit-equipas');
+  if (cbWrap) {
+    const checked = [...cbWrap.querySelectorAll('input:checked')].map(cb => cb.value);
+    cbWrap.innerHTML = depts.map(d =>
+      `<label style="display:flex;align-items:center;gap:4px;cursor:pointer">` +
+      `<input type="checkbox" name="equipa" value="${d}"${checked.includes(d)?' checked':''}> ${d}</label>`
+    ).join('');
+  }
 }
 async function loadProjetos(){
   // Factorial_Projetos = plProjetos top-level (vindos do Factorial)
