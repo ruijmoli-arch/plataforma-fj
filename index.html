@@ -4642,11 +4642,36 @@ function renderSem(){
 
   const matchesMe=nome=>nome&&myName&&nome.toLowerCase().split(/\s+/).some(w=>w.length>2&&myName.split(/\s+/).some(m=>m.includes(w)||w.includes(m)));
   const normDep=s=>(s||'').replace(/[\s.]/g,'').toLowerCase();
-  const semColMatch=(responsavel,respEmail)=>{
+
+  // Resolve departamento efetivo: tarefa → ação → projeto
+  const getEffDep=t=>{
+    if(t.dep) return normDep(t.dep);
+    const a=t.acaoId?plAcoes.find(a=>String(a.id)===String(t.acaoId)):null;
+    if(a?.dep) return normDep(a.dep);
+    const projId=t.projetoId||(a?.projetoId)||null;
+    const p=projId?plProjetos.find(p=>String(p.id)===String(projId)):null;
+    return normDep(p?.dep||'');
+  };
+
+  // Verifica se uma tarefa pertence ao colaborador selecionado
+  // Regra cascata: proj responsável → vê todas tarefas do projeto
+  //                ação responsável → vê todas tarefas da ação
+  //                tarefa responsável → vê a tarefa
+  const colMatchesTarefa=t=>{
     if(!colEmail) return true;
-    if(respEmail&&respEmail.toLowerCase()===colEmail) return true;
-    const u=fjUtilizadores.find(u=>u.email===colEmail);
-    if(u&&responsavel&&responsavel.toLowerCase()===u.titulo.toLowerCase()) return true;
+    const colU=fjUtilizadores.find(u=>u.email===colEmail);
+    const colNome=(colU?.titulo||'').toLowerCase();
+    const nameEq=(nome)=>nome&&colNome&&nome.toLowerCase()===colNome;
+    const emailEq=(email)=>email&&email.toLowerCase()===colEmail;
+    // nível tarefa
+    if(emailEq(t.responsavelEmail)||nameEq(t.responsavel)) return true;
+    // nível ação → todas as tarefas dessa ação
+    const acao=t.acaoId?plAcoes.find(a=>String(a.id)===String(t.acaoId)):null;
+    if(acao&&(emailEq(acao.responsavelEmail)||nameEq(acao.responsavel))) return true;
+    // nível projeto → todas as tarefas desse projeto
+    const projId=t.projetoId||(acao?.projetoId)||null;
+    const proj=projId?plProjetos.find(p=>String(p.id)===String(projId)):null;
+    if(proj&&(emailEq(proj.responsavelEmail)||nameEq(proj.responsavel))) return true;
     return false;
   };
 
@@ -4672,11 +4697,11 @@ function renderSem(){
       }
     }
 
-    // Filtros Departamento + Colaborador (visíveis para todos mas só efetivos para Diretores+)
-    if(isDir){
-      if(dep&&normDep(t.dep)!==normDep(dep)) return false;
-      if(colEmail&&!semColMatch(t.responsavel,t.responsavelEmail)) return false;
-    }
+    // Filtro Departamento: resolve dep efetivo via tarefa → ação → projeto
+    if(dep && getEffDep(t)!==normDep(dep)) return false;
+
+    // Filtro Colaborador com regra cascata (para Diretores+)
+    if(isDir && colEmail && !colMatchesTarefa(t)) return false;
 
     if(q&&!t.titulo.toLowerCase().includes(q)) return false;
     return true;
