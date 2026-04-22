@@ -6325,6 +6325,14 @@ function gfRenderHome() {
   
   const totOrc = GF_RUBRICAS.filter(r => r.ano === GF.year).reduce((a, r) => a + (r.despOrc || 0), 0);
   const totProc = GF_RUBRICAS.filter(r => r.ano === GF.year).reduce((a, r) => a + (r.despProc || 0), 0);
+
+  // KPIs de Tesouraria (apenas para Financeiro/PE)
+  const canTes = gfCanViewTesouraria();
+  const ESTADOS_DIVIDA = ['Aprovado DF', 'Aprovado', 'Processado'];
+  const dividas = canTes ? GF_SOLICITACOES.filter(s => ESTADOS_DIVIDA.includes(s.estado) && s.tipoSolicitacao === 'Despesa') : [];
+  const totalDivida = dividas.reduce((a, s) => a + (s.valor || 0), 0);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dividasVencidas = dividas.filter(s => s.dataLimitePagamento && new Date(s.dataLimitePagamento) < hoje).length;
   
   return `
     <div style="margin-bottom:28px">
@@ -6350,6 +6358,37 @@ function gfRenderHome() {
         <div style="font-size:20px;font-weight:600;color:${pendAprov > 0 ? '#D97706' : 'inherit'}">${pendAprov}</div>
       </div>
     </div>
+
+    ${canTes ? `
+    <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Tesouraria</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px">
+      <div class="card" style="padding:16px;cursor:pointer;border-left:4px solid #1E40AF" onclick="gfNav('tesouraria-divida')" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Dívida a Fornecedores</div>
+            <div style="font-size:20px;font-weight:700;color:#1E40AF">${gfFmt(totalDivida)}</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">${dividas.length} solicitação(ões) por pagar</div>
+          </div>
+          <div style="width:40px;height:40px;background:#EFF6FF;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1E40AF" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+        </div>
+        ${dividasVencidas > 0 ? `<div style="margin-top:10px;padding:6px 10px;background:#FCEBEB;border-radius:6px;font-size:12px;color:#A32D2D;font-weight:500">⚠️ ${dividasVencidas} pagamento(s) em atraso</div>` : ''}
+      </div>
+      <div class="card" style="padding:16px;cursor:pointer;border-left:4px solid #059669" onclick="gfNav('tesouraria-previsoes')" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Previsões de Tesouraria</div>
+            <div style="font-size:16px;font-weight:600;color:#059669">Vista semanal</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px">Saldo previsto por semana</div>
+          </div>
+          <div style="width:40px;height:40px;background:#ECFDF5;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
     
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
       <div class="card" onclick="gfNav('orcamento')" style="cursor:pointer" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
@@ -6406,8 +6445,11 @@ function gfRenderTesourariaDivida() {
     return `<div style="padding:2rem;text-align:center;color:var(--text3)">Não tem permissão para aceder a esta secção.</div>`;
   }
 
-  // Solicitações processadas mas não pagas
-  const dividas = GF_SOLICITACOES.filter(s => s.estado === 'Processado' && s.tipoSolicitacao === 'Despesa');
+  // Despesas aprovadas (DF ou superior) ainda não pagas
+  const ESTADOS_DIVIDA = ['Aprovado DF', 'Aprovado', 'Processado'];
+  const dividas = GF_SOLICITACOES.filter(s =>
+    ESTADOS_DIVIDA.includes(s.estado) && s.tipoSolicitacao === 'Despesa'
+  );
   const total = dividas.reduce((a, s) => a + (s.valor || 0), 0);
   const semPrazo = dividas.filter(s => !s.dataLimitePagamento).length;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -6415,6 +6457,16 @@ function gfRenderTesourariaDivida() {
     if (!s.dataLimitePagamento) return false;
     return new Date(s.dataLimitePagamento) < hoje;
   }).length;
+
+  const estadoBadge = estado => {
+    const m = {
+      'Aprovado DF':  ['#D1FAE5','#065F46'],
+      'Aprovado':     ['#D1FAE5','#065F46'],
+      'Processado':   ['#DBEAFE','#1E40AF'],
+    };
+    const [bg,fg] = m[estado] || ['#E5E7EB','#374151'];
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:${bg};color:${fg}">${estado}</span>`;
+  };
 
   const rows = dividas.length ? dividas.map(s => {
     const prazo = s.dataLimitePagamento;
@@ -6426,28 +6478,26 @@ function gfRenderTesourariaDivida() {
       : vencida
       ? `<span style="background:#FCEBEB;color:#A32D2D;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">⚠️ Vencida</span>`
       : proxima
-      ? `<span style="background:#FAEEDA;color:#633806;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">⏰ Próxima</span>`
+      ? `<span style="background:#FAEEDA;color:#633806;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">⏰ Esta semana</span>`
       : `<span style="background:#EAF3DE;color:#27500A;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">OK</span>`;
     return `<tr style="${vencida ? 'background:#FFF8F8' : ''}">
-      <td style="font-family:monospace;font-size:12px">${s.codigo}</td>
+      <td style="font-family:monospace;font-size:12px">${s.codigo || '—'}</td>
       <td style="font-weight:500">${s.titulo}</td>
       <td>${s.fornecedor || '—'}</td>
       <td>${s.projetoNome || '—'}</td>
-      <td>${s.rubricaNome || '—'}</td>
       <td style="font-weight:600;color:#1E40AF">${gfFmt(s.valor)}</td>
+      <td>${estadoBadge(s.estado)}</td>
       <td>${prazo ? gfDate(prazo) : '—'}</td>
       <td>${prazoBadge}</td>
-      <td>
-        <button class="btn btn-sm" onclick="GF.solicitacao=${s.id};gfNav('solicitacao-view')">Ver</button>
-      </td>
+      <td><button class="btn btn-sm" onclick="GF.solicitacao=${s.id};gfNav('solicitacao-view')">Ver</button></td>
     </tr>`;
-  }).join('') : `<tr><td colspan="9"><div class="empty" style="padding:2rem">Não existem solicitações processadas e por pagar.</div></td></tr>`;
+  }).join('') : `<tr><td colspan="9"><div class="empty" style="padding:2rem">Não existem solicitações aprovadas e por pagar.</div></td></tr>`;
 
   return `
     <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
         <div style="font-size:22px;font-weight:600;margin-bottom:4px">💳 Dívida a Fornecedores</div>
-        <div style="font-size:13px;color:var(--text3)">Solicitações processadas aguardando pagamento</div>
+        <div style="font-size:13px;color:var(--text3)">Despesas aprovadas aguardando pagamento</div>
       </div>
     </div>
 
@@ -6472,21 +6522,20 @@ function gfRenderTesourariaDivida() {
     <div class="table-wrap">
       <table>
         <colgroup>
-          <col style="width:9%"><col style="width:20%"><col style="width:14%">
-          <col style="width:12%"><col style="width:12%"><col style="width:10%">
-          <col style="width:9%"><col style="width:8%"><col style="width:6%">
+          <col style="width:8%"><col style="width:22%"><col style="width:14%">
+          <col style="width:13%"><col style="width:10%"><col style="width:11%">
+          <col style="width:9%"><col style="width:8%"><col style="width:5%">
         </colgroup>
         <thead><tr>
           <th>Código</th><th>Título</th><th>Fornecedor</th>
-          <th>Projeto</th><th>Rúbrica</th><th>Valor</th>
-          <th>Data Limite</th><th>Estado</th><th>Ações</th>
+          <th>Projeto</th><th>Valor</th><th>Estado</th>
+          <th>Data Limite</th><th>Prazo</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
   `;
 }
-
 // ══════════════════════════════════════════════════════════════
 // TESOURARIA — PREVISÕES DE TESOURARIA
 // ══════════════════════════════════════════════════════════════
@@ -6534,140 +6583,203 @@ async function gfRenderTesourariaPrevisoes() {
   }
 }
 
+// Estado do selector de período das previsões
+let _gfPrevPeriodo = 'semanal';
+let _gfSaldoAtualCache = 0;
+
+function gfSetPrevPeriodo(p) {
+  _gfPrevPeriodo = p;
+  const app = gfEl('gf-app');
+  if (app) app.innerHTML = `<div style="max-width:1200px;margin:0 auto">${_gfBuildPrevisoes(_gfSaldoAtualCache)}</div>`;
+}
+
 function _gfBuildPrevisoes(saldoAtual) {
-  // Solicitações processadas ainda não pagas com data limite
+  _gfSaldoAtualCache = saldoAtual;
+
+  // Despesas aprovadas (DF ou superior) ainda não pagas
+  const ESTADOS_TESOURARIA = ['Aprovado DF', 'Aprovado', 'Processado'];
   const dividas = GF_SOLICITACOES.filter(s =>
-    s.estado === 'Processado' &&
-    s.tipoSolicitacao === 'Despesa'
+    ESTADOS_TESOURARIA.includes(s.estado) && s.tipoSolicitacao === 'Despesa'
+  );
+  // Receitas aprovadas ainda não recebidas
+  const receitas = GF_SOLICITACOES.filter(s =>
+    ESTADOS_TESOURARIA.includes(s.estado) && s.tipoSolicitacao === 'Receita'
   );
 
-  // Obter data de início (semana actual)
   const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const diaSemana = hoje.getDay() === 0 ? 6 : hoje.getDay() - 1; // 0=Seg
-  const inicioSemanaAtual = new Date(hoje); inicioSemanaAtual.setDate(hoje.getDate() - diaSemana);
 
-  // Gerar 8 semanas
-  const NUM_WEEKS = 8;
-  const semanas = [];
-  for (let w = 0; w < NUM_WEEKS; w++) {
-    const inicio = new Date(inicioSemanaAtual); inicio.setDate(inicioSemanaAtual.getDate() + w * 7);
-    const fim = new Date(inicio); fim.setDate(inicio.getDate() + 6);
-    const pagamentos = dividas.filter(s => {
-      if (!s.dataLimitePagamento) return false;
-      const d = new Date(s.dataLimitePagamento);
-      return d >= inicio && d <= fim;
-    });
-    const semVencidas = w === 0 ? dividas.filter(s => {
-      if (!s.dataLimitePagamento) return false;
-      return new Date(s.dataLimitePagamento) < inicio;
-    }) : [];
-    semanas.push({ inicio, fim, pagamentos, semVencidas });
+  // ── Gerar períodos consoante o modo ──────────────────────────
+  const periodos = [];
+  const periodo = _gfPrevPeriodo;
+
+  if (periodo === 'semanal') {
+    const dow = hoje.getDay() === 0 ? 6 : hoje.getDay() - 1;
+    const seg = new Date(hoje); seg.setDate(hoje.getDate() - dow);
+    for (let w = 0; w < 8; w++) {
+      const ini = new Date(seg); ini.setDate(seg.getDate() + w * 7);
+      const fim = new Date(ini); fim.setDate(ini.getDate() + 6);
+      periodos.push({ ini, fim, label: `Semana ${w+1}`, sublabel: null });
+    }
+  } else if (periodo === 'mensal') {
+    for (let m = 0; m < 6; m++) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() + m, 1);
+      const ini = new Date(d.getFullYear(), d.getMonth(), 1);
+      const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      const nome = ini.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+      periodos.push({ ini, fim, label: nome.charAt(0).toUpperCase() + nome.slice(1), sublabel: null });
+    }
+  } else { // trimestral
+    const anoAtual = hoje.getFullYear();
+    const trimestreAtual = Math.floor(hoje.getMonth() / 3);
+    for (let q = 0; q < 4; q++) {
+      const tIdx = (trimestreAtual + q) % 4;
+      const ano = anoAtual + Math.floor((trimestreAtual + q) / 4);
+      const ini = new Date(ano, tIdx * 3, 1);
+      const fim = new Date(ano, tIdx * 3 + 3, 0);
+      periodos.push({ ini, fim, label: `Q${tIdx+1} ${ano}`, sublabel: null });
+    }
   }
 
-  // Calcular saldo corrido semana a semana
+  const fmtDate = d => d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+  const fmt = v => {
+    const abs = Math.abs(v);
+    const s = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(abs) + ' €';
+    return v < 0 ? '-' + s : s;
+  };
+  const fmtSinal = (v, neg) => {
+    if (v === 0) return `<span style="color:var(--text3)">0,00 €</span>`;
+    return `<span style="color:${neg ? '#A32D2D' : '#059669'}">${neg ? '-' : '+'}${fmt(v)}</span>`;
+  };
+
+  // ── Calcular saldo corrido ──────────────────────────────────
   let saldoCorrente = saldoAtual;
-  const semanasComSaldo = semanas.map((s, i) => {
-    const totalSemana = [...s.pagamentos, ...s.semVencidas].reduce((a, p) => a + (p.valor || 0), 0);
-    const saldoInicio = saldoCorrente;
-    saldoCorrente = saldoCorrente - totalSemana;
-    return { ...s, totalSemana, saldoInicio, saldoFim: saldoCorrente };
+  const periodosCalc = periodos.map((p, i) => {
+    const filterRange = s => {
+      if (!s.dataLimitePagamento) return false;
+      const d = new Date(s.dataLimitePagamento);
+      // Na primeira janela incluir também os vencidos
+      if (i === 0) return d <= p.fim;
+      return d >= p.ini && d <= p.fim;
+    };
+    const saidas = dividas.filter(filterRange);
+    const entradas = receitas.filter(filterRange);
+    const totalSaidas = saidas.reduce((a, s) => a + (s.valor || 0), 0);
+    const totalEntradas = entradas.reduce((a, s) => a + (s.valor || 0), 0);
+    const saldoIni = saldoCorrente;
+    saldoCorrente = saldoCorrente + totalEntradas - totalSaidas;
+    const vencidos = i === 0 ? saidas.filter(s => new Date(s.dataLimitePagamento) < p.ini) : [];
+    return { ...p, saidas, entradas, totalSaidas, totalEntradas, saldoIni, saldoFim: saldoCorrente, vencidos };
   });
 
-  const fmt = v => new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
-  const fmtDate = d => d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
-
-  const linhasSemanas = semanasComSaldo.map((s, i) => {
-    const isNegativo = s.saldoFim < 0;
-    const isAtencao = s.saldoFim >= 0 && s.saldoFim < (saldoAtual * 0.2);
-    const cor = isNegativo ? '#A32D2D' : isAtencao ? '#633806' : '#27500A';
-    const bgCor = isNegativo ? '#FFF8F8' : isAtencao ? '#FFFBF0' : '';
-    const allPag = [...s.semVencidas, ...s.pagamentos];
-    const detalhe = allPag.length ? allPag.map(p =>
-      `<div style="font-size:11px;color:var(--text2);padding:2px 0;display:flex;justify-content:space-between;gap:8px">
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px">${p.titulo} — ${p.fornecedor || '—'}</span>
-        <span style="font-weight:600;flex-shrink:0;color:#A32D2D">-${fmt(p.valor)}</span>
-      </div>`
-    ).join('') : `<div style="font-size:11px;color:var(--text3);padding:2px 0">Sem pagamentos previstos</div>`;
-
-    return `
-      <div style="border:0.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;background:${bgCor || 'var(--bg2)'}">
-        <div style="padding:12px 16px;display:grid;grid-template-columns:1fr auto auto auto;gap:16px;align-items:center;cursor:pointer;background:${bgCor || 'var(--bg3)'}" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-          <div>
-            <div style="font-size:13px;font-weight:600">
-              ${i === 0 ? '📅 ' : ''}Semana ${i + 1} — ${fmtDate(s.inicio)} a ${fmtDate(s.fim)}
-              ${i === 0 ? '<span style="font-size:10px;background:#003087;color:#fff;padding:1px 7px;border-radius:10px;margin-left:8px">Atual</span>' : ''}
-              ${s.semVencidas.length ? `<span style="font-size:10px;background:#FCEBEB;color:#A32D2D;padding:1px 7px;border-radius:10px;margin-left:4px">⚠️ ${s.semVencidas.length} vencida(s)</span>` : ''}
-            </div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">${allPag.length} pagamento(s) previsto(s)</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saldo início</div>
-            <div style="font-size:13px;font-weight:600">${fmt(s.saldoInicio)}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saídas</div>
-            <div style="font-size:13px;font-weight:600;color:${s.totalSemana > 0 ? '#A32D2D' : 'var(--text3)'}">-${fmt(s.totalSemana)}</div>
-          </div>
-          <div style="text-align:right;min-width:110px">
-            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saldo fim</div>
-            <div style="font-size:16px;font-weight:700;color:${cor}">${fmt(s.saldoFim)}</div>
-          </div>
-        </div>
-        <div style="display:none;padding:10px 16px 12px;border-top:0.5px solid var(--border)">
-          ${detalhe}
-          ${s.pagamentos.length + s.semVencidas.length === 0 ? '' : `<div style="margin-top:8px;font-size:11px;color:var(--text3);display:flex;justify-content:space-between"><span>Total da semana</span><span style="font-weight:700;color:#A32D2D">-${fmt(s.totalSemana)}</span></div>`}
-        </div>
-      </div>`;
+  // ── Cards resumo ────────────────────────────────────────────
+  const cardsHtml = periodosCalc.slice(0, 4).map((p, i) => {
+    const cor = p.saldoFim < 0 ? '#A32D2D' : p.saldoFim < saldoAtual * 0.2 ? '#633806' : '#27500A';
+    const bord = p.saldoFim < 0 ? '#FCA5A5' : 'var(--border)';
+    return `<div style="background:var(--bg2);border:0.5px solid ${bord};border-radius:8px;padding:12px 14px">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">${p.label}</div>
+      <div style="font-size:15px;font-weight:700;color:${cor}">${fmt(p.saldoFim)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtDate(p.ini)} – ${fmtDate(p.fim)}</div>
+      ${p.totalEntradas > 0 ? `<div style="font-size:10px;color:#059669;margin-top:3px">+${fmt(p.totalEntradas)}</div>` : ''}
+      ${p.totalSaidas > 0 ? `<div style="font-size:10px;color:#A32D2D">-${fmt(p.totalSaidas)}</div>` : ''}
+    </div>`;
   }).join('');
 
-  const semSemPrazo = dividas.filter(s => !s.dataLimitePagamento);
+  // ── Linhas de detalhe ───────────────────────────────────────
+  const linhas = periodosCalc.map((p, i) => {
+    const isNeg = p.saldoFim < 0;
+    const isWarn = !isNeg && p.saldoFim < saldoAtual * 0.2 && saldoAtual > 0;
+    const bgRow = isNeg ? '#FFF8F8' : isWarn ? '#FFFBF0' : 'var(--bg3)';
+    const bgBody = isNeg ? '#FFF8F8' : isWarn ? '#FFFBF0' : 'var(--bg2)';
+    const corSaldo = isNeg ? '#A32D2D' : isWarn ? '#633806' : '#27500A';
+    const labelPeriodo = periodo === 'semanal'
+      ? `${i === 0 ? '📅 ' : ''}${p.label} — ${fmtDate(p.ini)} a ${fmtDate(p.fim)}`
+      : p.label;
+
+    const rowsS = p.saidas.map(s => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;color:var(--text2)">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${s.titulo}${s.fornecedor ? ' — ' + s.fornecedor : ''}${new Date(s.dataLimitePagamento) < p.ini ? ' <span style="color:#A32D2D;font-size:10px">[vencido]</span>' : ''}</span>
+      <span style="font-weight:600;flex-shrink:0;color:#A32D2D">-${fmt(s.valor)}</span>
+    </div>`).join('');
+    const rowsE = p.entradas.map(s => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;color:var(--text2)">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${s.titulo}${s.fornecedor ? ' — ' + s.fornecedor : ''}</span>
+      <span style="font-weight:600;flex-shrink:0;color:#059669">+${fmt(s.valor)}</span>
+    </div>`).join('');
+
+    return `<div style="border:0.5px solid ${isNeg ? '#FCA5A5' : 'var(--border)'};border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 110px 110px 110px 120px;gap:8px;align-items:center;cursor:pointer;background:${bgRow}"
+           onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <div>
+          <div style="font-size:13px;font-weight:600">
+            ${labelPeriodo}
+            ${i === 0 && periodo === 'semanal' ? '<span style="font-size:10px;background:#003087;color:#fff;padding:1px 7px;border-radius:10px;margin-left:6px">Atual</span>' : ''}
+            ${p.vencidos.length ? `<span style="font-size:10px;background:#FCEBEB;color:#A32D2D;padding:1px 7px;border-radius:10px;margin-left:4px">⚠️ ${p.vencidos.length} vencido(s)</span>` : ''}
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${p.saidas.length} saída(s) · ${p.entradas.length} entrada(s)</div>
+        </div>
+        <div style="text-align:right"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Saldo início</div><div style="font-size:12px;font-weight:600">${fmt(p.saldoIni)}</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:#059669;margin-bottom:2px">Entradas</div><div style="font-size:12px;font-weight:600">${fmtSinal(p.totalEntradas, false)}</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:#A32D2D;margin-bottom:2px">Saídas</div><div style="font-size:12px;font-weight:600">${fmtSinal(p.totalSaidas, true)}</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Saldo fim</div><div style="font-size:15px;font-weight:700;color:${corSaldo}">${fmt(p.saldoFim)}</div></div>
+      </div>
+      <div style="display:none;padding:10px 16px 14px;border-top:0.5px solid var(--border);background:${bgBody}">
+        ${!p.saidas.length && !p.entradas.length
+          ? `<div style="font-size:11px;color:var(--text3)">Sem movimentos previstos neste período.</div>`
+          : `${p.entradas.length ? `<div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;margin-bottom:4px">▲ Entradas</div>${rowsE}` : ''}
+             ${p.saidas.length ? `<div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;margin:${p.entradas.length ? '8px' : '0'} 0 4px">▼ Saídas</div>${rowsS}` : ''}
+             <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;display:flex;justify-content:space-between">
+               <span style="color:var(--text3)">Fluxo líquido</span>
+               <span style="font-weight:700;color:${(p.totalEntradas-p.totalSaidas)>=0?'#059669':'#A32D2D'}">${(p.totalEntradas-p.totalSaidas)>=0?'+':''}${fmt(p.totalEntradas-p.totalSaidas)}</span>
+             </div>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+
+  const semPrazoDesp = dividas.filter(s => !s.dataLimitePagamento).length;
+  const semPrazoRec = receitas.filter(s => !s.dataLimitePagamento).length;
+  const btnStyle = (p) => `padding:7px 16px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:${_gfPrevPeriodo===p?'var(--fj-blue)':'var(--bg2)'};color:${_gfPrevPeriodo===p?'#fff':'var(--text2)'};font-family:inherit;transition:all .15s`;
 
   return `
-    <div style="margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
         <div style="font-size:22px;font-weight:600;margin-bottom:4px">📊 Previsões de Tesouraria</div>
-        <div style="font-size:13px;color:var(--text3)">Visão semanal dos pagamentos previstos</div>
+        <div style="font-size:13px;color:var(--text3)">Entradas e saídas previstas — aprovadas e por liquidar</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button style="${btnStyle('semanal')}" onclick="gfSetPrevPeriodo('semanal')">Semanal</button>
+        <button style="${btnStyle('mensal')}" onclick="gfSetPrevPeriodo('mensal')">Mensal</button>
+        <button style="${btnStyle('trimestral')}" onclick="gfSetPrevPeriodo('trimestral')">Trimestral</button>
       </div>
     </div>
 
-    <!-- Saldo de Caixa -->
-    <div class="card" style="margin-bottom:20px;padding:18px 20px;border-left:4px solid var(--fj-blue)">
+    <div class="card" style="margin-bottom:18px;padding:16px 20px;border-left:4px solid var(--fj-blue)">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
         <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Saldo de Caixa Atual</div>
-          <div style="font-size:28px;font-weight:700;color:${saldoAtual < 0 ? '#A32D2D' : '#003087'}">${fmt(saldoAtual)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:4px">Valor base para as previsões</div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Saldo de Caixa Atual</div>
+          <div style="font-size:26px;font-weight:700;color:${saldoAtual<0?'#A32D2D':'#003087'}">${fmt(saldoAtual)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Guardado em FJ_Configuracoes · base para as previsões</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <input type="number" id="tes-saldo-input" value="${saldoAtual}" step="0.01" placeholder="0,00"
-            style="padding:10px 14px;border:1px solid var(--border2);border-radius:8px;font-size:15px;width:180px;font-weight:600;text-align:right">
-          <button class="btn btn-primary" onclick="gfSaveSaldoCaixa(parseFloat(document.getElementById('tes-saldo-input').value)||0)" style="background:var(--fj-blue);border-color:var(--fj-blue)">
-            Guardar Saldo
-          </button>
+          <input type="number" id="tes-saldo-input" value="${saldoAtual}" step="0.01"
+            style="padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:15px;width:170px;font-weight:600;text-align:right">
+          <button class="btn btn-primary" onclick="gfSaveSaldoCaixa(parseFloat(document.getElementById('tes-saldo-input').value)||0)"
+            style="background:var(--fj-blue);border-color:var(--fj-blue)">Guardar Saldo</button>
         </div>
       </div>
     </div>
 
-    ${semSemPrazo.length ? `
-    <div style="background:#FAEEDA;border:1px solid #F9CA8B;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#633806">
-      ⚠️ <strong>${semSemPrazo.length}</strong> solicitação(ões) processada(s) sem <em>Data Limite de Pagamento</em> definida — não incluídas nas previsões.
+    ${(semPrazoDesp + semPrazoRec) > 0 ? `
+    <div style="background:#FAEEDA;border:1px solid #F9CA8B;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#633806">
+      ⚠️ <strong>${semPrazoDesp}</strong> saída(s) e <strong>${semPrazoRec}</strong> entrada(s) sem <em>Data Limite de Pagamento</em> — não incluídas nas previsões.
       <a href="javascript:void(0)" onclick="gfNav('tesouraria-divida')" style="color:#003087;font-weight:600;margin-left:8px">Ver Dívida a Fornecedores →</a>
     </div>` : ''}
 
-    <!-- Resumo gráfico -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
-      ${semanasComSaldo.slice(0,4).map((s, i) => `
-        <div style="background:var(--bg2);border:0.5px solid ${s.saldoFim < 0 ? '#FCA5A5' : 'var(--border)'};border-radius:8px;padding:12px 14px">
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Sem. ${i+1}</div>
-          <div style="font-size:16px;font-weight:700;color:${s.saldoFim < 0 ? '#A32D2D' : s.saldoFim < saldoAtual * 0.2 ? '#633806' : '#27500A'}">${fmt(s.saldoFim)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtDate(s.inicio)} – ${fmtDate(s.fim)}</div>
-        </div>
-      `).join('')}
-    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">${cardsHtml}</div>
 
-    <!-- Detalhes semana a semana -->
-    <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text2)">Detalhe por semana <span style="font-size:11px;font-weight:400;color:var(--text3)">(clique para expandir)</span></div>
-    ${linhasSemanas}
+    <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text2)">
+      Detalhe por período
+      <span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:6px">(clique para expandir)</span>
+    </div>
+    ${linhas}
   `;
 }
 
@@ -7525,14 +7637,18 @@ function gfRenderSolicitacoes() {
             <th style="padding:12px 16px;text-align:left;font-weight:500;color:var(--mod-financeiro)">Projeto</th>
             <th style="padding:12px 16px;text-align:right;font-weight:500;color:var(--mod-financeiro)">Valor</th>
             <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Estado</th>
-            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Data</th>
+            <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Data Submissão</th>
+            ${gfCanViewTesouraria() ? `<th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Data Limite Pag.</th>` : ''}
             <th style="padding:12px 16px;text-align:center;font-weight:500;color:var(--mod-financeiro)">Ações</th>
           </tr>
         </thead>
         <tbody>
-          ${lista.length === 0 ? `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text3)">Sem solicitações</td></tr>` :
-            lista.map(s => `
-              <tr style="border-bottom:1px solid var(--border)">
+          ${lista.length === 0 ? `<tr><td colspan="${gfCanViewTesouraria() ? 9 : 8}" style="padding:40px;text-align:center;color:var(--text3)">Sem solicitações</td></tr>` :
+            lista.map(s => {
+              const hoje2 = new Date(); hoje2.setHours(0,0,0,0);
+              const limVenc = s.dataLimitePagamento && new Date(s.dataLimitePagamento) < hoje2 && s.estado === 'Processado';
+              return `
+              <tr style="border-bottom:1px solid var(--border);${limVenc ? 'background:#FFF8F8' : ''}">
                 <td style="padding:14px 16px;font-family:monospace;font-size:12px">${s.codigo || '—'}</td>
                 <td style="padding:14px 16px;font-weight:500">${s.titulo}</td>
                 <td style="padding:14px 16px;text-align:center">
@@ -7542,11 +7658,16 @@ function gfRenderSolicitacoes() {
                 <td style="padding:14px 16px;text-align:right;font-weight:500">${gfFmt(s.valor)}</td>
                 <td style="padding:14px 16px;text-align:center">${GF_BADGES[s.estado] || s.estado}</td>
                 <td style="padding:14px 16px;text-align:center;font-size:12px">${gfDate(s.dataSubmissao)}</td>
+                ${gfCanViewTesouraria() ? `<td style="padding:14px 16px;text-align:center;font-size:12px">
+                  ${s.dataLimitePagamento
+                    ? `<span style="font-weight:500;color:${limVenc ? '#A32D2D' : 'var(--text)'}">${limVenc ? '⚠️ ' : ''}${gfDate(s.dataLimitePagamento)}</span>`
+                    : '<span style="color:var(--text3)">—</span>'}
+                </td>` : ''}
                 <td style="padding:14px 16px;text-align:center">
                   <button class="btn btn-sm" onclick="GF.solicitacao=${s.id};gfNav('solicitacao-view')">Ver</button>
                 </td>
-              </tr>
-            `).join('')
+              </tr>`;
+            }).join('')
           }
         </tbody>
       </table>
