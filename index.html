@@ -2105,7 +2105,7 @@ function normalizeDep(dep) {
   }
   // Fallback estático (antes dos departamentos carregarem)
   const map = {
-    'gestao':'Gestão','gestão':'Gestão',
+    'gestao':'E. Gestão','gestão':'E. Gestão','e.gestao':'E. Gestão','e.gestão':'E. Gestão','egestao':'E. Gestão','egestão':'E. Gestão',
     'cadm':'CAdm','c adm':'CAdm','c.adm':'CAdm',
     'financeiro':'Financeiro','impacto':'Impacto',
     'inov':'INOV','inovação':'INOV','inovacao':'INOV',
@@ -2403,7 +2403,7 @@ function canViewFinanceProject(projetoId){
 
   // CAdm, Gestão e todos os Diretores vêem tudo
   if(equipas.includes('CAdm')) return true;
-  if(equipas.includes('Gestão')) return true;
+  if(equipas.includes('E. Gestão')) return true;
   if(cargo === 'Diretor') return true;
 
   // Membros da equipa Financeiro vêem todos os projetos (só leitura)
@@ -2430,7 +2430,7 @@ function filterFinanceProjects(projects){
 
   // CAdm e Gestão vêem tudo
   if(equipas.includes('CAdm')) return projects;
-  if(equipas.includes('Gestão')) return projects;
+  if(equipas.includes('E. Gestão')) return projects;
 
   // Membros da equipa Financeiro vêem todos os projetos (só leitura)
   if(isFinanceiroEquipa()) return projects;
@@ -2724,7 +2724,7 @@ function renderCATopics(){
   const panel=el('ca-topics-panel');
   if(!panel)return;
   // Show to Gestao group (not CA, they see everything already)
-  if(!userHasEquipa('Gestão')||userHasEquipa('CAdm')){panel.innerHTML='';return;}
+  if(!userHasEquipa('E. Gestão')||userHasEquipa('CAdm')){panel.innerHTML='';return;}
   const caItems=items.filter(i=>i.reuniao==='Reunião com CAdm'&&i.estado!=='Concluído'&&i.estado!=='Cancelado');
   if(!caItems.length){panel.innerHTML='';return;}
   panel.innerHTML=`<div style="margin-top:1.5rem">
@@ -3037,8 +3037,7 @@ function renderInlineTarefas(){
 async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
   if(!feInlineTarefas.length) return;
   try{
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')?$select=ListItemEntityTypeFullName`);
-    const listType=meta.d.ListItemEntityTypeFullName;
+    const listType='SP.Data.FJ_x005f_TarefasReuniaoListItem';
     for(const t of feInlineTarefas){
       const body={__metadata:{type:listType},
         Title:t.titulo
@@ -3135,24 +3134,23 @@ async function saveTarefa(){
   if(!titulo){alert('Por favor indique o título.');return;}
   const btn=el('save-tar-btn');btn.textContent='A guardar...';btn.disabled=true;
   try{
-    // Obter tipo OData correcto da lista
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')?$select=ListItemEntityTypeFullName`);
-    const listType=meta.d.ListItemEntityTypeFullName;
+    const listType='SP.Data.FJ_x005f_TarefasReuniaoListItem';
     const body={__metadata:{type:listType},
-      Title:titulo,Estado:gv('ft-estado'),
-      Prioridade:gv('ft-prior')
+      Title:titulo,
+      Estado:gv('ft-estado')||'Por fazer',
+      Prioridade:gv('ft-prior')||'Média'
     };
     const respVal=gv('ft-resp');if(respVal)body.Responsavel=respVal;
     const depVal=gv('ft-dep');if(depVal)body.Departamento=depVal;
-    if(gv('ft-data'))body.DataLimite=gv('ft-data')+'T00:00:00Z';
+    const dataVal=gv('ft-data');if(dataVal)body.DataLimite=dataVal+'T00:00:00Z';
     if(rnEditTarId){
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items(${rnEditTarId})`,body,'MERGE','*');
     }else{
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
     }
     closeRnTarForm();await loadRnTarefas();showNotif('Tarefa guardada!','success');
-  }catch(e){showNotif('Erro: '+e.message,'error');}
-  btn.textContent='Guardar';btn.disabled=false;
+  }catch(e){showNotif('Erro ao guardar tarefa: '+e.message,'error');console.error('saveTarefa:',e);}
+  finally{btn.textContent='Guardar';btn.disabled=false;}
 }
 async function deleteTar(id){
   if(!confirm('Eliminar esta tarefa?'))return;
@@ -3903,12 +3901,15 @@ async function rhInit(){
 async function rhLoadRegistos(){
   try{
     const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
-    const canSeeAll=(userCargo()==='Presidente Executivo'||userCargo()==='Diretor');
+    const isPE=userCargo()==='Presidente Executivo';
+    const isDir=userCargo()==='Diretor';
     let url;
-    if(canSeeAll){
+    if(isPE){
+      // Presidente Executivo vê tudo
       url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*&$orderby=Data desc&$top=5000`;
     } else {
-      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*&$filter=TrabalhadorEmail eq '${userEmail}'&$orderby=Data desc&$top=5000`;
+      // Todos os outros (incluindo Diretores) carregam tudo — filtragem feita no cliente
+      url=`${SP}/_api/web/lists/getbytitle('${RH_LIST}')/items?$select=*&$orderby=Data desc&$top=5000`;
     }
     const d=await spRead(url);
     rhRegistos=(d.d?.results||[]).map(r=>({
@@ -4123,12 +4124,26 @@ function rhPopulateVerFiltros(){
 function rhRenderVerRegistos(){
   const cont=el('rh-ver-container');if(!cont)return;
   const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
-  const isManager=userCargo()==='Presidente Executivo'||userCargo()==='Diretor';
+  const isPE=userCargo()==='Presidente Executivo';
+  const isDir=userCargo()==='Diretor';
+  const isManager=isPE||isDir;
+  const myEquipas=currentUserFJ?.equipa||[];
   const fDI=el('rh-ff-data-ini')?.value||'';
   const fDF=el('rh-ff-data-fim')?.value||'';
   const fProj=el('rh-ff-ver-proj')?.value||'';
   let regs=rhRegistos;
-  if(!isManager)regs=regs.filter(r=>r.trabalhadorEmail===userEmail);
+  if(isPE){
+    // PE vê tudo
+  } else if(isDir){
+    regs=regs.filter(r=>{
+      if(r.trabalhadorEmail===userEmail) return true;
+      const u=fjUtilizadores.find(u=>u.email===r.trabalhadorEmail);
+      if(!u) return false;
+      return u.equipa.some(e=>myEquipas.includes(e));
+    });
+  } else {
+    regs=regs.filter(r=>r.trabalhadorEmail===userEmail);
+  }
   if(fDI)regs=regs.filter(r=>r.data>=fDI);
   if(fDF)regs=regs.filter(r=>r.data<=fDF);
   if(fProj)regs=regs.filter(r=>r.projetoNome===fProj);
@@ -4256,7 +4271,9 @@ async function rhSaveEdit(){
 
 // ── ANÁLISE DE HORAS ──
 function rhPopulateAnaliseFilters(){
-  const isManager=userCargo()==='Presidente Executivo'||userCargo()==='Diretor';
+  const isPE=userCargo()==='Presidente Executivo';
+  const isDir=userCargo()==='Diretor';
+  const isManager=isPE||isDir;
   const selW=el('rh-ff-worker');
   if(selW){
     if(isManager){
@@ -4279,13 +4296,27 @@ function rhPopulateAnaliseFilters(){
 function rhRenderAnalise(){
   const cont=el('rh-analise-container'),statsCont=el('rh-analise-stats');if(!cont)return;
   const userEmail=(user?.username||user?.preferredUsername||'').toLowerCase();
-  const isManager=userCargo()==='Presidente Executivo'||userCargo()==='Diretor';
+  const isPE=userCargo()==='Presidente Executivo';
+  const isDir=userCargo()==='Diretor';
+  const myEquipas=currentUserFJ?.equipa||[];
   const fWorker=el('rh-ff-worker')?.value||'';
   const fProj=el('rh-ff-proj')?.value||'';
   const fIni=el('rh-ff-ini')?.value||'';
   const fFim=el('rh-ff-fim')?.value||'';
   let regs=rhRegistos;
-  if(!isManager)regs=regs.filter(r=>r.trabalhadorEmail===userEmail);
+  if(isPE){
+    // PE vê tudo — sem filtro extra
+  } else if(isDir){
+    // Diretores vêem os seus próprios registos + os da sua equipa
+    regs=regs.filter(r=>{
+      if(r.trabalhadorEmail===userEmail) return true;
+      const u=fjUtilizadores.find(u=>u.email===r.trabalhadorEmail);
+      if(!u) return false;
+      return u.equipa.some(e=>myEquipas.includes(e));
+    });
+  } else {
+    regs=regs.filter(r=>r.trabalhadorEmail===userEmail);
+  }
   if(fWorker)regs=regs.filter(r=>r.trabalhadorEmail===fWorker);
   if(fProj)regs=regs.filter(r=>r.projetoNome===fProj);
   if(fIni)regs=regs.filter(r=>r.data>=fIni);
@@ -4753,6 +4784,7 @@ function renderHier(){
               </tbody>
             </table>
           </div>`:''}
+        ${(()=>{const projKPIs=plKpdefs.filter(k=>String(k.projetoId)===String(p.id)&&!k.acaoId);return projKPIs.length?`<div style="background:#F5F3FF;border-top:1px solid #DDD8FE;border-left:4px solid #7C3AED;padding:10px 16px"><div style="font-size:11px;font-weight:700;color:#5B21B6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📊 KPIs do Projeto (${projKPIs.length})</div>${projKPIs.map(k=>{const lr=plKpregs.filter(r=>r.kpiId==k.id).sort((a,b)=>b.id-a.id)[0];const pct=lr&&k.meta?Math.round((lr.valor/k.meta)*100):null;const c=pct!==null?kpiColor(k,pct):'var(--tx3)';return`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12px;border-bottom:1px dashed #DDD8FE"><span style="flex:1;font-weight:500;color:#3C3489">${k.nome}</span><span style="color:var(--tx2)">${lr?lr.valor+' '+k.uni:'—'}</span><span style="font-weight:700;color:${c}">${pct!==null?pct+'%':'—'}</span></div>`;}).join('')}</div>`:'';})()}
         ${!pAcoes.length&&!tarSemAcao.length?`<div style="padding:12px 24px;font-size:13px;color:var(--tx3)">Sem ações nem plTarefas.${isDir?` <button class="btn btn-sm btn-primary" onclick="openAcaoForm(${p.id})">+ Criar ação</button>`:''}</div>`:''}
       </div>
     </div>`;
@@ -5231,7 +5263,7 @@ function plCanSeeAll(){
   if(!currentUserFJ) return true;
   const cargo   = userCargo();
   const equipas = currentUserFJ.equipa || [];
-  return cargo==='Presidente Executivo'||cargo==='Diretor'||equipas.includes('CAdm')||equipas.includes('Gestão');
+  return cargo==='Presidente Executivo'||cargo==='Diretor'||equipas.includes('CAdm')||equipas.includes('E. Gestão');
 }
 
 // ── Vista do Plano Semanal ──────────────────────────────────────────────
@@ -9452,7 +9484,7 @@ function coCanViewRegisto(r) {
   if (cargo === 'Presidente Executivo') return true;
   if (cargo === 'Diretor')              return true;
   if (equipas.includes('CAdm'))         return true;
-  if (equipas.includes('Gestão'))       return true;
+  if (equipas.includes('E. Gestão'))       return true;
   const myEmail = (user?.username || user?.preferredUsername || '').toLowerCase();
   if (r.respEmail && r.respEmail.toLowerCase() === myEmail) return true;
   return equipas.some(dep => dep === r.departamento);
@@ -9464,7 +9496,7 @@ function coCanViewTarefa(t) {
   if (cargo === 'Presidente Executivo') return true;
   if (cargo === 'Diretor')              return true;
   if (equipas.includes('CAdm'))         return true;
-  if (equipas.includes('Gestão'))       return true;
+  if (equipas.includes('E. Gestão'))       return true;
   const myEmail = (user?.username || user?.preferredUsername || '').toLowerCase();
   if (t.respEmail && t.respEmail.toLowerCase() === myEmail) return true;
   const reg = CO_REGISTOS.find(r => r.id === t.correioId);
@@ -9504,7 +9536,7 @@ function coRenderTabela() {
       : `<span class="badge" style="background:var(--purple-bg);color:var(--purple)">↑ Saída</span>`;
     const anexo = r.attachments.length
       ? r.attachments.map(a =>
-          `<a href="javascript:void(0)" onclick="downloadSPFile('${a.url}','${a.name}')" style="font-size:12px;color:var(--blue-d);text-decoration:none">📎 ${a.name}</a>`
+          `<a href="https://fjuventude.sharepoint.com${a.url}" target="_blank" style="font-size:12px;color:var(--blue-d);text-decoration:none">📎 ${a.name}</a>`
         ).join('<br>')
       : '<span style="color:var(--text3);font-size:12px">—</span>';
     const tarefasDeste = CO_TAREFAS.filter(t => t.correioId === r.id && t.estado !== 'Concluída' && t.estado !== 'Cancelada');
@@ -9810,7 +9842,7 @@ function coOpenDetail(id) {
       <div style="margin-bottom:16px">
         <div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📎 Anexo</div>
         <div class="attach-list">
-          ${r.attachments.map(a=>`<div class="attach-item"><a href="javascript:void(0)" onclick="downloadSPFile('${a.url}','${a.name}')">📄 ${a.name}</a></div>`).join('')}
+          ${r.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank" style="color:var(--blue-d);text-decoration:none">📄 ${a.name}</a></div>`).join('')}
         </div>
       </div>` : ''}
     <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-top:4px">
