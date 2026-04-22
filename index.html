@@ -730,6 +730,17 @@ tr:hover td{background:var(--bg3)}
         Aprovações
       </div>
 
+      <!-- Tesouraria -->
+      <div class="sidebar-lbl" id="gf-nav-tesouraria-lbl" style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:.6rem .75rem .15rem;display:none">Tesouraria</div>
+      <div class="nav-item" id="gf-nav-divida" onclick="gfNav('tesouraria-divida')" style="color:rgba(255,255,255,.75);padding-left:1.25rem;display:none">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="1"/><path d="M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1"/><line x1="8" y1="8" x2="8" y2="12"/><line x1="6" y1="10" x2="10" y2="10"/></svg>
+        Dívida a Fornecedores
+      </div>
+      <div class="nav-item" id="gf-nav-previsoes" onclick="gfNav('tesouraria-previsoes')" style="color:rgba(255,255,255,.75);padding-left:1.25rem;display:none">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,12 5,7 9,9 15,3"/><line x1="1" y1="15" x2="15" y2="15"/></svg>
+        Previsões de Tesouraria
+      </div>
+
       <div class="nav-item" id="gf-nav-direcao" onclick="gfNav('direcao')" style="color:rgba(255,255,255,.75);display:none">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-8 4 4 4-6"/></svg>
         Vista Direção
@@ -6087,6 +6098,7 @@ async function gfLoadAll() {
       dataAprovDF: r.DataAprovDF || null,
       dataProcessado: r.DataProcessado || null,
       dataPago: r.DataPago || null,
+      dataLimitePagamento: r.DataLimitePagamento ? r.DataLimitePagamento.split('T')[0] : null,
       motivoRejeicao: r.MotivoRejeicao || ''
     }));
 
@@ -6232,6 +6244,8 @@ function gfNav(screen, params = {}) {
     'aprovacoes':           'gf-nav-aprovacoes',
     'direcao':              'gf-nav-direcao',
     'configuracoes':        'gf-nav-configuracoes',
+    'tesouraria-divida':    'gf-nav-divida',
+    'tesouraria-previsoes': 'gf-nav-previsoes',
   };
   const navId = NAV_MAP[screen] || NAV_MAP[screen.split('-')[0]];
   const navEl = navId ? gfEl(navId) : null;
@@ -6257,6 +6271,13 @@ function gfUpdateSidebarNav() {
   // Configurações: apenas PE
   const cfg = document.getElementById('gf-nav-configuracoes');
   if (cfg) cfg.style.display = _financeRole === 'pe' ? 'flex' : 'none';
+  // Tesouraria: apenas Financeiro ou PE
+  const canTes = gfCanViewTesouraria();
+  const tesIds = ['gf-nav-tesouraria-lbl', 'gf-nav-divida', 'gf-nav-previsoes'];
+  tesIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canTes ? (id === 'gf-nav-tesouraria-lbl' ? 'block' : 'flex') : 'none';
+  });
 }
 
 // ── MAIN RENDER ──
@@ -6264,6 +6285,13 @@ function gfRender() {
   const app = gfEl('gf-app');
   if (!app) return;
   
+  // Previsões são assíncronas — render direto ao DOM
+  if (GF.screen === 'tesouraria-previsoes') {
+    app.innerHTML = `<div style="max-width:1200px;margin:0 auto"><div class="empty" style="padding:3rem">⏳ A carregar previsões...</div></div>`;
+    gfRenderTesourariaPrevisoes();
+    return;
+  }
+
   let html = '';
   switch (GF.screen) {
     case 'home': html = gfRenderHome(); break;
@@ -6278,6 +6306,7 @@ function gfRender() {
     case 'aprovacoes': html = gfRenderAprovacoes(); break;
     case 'faturas': html = gfRenderFaturas(); break;
     case 'configuracoes': html = gfRenderConfiguracoes(); break;
+    case 'tesouraria-divida': html = gfRenderTesourariaDivida(); break;
     default: html = gfRenderHome();
   }
   
@@ -6366,6 +6395,281 @@ function gfRenderHome() {
 function gfCanApprove() { return ['area_director', 'df', 'pe', 'pca'].includes(_financeRole); }
 // Podem VER aprovações (sem botões de ação): aprovadores + membros da equipa Financeiro
 function gfCanViewAprovacoes() { return gfCanApprove() || isFinanceiroEquipa(); }
+// Tesouraria: apenas equipa Financeiro (inclui DF) ou Presidente Executivo
+function gfCanViewTesouraria() { return _financeRole === 'pe' || isFinanceiroEquipa(); }
+
+// ══════════════════════════════════════════════════════════════
+// TESOURARIA — DÍVIDA A FORNECEDORES
+// ══════════════════════════════════════════════════════════════
+function gfRenderTesourariaDivida() {
+  if (!gfCanViewTesouraria()) {
+    return `<div style="padding:2rem;text-align:center;color:var(--text3)">Não tem permissão para aceder a esta secção.</div>`;
+  }
+
+  // Solicitações processadas mas não pagas
+  const dividas = GF_SOLICITACOES.filter(s => s.estado === 'Processado' && s.tipoSolicitacao === 'Despesa');
+  const total = dividas.reduce((a, s) => a + (s.valor || 0), 0);
+  const semPrazo = dividas.filter(s => !s.dataLimitePagamento).length;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const vencidas = dividas.filter(s => {
+    if (!s.dataLimitePagamento) return false;
+    return new Date(s.dataLimitePagamento) < hoje;
+  }).length;
+
+  const rows = dividas.length ? dividas.map(s => {
+    const prazo = s.dataLimitePagamento;
+    const prazoDate = prazo ? new Date(prazo) : null;
+    const vencida = prazoDate && prazoDate < hoje;
+    const proxima = prazoDate && !vencida && (prazoDate - hoje) < 7 * 24 * 60 * 60 * 1000;
+    const prazoBadge = !prazo
+      ? `<span style="background:#F1EFE8;color:#5F5E5A;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">Sem prazo</span>`
+      : vencida
+      ? `<span style="background:#FCEBEB;color:#A32D2D;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">⚠️ Vencida</span>`
+      : proxima
+      ? `<span style="background:#FAEEDA;color:#633806;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">⏰ Próxima</span>`
+      : `<span style="background:#EAF3DE;color:#27500A;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">OK</span>`;
+    return `<tr style="${vencida ? 'background:#FFF8F8' : ''}">
+      <td style="font-family:monospace;font-size:12px">${s.codigo}</td>
+      <td style="font-weight:500">${s.titulo}</td>
+      <td>${s.fornecedor || '—'}</td>
+      <td>${s.projetoNome || '—'}</td>
+      <td>${s.rubricaNome || '—'}</td>
+      <td style="font-weight:600;color:#1E40AF">${gfFmt(s.valor)}</td>
+      <td>${prazo ? gfDate(prazo) : '—'}</td>
+      <td>${prazoBadge}</td>
+      <td>
+        <button class="btn btn-sm" onclick="GF.solicitacao=${s.id};gfNav('solicitacao-view')">Ver</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="9"><div class="empty" style="padding:2rem">Não existem solicitações processadas e por pagar.</div></td></tr>`;
+
+  return `
+    <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:22px;font-weight:600;margin-bottom:4px">💳 Dívida a Fornecedores</div>
+        <div style="font-size:13px;color:var(--text3)">Solicitações processadas aguardando pagamento</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Total em dívida</div>
+        <div style="font-size:22px;font-weight:700;color:#1E40AF">${gfFmt(total)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">${dividas.length} solicitação(ões)</div>
+      </div>
+      <div class="card" style="padding:16px;${vencidas > 0 ? 'border-color:#FCA5A5;background:#FFF8F8' : ''}">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Prazos vencidos</div>
+        <div style="font-size:22px;font-weight:700;color:${vencidas > 0 ? '#A32D2D' : 'var(--text)'}">${vencidas}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Pagamento em atraso</div>
+      </div>
+      <div class="card" style="padding:16px">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Sem data limite</div>
+        <div style="font-size:22px;font-weight:700;color:${semPrazo > 0 ? '#633806' : 'var(--text)'}">${semPrazo}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Prazo não definido</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width:9%"><col style="width:20%"><col style="width:14%">
+          <col style="width:12%"><col style="width:12%"><col style="width:10%">
+          <col style="width:9%"><col style="width:8%"><col style="width:6%">
+        </colgroup>
+        <thead><tr>
+          <th>Código</th><th>Título</th><th>Fornecedor</th>
+          <th>Projeto</th><th>Rúbrica</th><th>Valor</th>
+          <th>Data Limite</th><th>Estado</th><th>Ações</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════
+// TESOURARIA — PREVISÕES DE TESOURARIA
+// ══════════════════════════════════════════════════════════════
+
+// Helper: obter/guardar saldo em FJ_Configuracoes
+let _gfSaldoCaixaId = null;
+
+async function gfSaveSaldoCaixa(valor) {
+  const body = {
+    __metadata: { type: 'SP.Data.FJ_x005f_ConfiguracoesListItem' },
+    Title: 'SaldoCaixa',
+    Valor: String(valor)
+  };
+  try {
+    if (_gfSaldoCaixaId) {
+      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Configuracoes')/items(${_gfSaldoCaixaId})`, body, 'MERGE');
+    } else {
+      const r = await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Configuracoes')/items`, body, 'POST');
+      const d = await r.json(); _gfSaldoCaixaId = d.d?.Id || null;
+    }
+    showNotif('Saldo de caixa guardado ✓', 'success');
+    gfNav('tesouraria-previsoes');
+  } catch(e) {
+    showNotif('Erro ao guardar saldo: ' + e.message, 'error');
+  }
+}
+
+async function gfRenderTesourariaPrevisoes() {
+  if (!gfCanViewTesouraria()) {
+    const app = gfEl('gf-app');
+    if (app) app.innerHTML = `<div style="max-width:1200px;margin:0 auto"><div style="padding:2rem;text-align:center;color:var(--text3)">Não tem permissão para aceder a esta secção.</div></div>`;
+    return;
+  }
+  // Carregar saldo actual do SP
+  let saldoAtual = 0;
+  try {
+    const dc = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Configuracoes')/items?$filter=Title eq 'SaldoCaixa'&$select=Id,Valor&$top=1`);
+    const cfg = dc.d?.results?.[0];
+    if (cfg) { saldoAtual = parseFloat(cfg.Valor) || 0; _gfSaldoCaixaId = cfg.Id; }
+  } catch(e) { /* lista pode não existir */ }
+
+  const app = gfEl('gf-app');
+  if (app) {
+    app.innerHTML = `<div style="max-width:1200px;margin:0 auto">${_gfBuildPrevisoes(saldoAtual)}</div>`;
+  }
+}
+
+function _gfBuildPrevisoes(saldoAtual) {
+  // Solicitações processadas ainda não pagas com data limite
+  const dividas = GF_SOLICITACOES.filter(s =>
+    s.estado === 'Processado' &&
+    s.tipoSolicitacao === 'Despesa'
+  );
+
+  // Obter data de início (semana actual)
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const diaSemana = hoje.getDay() === 0 ? 6 : hoje.getDay() - 1; // 0=Seg
+  const inicioSemanaAtual = new Date(hoje); inicioSemanaAtual.setDate(hoje.getDate() - diaSemana);
+
+  // Gerar 8 semanas
+  const NUM_WEEKS = 8;
+  const semanas = [];
+  for (let w = 0; w < NUM_WEEKS; w++) {
+    const inicio = new Date(inicioSemanaAtual); inicio.setDate(inicioSemanaAtual.getDate() + w * 7);
+    const fim = new Date(inicio); fim.setDate(inicio.getDate() + 6);
+    const pagamentos = dividas.filter(s => {
+      if (!s.dataLimitePagamento) return false;
+      const d = new Date(s.dataLimitePagamento);
+      return d >= inicio && d <= fim;
+    });
+    const semVencidas = w === 0 ? dividas.filter(s => {
+      if (!s.dataLimitePagamento) return false;
+      return new Date(s.dataLimitePagamento) < inicio;
+    }) : [];
+    semanas.push({ inicio, fim, pagamentos, semVencidas });
+  }
+
+  // Calcular saldo corrido semana a semana
+  let saldoCorrente = saldoAtual;
+  const semanasComSaldo = semanas.map((s, i) => {
+    const totalSemana = [...s.pagamentos, ...s.semVencidas].reduce((a, p) => a + (p.valor || 0), 0);
+    const saldoInicio = saldoCorrente;
+    saldoCorrente = saldoCorrente - totalSemana;
+    return { ...s, totalSemana, saldoInicio, saldoFim: saldoCorrente };
+  });
+
+  const fmt = v => new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' €';
+  const fmtDate = d => d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+
+  const linhasSemanas = semanasComSaldo.map((s, i) => {
+    const isNegativo = s.saldoFim < 0;
+    const isAtencao = s.saldoFim >= 0 && s.saldoFim < (saldoAtual * 0.2);
+    const cor = isNegativo ? '#A32D2D' : isAtencao ? '#633806' : '#27500A';
+    const bgCor = isNegativo ? '#FFF8F8' : isAtencao ? '#FFFBF0' : '';
+    const allPag = [...s.semVencidas, ...s.pagamentos];
+    const detalhe = allPag.length ? allPag.map(p =>
+      `<div style="font-size:11px;color:var(--text2);padding:2px 0;display:flex;justify-content:space-between;gap:8px">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px">${p.titulo} — ${p.fornecedor || '—'}</span>
+        <span style="font-weight:600;flex-shrink:0;color:#A32D2D">-${fmt(p.valor)}</span>
+      </div>`
+    ).join('') : `<div style="font-size:11px;color:var(--text3);padding:2px 0">Sem pagamentos previstos</div>`;
+
+    return `
+      <div style="border:0.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;background:${bgCor || 'var(--bg2)'}">
+        <div style="padding:12px 16px;display:grid;grid-template-columns:1fr auto auto auto;gap:16px;align-items:center;cursor:pointer;background:${bgCor || 'var(--bg3)'}" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+          <div>
+            <div style="font-size:13px;font-weight:600">
+              ${i === 0 ? '📅 ' : ''}Semana ${i + 1} — ${fmtDate(s.inicio)} a ${fmtDate(s.fim)}
+              ${i === 0 ? '<span style="font-size:10px;background:#003087;color:#fff;padding:1px 7px;border-radius:10px;margin-left:8px">Atual</span>' : ''}
+              ${s.semVencidas.length ? `<span style="font-size:10px;background:#FCEBEB;color:#A32D2D;padding:1px 7px;border-radius:10px;margin-left:4px">⚠️ ${s.semVencidas.length} vencida(s)</span>` : ''}
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${allPag.length} pagamento(s) previsto(s)</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saldo início</div>
+            <div style="font-size:13px;font-weight:600">${fmt(s.saldoInicio)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saídas</div>
+            <div style="font-size:13px;font-weight:600;color:${s.totalSemana > 0 ? '#A32D2D' : 'var(--text3)'}">-${fmt(s.totalSemana)}</div>
+          </div>
+          <div style="text-align:right;min-width:110px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase">Saldo fim</div>
+            <div style="font-size:16px;font-weight:700;color:${cor}">${fmt(s.saldoFim)}</div>
+          </div>
+        </div>
+        <div style="display:none;padding:10px 16px 12px;border-top:0.5px solid var(--border)">
+          ${detalhe}
+          ${s.pagamentos.length + s.semVencidas.length === 0 ? '' : `<div style="margin-top:8px;font-size:11px;color:var(--text3);display:flex;justify-content:space-between"><span>Total da semana</span><span style="font-weight:700;color:#A32D2D">-${fmt(s.totalSemana)}</span></div>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  const semSemPrazo = dividas.filter(s => !s.dataLimitePagamento);
+
+  return `
+    <div style="margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:22px;font-weight:600;margin-bottom:4px">📊 Previsões de Tesouraria</div>
+        <div style="font-size:13px;color:var(--text3)">Visão semanal dos pagamentos previstos</div>
+      </div>
+    </div>
+
+    <!-- Saldo de Caixa -->
+    <div class="card" style="margin-bottom:20px;padding:18px 20px;border-left:4px solid var(--fj-blue)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Saldo de Caixa Atual</div>
+          <div style="font-size:28px;font-weight:700;color:${saldoAtual < 0 ? '#A32D2D' : '#003087'}">${fmt(saldoAtual)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Valor base para as previsões</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="tes-saldo-input" value="${saldoAtual}" step="0.01" placeholder="0,00"
+            style="padding:10px 14px;border:1px solid var(--border2);border-radius:8px;font-size:15px;width:180px;font-weight:600;text-align:right">
+          <button class="btn btn-primary" onclick="gfSaveSaldoCaixa(parseFloat(document.getElementById('tes-saldo-input').value)||0)" style="background:var(--fj-blue);border-color:var(--fj-blue)">
+            Guardar Saldo
+          </button>
+        </div>
+      </div>
+    </div>
+
+    ${semSemPrazo.length ? `
+    <div style="background:#FAEEDA;border:1px solid #F9CA8B;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#633806">
+      ⚠️ <strong>${semSemPrazo.length}</strong> solicitação(ões) processada(s) sem <em>Data Limite de Pagamento</em> definida — não incluídas nas previsões.
+      <a href="javascript:void(0)" onclick="gfNav('tesouraria-divida')" style="color:#003087;font-weight:600;margin-left:8px">Ver Dívida a Fornecedores →</a>
+    </div>` : ''}
+
+    <!-- Resumo gráfico -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+      ${semanasComSaldo.slice(0,4).map((s, i) => `
+        <div style="background:var(--bg2);border:0.5px solid ${s.saldoFim < 0 ? '#FCA5A5' : 'var(--border)'};border-radius:8px;padding:12px 14px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Sem. ${i+1}</div>
+          <div style="font-size:16px;font-weight:700;color:${s.saldoFim < 0 ? '#A32D2D' : s.saldoFim < saldoAtual * 0.2 ? '#633806' : '#27500A'}">${fmt(s.saldoFim)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtDate(s.inicio)} – ${fmtDate(s.fim)}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Detalhes semana a semana -->
+    <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text2)">Detalhe por semana <span style="font-size:11px;font-weight:400;color:var(--text3)">(clique para expandir)</span></div>
+    ${linhasSemanas}
+  `;
+}
 
 // Encontra o Diretor de Área de um departamento dinamicamente:
 // = utilizador com cargo 'Diretor' cuja equipa inclui esse departamento (excluindo CAdm)
@@ -7332,6 +7636,10 @@ function gfRenderSolicitacaoForm() {
               <input type="email" id="gf-sol-email" value="${sol?.emailForn || ''}" placeholder="email@empresa.pt" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
             </div>
           </div>
+          <div style="margin-bottom:16px">
+            <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">📅 Data Limite de Pagamento <span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:4px">Prazo máximo para efetuar o pagamento</span></label>
+            <input type="date" id="gf-sol-data-limite" value="${sol?.dataLimitePagamento || ''}" style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;width:220px">
+          </div>
           
           <div>
             <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px">Justificação</label>
@@ -7458,6 +7766,7 @@ async function gfSaveSolicitacao(id, estado) {
   const emailForn = gfVal('gf-sol-email').trim();
   const justificacao = gfVal('gf-sol-justificacao').trim();
   const tipoSolicitacao = document.querySelector('input[name="gf-sol-tipo"]:checked')?.value || 'Despesa';
+  const dataLimite = gfVal('gf-sol-data-limite') || null;
   
   if (!titulo || !projetoId || !rubricaId || valor <= 0 || !fornecedor) {
     showNotif('Preencha todos os campos obrigatórios', 'error');
@@ -7486,7 +7795,8 @@ async function gfSaveSolicitacao(id, estado) {
     TipoSolicitacao: tipoSolicitacao,
     Fornecedor: fornecedor,
     EmailFornecedor: emailForn,
-    Justificacao: justificacao
+    Justificacao: justificacao,
+    DataLimitePagamento: dataLimite ? new Date(dataLimite).toISOString() : null
   };
   
   if (estado === 'Submetido') {
