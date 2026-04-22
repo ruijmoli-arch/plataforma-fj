@@ -6060,7 +6060,7 @@ async function gfLoadAll() {
     }));
 
     // Rubricas com expand
-    const dr = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items?$select=Id,Title,ProjetoIdId,TipoRubrica,DespOrcamentada,RecOrcamentada,AnoOrcamental,Estado,HistoricoAlteracoes,ProjetoId/Title,ProjetoId/Id&$expand=ProjetoId&$top=2000`);
+    const dr = await spRead(`${SP}/_api/web/lists/getbytitle('FJ_Rubricas')/items?$select=Id,Title,ProjetoIdId,TipoRubrica,DespOrcamentada,RecOrcamentada,AnoOrcamental,Estado,HistoricoAlteracoes,RubricaMensal,DiaPagamento,ProjetoId/Title,ProjetoId/Id&$expand=ProjetoId&$top=2000`);
     GF_RUBRICAS = (dr.d?.results || []).map(r => ({
       id: r.Id,
       titulo: r.Title || '',
@@ -6071,7 +6071,9 @@ async function gfLoadAll() {
       recOrc: r.RecOrcamentada || 0,
       ano: r.AnoOrcamental || GF.year,
       estado: r.Estado || 'Ativo',
-      historicoAlteracoes: r.HistoricoAlteracoes || '[]'
+      historicoAlteracoes: r.HistoricoAlteracoes || '[]',
+      rubricaMensal: r.RubricaMensal === true || r.RubricaMensal === 'Yes' || r.RubricaMensal === 1,
+      diaPagamento: parseInt(r.DiaPagamento) || 15
     }));
 
     // Solicitações com expand
@@ -6437,6 +6439,44 @@ function gfCanViewAprovacoes() { return gfCanApprove() || isFinanceiroEquipa(); 
 // Tesouraria: apenas equipa Financeiro (inclui DF) ou Presidente Executivo
 function gfCanViewTesouraria() { return _financeRole === 'pe' || isFinanceiroEquipa(); }
 
+// ── Edição inline da data limite na Dívida a Fornecedores ──
+function gfDividaEditDate(id, currentDate) {
+  const cell = document.getElementById(`div-date-cell-${id}`);
+  if (!cell) return;
+  cell.innerHTML = `
+    <div style="display:flex;align-items:center;gap:4px">
+      <input type="date" id="div-date-inp-${id}" value="${currentDate}"
+        style="padding:4px 7px;border:1px solid var(--border2);border-radius:6px;font-size:12px;width:130px">
+      <button onclick="gfDividaSaveDate(${id})" title="Guardar"
+        style="padding:4px 8px;background:#10B981;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">✓</button>
+      <button onclick="gfNav('tesouraria-divida')" title="Cancelar"
+        style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px">✕</button>
+    </div>`;
+  document.getElementById(`div-date-inp-${id}`)?.focus();
+}
+
+async function gfDividaSaveDate(id) {
+  const inp = document.getElementById(`div-date-inp-${id}`);
+  if (!inp) return;
+  const val = inp.value;
+  const btn = inp.nextElementSibling;
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    await spWrite(
+      `${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${id})`,
+      { __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
+        DataLimitePagamento: val ? new Date(val).toISOString() : null },
+      'MERGE'
+    );
+    showNotif('Data limite guardada ✓', 'success');
+    await gfLoadAll();
+    gfNav('tesouraria-divida');
+  } catch(e) {
+    showNotif('Erro: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '✓'; }
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // TESOURARIA — DÍVIDA A FORNECEDORES
 // ══════════════════════════════════════════════════════════════
@@ -6480,14 +6520,20 @@ function gfRenderTesourariaDivida() {
       : proxima
       ? `<span style="background:#FAEEDA;color:#633806;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">⏰ Esta semana</span>`
       : `<span style="background:#EAF3DE;color:#27500A;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500">OK</span>`;
-    return `<tr style="${vencida ? 'background:#FFF8F8' : ''}">
+    return `<tr style="${vencida ? 'background:#FFF8F8' : ''}" id="div-row-${s.id}">
       <td style="font-family:monospace;font-size:12px">${s.codigo || '—'}</td>
       <td style="font-weight:500">${s.titulo}</td>
       <td>${s.fornecedor || '—'}</td>
       <td>${s.projetoNome || '—'}</td>
       <td style="font-weight:600;color:#1E40AF">${gfFmt(s.valor)}</td>
       <td>${estadoBadge(s.estado)}</td>
-      <td>${prazo ? gfDate(prazo) : '—'}</td>
+      <td id="div-date-cell-${s.id}">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px">${prazo ? gfDate(prazo) : '—'}</span>
+          <button onclick="gfDividaEditDate(${s.id},'${prazo || ''}')" title="Editar data limite"
+            style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:0;line-height:1">✏️</button>
+        </div>
+      </td>
       <td>${prazoBadge}</td>
       <td><button class="btn btn-sm" onclick="GF.solicitacao=${s.id};gfNav('solicitacao-view')">Ver</button></td>
     </tr>`;
@@ -6587,6 +6633,39 @@ async function gfRenderTesourariaPrevisoes() {
 let _gfPrevPeriodo = 'semanal';
 let _gfSaldoAtualCache = 0;
 
+// ── Gera pagamentos mensais sintéticos a partir de rubricas marcadas como mensais ──
+function _gfGetPagamentosMensais() {
+  const anoAtual = new Date().getFullYear();
+  const pagamentos = [];
+
+  GF_RUBRICAS
+    .filter(r => r.rubricaMensal && r.despOrc > 0 && r.estado === 'Ativo' && r.tipo === 'Despesa')
+    .forEach(r => {
+      const isRH = /afeta[çc][aã]o\s*rh/i.test(r.titulo);
+      const divisor = isRH ? 14 : 12;
+      const valorBase = r.despOrc / divisor;
+
+      for (let mes = 1; mes <= 12; mes++) {
+        // "Afetação RH": julho (7) e novembro (11) têm 2 pagamentos
+        const multiplicador = isRH && (mes === 7 || mes === 11) ? 2 : 1;
+        const valor = valorBase * multiplicador;
+        const dia = Math.min(r.diaPagamento, new Date(anoAtual, mes, 0).getDate()); // ajusta ao último dia do mês
+        const data = new Date(anoAtual, mes - 1, dia);
+        pagamentos.push({
+          data,
+          valor,
+          titulo: r.titulo,
+          fornecedor: r.projetoNome || '—',
+          dataLimitePagamento: data.toISOString().split('T')[0],
+          _isMensal: true,
+          _rubricaId: r.id
+        });
+      }
+    });
+
+  return pagamentos;
+}
+
 function gfSetPrevPeriodo(p) {
   _gfPrevPeriodo = p;
   const app = gfEl('gf-app');
@@ -6605,6 +6684,8 @@ function _gfBuildPrevisoes(saldoAtual) {
   const receitas = GF_SOLICITACOES.filter(s =>
     ESTADOS_TESOURARIA.includes(s.estado) && s.tipoSolicitacao === 'Receita'
   );
+  // Pagamentos recorrentes de rubricas mensais
+  const pagamentosMensais = _gfGetPagamentosMensais();
 
   const hoje = new Date(); hoje.setHours(0,0,0,0);
 
@@ -6663,29 +6744,37 @@ function _gfBuildPrevisoes(saldoAtual) {
     };
     const saidas = dividas.filter(filterRange);
     const entradas = receitas.filter(filterRange);
+    // Pagamentos mensais: sempre por data exata, sem acumular vencidos
+    const mensais = pagamentosMensais.filter(pm => {
+      const d = pm.data;
+      return d >= p.ini && d <= p.fim;
+    });
     const totalSaidas = saidas.reduce((a, s) => a + (s.valor || 0), 0);
     const totalEntradas = entradas.reduce((a, s) => a + (s.valor || 0), 0);
+    const totalMensais = mensais.reduce((a, m) => a + (m.valor || 0), 0);
     const saldoIni = saldoCorrente;
-    saldoCorrente = saldoCorrente + totalEntradas - totalSaidas;
+    saldoCorrente = saldoCorrente + totalEntradas - totalSaidas - totalMensais;
     const vencidos = i === 0 ? saidas.filter(s => new Date(s.dataLimitePagamento) < p.ini) : [];
-    return { ...p, saidas, entradas, totalSaidas, totalEntradas, saldoIni, saldoFim: saldoCorrente, vencidos };
+    return { ...p, saidas, entradas, mensais, totalSaidas, totalEntradas, totalMensais, saldoIni, saldoFim: saldoCorrente, vencidos };
   });
 
   // ── Cards resumo ────────────────────────────────────────────
   const cardsHtml = periodosCalc.slice(0, 4).map((p, i) => {
     const cor = p.saldoFim < 0 ? '#A32D2D' : p.saldoFim < saldoAtual * 0.2 ? '#633806' : '#27500A';
     const bord = p.saldoFim < 0 ? '#FCA5A5' : 'var(--border)';
+    const totalSaidasTot = p.totalSaidas + p.totalMensais;
     return `<div style="background:var(--bg2);border:0.5px solid ${bord};border-radius:8px;padding:12px 14px">
       <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">${p.label}</div>
       <div style="font-size:15px;font-weight:700;color:${cor}">${fmt(p.saldoFim)}</div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtDate(p.ini)} – ${fmtDate(p.fim)}</div>
       ${p.totalEntradas > 0 ? `<div style="font-size:10px;color:#059669;margin-top:3px">+${fmt(p.totalEntradas)}</div>` : ''}
-      ${p.totalSaidas > 0 ? `<div style="font-size:10px;color:#A32D2D">-${fmt(p.totalSaidas)}</div>` : ''}
+      ${totalSaidasTot > 0 ? `<div style="font-size:10px;color:#A32D2D">-${fmt(totalSaidasTot)}</div>` : ''}
     </div>`;
   }).join('');
 
   // ── Linhas de detalhe ───────────────────────────────────────
   const linhas = periodosCalc.map((p, i) => {
+    const totalSaidasTot = p.totalSaidas + p.totalMensais;
     const isNeg = p.saldoFim < 0;
     const isWarn = !isNeg && p.saldoFim < saldoAtual * 0.2 && saldoAtual > 0;
     const bgRow = isNeg ? '#FFF8F8' : isWarn ? '#FFFBF0' : 'var(--bg3)';
@@ -6699,10 +6788,19 @@ function _gfBuildPrevisoes(saldoAtual) {
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${s.titulo}${s.fornecedor ? ' — ' + s.fornecedor : ''}${new Date(s.dataLimitePagamento) < p.ini ? ' <span style="color:#A32D2D;font-size:10px">[vencido]</span>' : ''}</span>
       <span style="font-weight:600;flex-shrink:0;color:#A32D2D">-${fmt(s.valor)}</span>
     </div>`).join('');
+
     const rowsE = p.entradas.map(s => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;color:var(--text2)">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${s.titulo}${s.fornecedor ? ' — ' + s.fornecedor : ''}</span>
       <span style="font-weight:600;flex-shrink:0;color:#059669">+${fmt(s.valor)}</span>
     </div>`).join('');
+
+    const rowsM = p.mensais.map(m => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:2px 0;color:var(--text2)">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">🔄 ${m.titulo} <span style="color:var(--text3);font-size:10px">(rubrica mensal · dia ${m.data.getDate()})</span></span>
+      <span style="font-weight:600;flex-shrink:0;color:#A32D2D">-${fmt(m.valor)}</span>
+    </div>`).join('');
+
+    const semDetalhe = !p.saidas.length && !p.entradas.length && !p.mensais.length;
+    const liquidoTotal = p.totalEntradas - p.totalSaidas - p.totalMensais;
 
     return `<div style="border:0.5px solid ${isNeg ? '#FCA5A5' : 'var(--border)'};border-radius:10px;overflow:hidden;margin-bottom:8px">
       <div style="padding:12px 16px;display:grid;grid-template-columns:1fr 110px 110px 110px 120px;gap:8px;align-items:center;cursor:pointer;background:${bgRow}"
@@ -6713,21 +6811,22 @@ function _gfBuildPrevisoes(saldoAtual) {
             ${i === 0 && periodo === 'semanal' ? '<span style="font-size:10px;background:#003087;color:#fff;padding:1px 7px;border-radius:10px;margin-left:6px">Atual</span>' : ''}
             ${p.vencidos.length ? `<span style="font-size:10px;background:#FCEBEB;color:#A32D2D;padding:1px 7px;border-radius:10px;margin-left:4px">⚠️ ${p.vencidos.length} vencido(s)</span>` : ''}
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">${p.saidas.length} saída(s) · ${p.entradas.length} entrada(s)</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${p.saidas.length + p.mensais.length} saída(s) · ${p.entradas.length} entrada(s)${p.mensais.length ? ` · ${p.mensais.length} mensal(is)` : ''}</div>
         </div>
         <div style="text-align:right"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Saldo início</div><div style="font-size:12px;font-weight:600">${fmt(p.saldoIni)}</div></div>
         <div style="text-align:right"><div style="font-size:10px;color:#059669;margin-bottom:2px">Entradas</div><div style="font-size:12px;font-weight:600">${fmtSinal(p.totalEntradas, false)}</div></div>
-        <div style="text-align:right"><div style="font-size:10px;color:#A32D2D;margin-bottom:2px">Saídas</div><div style="font-size:12px;font-weight:600">${fmtSinal(p.totalSaidas, true)}</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:#A32D2D;margin-bottom:2px">Saídas</div><div style="font-size:12px;font-weight:600">${fmtSinal(totalSaidasTot, true)}</div></div>
         <div style="text-align:right"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Saldo fim</div><div style="font-size:15px;font-weight:700;color:${corSaldo}">${fmt(p.saldoFim)}</div></div>
       </div>
       <div style="display:none;padding:10px 16px 14px;border-top:0.5px solid var(--border);background:${bgBody}">
-        ${!p.saidas.length && !p.entradas.length
+        ${semDetalhe
           ? `<div style="font-size:11px;color:var(--text3)">Sem movimentos previstos neste período.</div>`
           : `${p.entradas.length ? `<div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;margin-bottom:4px">▲ Entradas</div>${rowsE}` : ''}
-             ${p.saidas.length ? `<div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;margin:${p.entradas.length ? '8px' : '0'} 0 4px">▼ Saídas</div>${rowsS}` : ''}
+             ${p.saidas.length ? `<div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;margin:${p.entradas.length?'8px':'0'} 0 4px">▼ Saídas pontuais</div>${rowsS}` : ''}
+             ${p.mensais.length ? `<div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;margin:${(p.entradas.length||p.saidas.length)?'8px':'0'} 0 4px">🔄 Despesas Mensais</div>${rowsM}` : ''}
              <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;display:flex;justify-content:space-between">
                <span style="color:var(--text3)">Fluxo líquido</span>
-               <span style="font-weight:700;color:${(p.totalEntradas-p.totalSaidas)>=0?'#059669':'#A32D2D'}">${(p.totalEntradas-p.totalSaidas)>=0?'+':''}${fmt(p.totalEntradas-p.totalSaidas)}</span>
+               <span style="font-weight:700;color:${liquidoTotal>=0?'#059669':'#A32D2D'}">${liquidoTotal>=0?'+':''}${fmt(liquidoTotal)}</span>
              </div>`
         }
       </div>
@@ -10478,6 +10577,8 @@ let _procSelectedFiles = [];
 function gfOpenProcessadoModal() {
   _procSelectedFiles = [];
   gfRenderProcFileList();
+  const el = document.getElementById('gf-proc-data-limite');
+  if (el) el.value = '';
   // Preencher select com solicitações "Aprovado DF" (ou "Aprovado Dir." para financeiro single-level)
   const aprovadas = GF_SOLICITACOES.filter(s =>
     canViewFinanceProject(s.projetoId) &&
@@ -10532,6 +10633,8 @@ async function gfSubmitProcessado() {
   if (!solId) { showNotif('Seleciona uma solicitação', 'error'); return; }
   if (!_procSelectedFiles.length) { showNotif('Anexa pelo menos um ficheiro (nota de encomenda)', 'error'); return; }
 
+  const dataLimite = document.getElementById('gf-proc-data-limite')?.value || null;
+
   const btn = document.getElementById('gf-proc-submit-btn');
   btn.disabled = true; btn.textContent = 'A guardar...';
   try {
@@ -10541,9 +10644,15 @@ async function gfSubmitProcessado() {
       await uploadAttachment('FJ_Solicitacoes', solId, renamed);
     }
     // Mudar estado para Processado
+    const body = {
+      __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' },
+      Estado: 'Processado',
+      DataProcessado: new Date().toISOString()
+    };
+    if (dataLimite) body.DataLimitePagamento = new Date(dataLimite).toISOString();
     await spWrite(
       `${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${solId})`,
-      { __metadata: { type: 'SP.Data.FJ_x005f_SolicitacoesListItem' }, Estado: 'Processado', DataProcessado: new Date().toISOString() },
+      body,
       'MERGE'
     );
     showNotif('Solicitação marcada como Processada e nota de encomenda anexada! ✓', 'success');
@@ -10663,6 +10772,11 @@ init();
         <select id="gf-proc-sol-select" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;color:var(--text);background:#fff">
           <option value="">— Selecionar —</option>
         </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📅 Data Limite de Pagamento</label>
+        <input type="date" id="gf-proc-data-limite" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;color:var(--text)">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Prazo máximo para efetuar o pagamento a este fornecedor</div>
       </div>
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Nota de encomenda *</label>
