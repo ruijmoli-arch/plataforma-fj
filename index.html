@@ -2858,7 +2858,7 @@ function renderTable(){
   if(!list.length){tb.innerHTML=`<tr><td colspan="9"><div class="empty">Nenhum assunto.<br>Clique em "+ Novo assunto".</div></td></tr>`;el('tcount').textContent='';return;}
   tb.innerHTML=list.map(i=>`<tr>
     <td>${fd(i.data)}</td>
-    <td title="${i.titulo}" style="font-weight:500">${i.titulo}${i.confidencial?` <span class="badge b-na" style="font-size:10px">&#128274;</span>`:''}${i.attachments?.length?` <span class="badge" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">&#128206; ${i.attachments.length}</span>`:''}</td>
+    <td title="${i.titulo}" style="font-weight:500">${i.titulo}${i.confidencial?` <span class="badge b-na" style="font-size:10px">&#128274;</span>`:''}${i.attachments?.length?`<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">${i.attachments.map(a=>`<button onclick="downloadSPFile('${a.url}','${a.name.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:#EEF1F6;border:0.5px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;color:var(--blue-d)">📎 ${a.name}</button>`).join('')}</div>`:''}</td>
     <td>${bdg(RM,i.reuniao,i.reuniao.replace('Reunião ',''))}</td>
     <td><span class="badge ${i.tipo==='Deliberativo'?'b-delib':'b-info'}">${i.tipo==='Deliberativo'?'Delib.':'Inform.'}</span></td>
     <td>${i.responsavel||'—'}</td>
@@ -10870,40 +10870,24 @@ async function gfSubmitPago() {
 
 
 // ═══ VIEWER PÚBLICO CA ═══════════════════════════════════════════
-async function gerarLinkViewer(tipo, snapshotItems){
+function gerarLinkViewer(tipo, snapshotItems){
   const itensSrc = snapshotItems || prepItems;
-  const payload={
-    v:3, tipo, data:today(),
+  const payload = {
+    v:5, tipo, data:today(),
     items: itensSrc.map(i=>({
-      id:i.id, titulo:i.titulo, tipo:i.tipo,
+      titulo:i.titulo, tipo:i.tipo,
       responsavel:i.responsavel||'',
       notas:i.notas||'', proposta:i.proposta||'',
-      attachments:(i.attachments||[]).map(a=>({name:a.name, url:a.url}))
+      attachments:(i.attachments||[]).map(a=>({name:a.name, url:'https://fjuventude.sharepoint.com'+a.url}))
     }))
   };
-  const token=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  const link=window.location.href.split('#')[0]+'#viewer='+token;
-  document.getElementById('share-link-input').value=link;
-  const aviso=document.getElementById('share-size-warn');
-  if(aviso) aviso.textContent='';
+  const token = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const link = window.location.href.split('#')[0]+'#viewer='+token;
+  document.getElementById('share-link-input').value = link;
+  const aviso = document.getElementById('share-size-warn');
+  if(aviso) aviso.textContent = '';
   document.getElementById('share-modal-bg').classList.add('open');
 }
-function viewerDownload(encodedDataUrl, name){
-  try{
-    const dataUrl=decodeURIComponent(encodedDataUrl);
-    // Converter dataURL → Blob → objectURL (browsers bloqueiam data: URLs directos)
-    const [header,b64]=dataUrl.split(',');
-    const mime=header.match(/:(.*?);/)[1];
-    const bytes=atob(b64);
-    const arr=new Uint8Array(bytes.length);
-    for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
-    const blob=new Blob([arr],{type:mime});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download=name;a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),2000);
-  }catch(e){console.error('viewerDownload error',e);}
-}
-
 function copyShareLink(){
   const inp=document.getElementById('share-link-input');
   inp.select();inp.setSelectionRange(0,99999);
@@ -10957,7 +10941,7 @@ function renderViewer(data){
       <div class="viewer-item-body">
         ${it.notas?`<div><div class="viewer-sec">Contextualização</div><div class="viewer-content">${it.notas.replace(/\n/g,'<br>')}</div></div>`:''}
         ${isD&&it.proposta?`<div><div class="viewer-sec">Proposta de Decisão</div><div class="viewer-proposta">${it.proposta.replace(/\n/g,'<br>')}</div></div>`:''}
-        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map(a=>`<a href="https://fjuventude.sharepoint.com${a.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;text-decoration:none;border:0.5px solid #c3d9f0">📎 ${a.name}</a>`).join('')}</div></div>`:''}
+        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map(a=>`<a href="${a.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;text-decoration:none;border:0.5px solid #c3d9f0">📎 ${a.name}</a>`).join('')}</div></div>`:''}
       </div>
     </div>`;
   }).join('');
