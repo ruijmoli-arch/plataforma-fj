@@ -3310,10 +3310,11 @@ function guardarSessao(){
   const key='fj_sessao_'+tipo.replace(/\s+/g,'_');
   localStorage.setItem(key,JSON.stringify(sessao));
   showNotif('Sessão guardada! Estará disponível amanhã.','success');
+  const snapshotItems=[...prepItems.map(i=>({...i}))]; // snapshot antes de fechar
   fecharPrep();
   loadSavedSessions();
   // Para reuniões do CA, gerar link de apresentação pública
-  if(tipo==='Reunião com CAdm') gerarLinkViewer(tipo);
+  if(tipo==='Reunião com CAdm') gerarLinkViewer(tipo, snapshotItems);
 }
 
 function loadSavedSessions(){
@@ -10869,7 +10870,8 @@ async function gfSubmitPago() {
 
 
 // ═══ VIEWER PÚBLICO CA ═══════════════════════════════════════════
-async function gerarLinkViewer(tipo){
+async function gerarLinkViewer(tipo, snapshotItems){
+  const itensSrc = snapshotItems || prepItems;
   // Mostrar progresso
   showNotif('A preparar apresentação com anexos…','success');
   const btn=document.querySelector('[onclick*="guardarSessao"]');
@@ -10877,6 +10879,7 @@ async function gerarLinkViewer(tipo){
 
   // Converter um anexo SP para dataURL (Base64)
   async function fetchAnexoBase64(serverRelUrl){
+    await getSPToken();
     const r=await fetch('https://fjuventude.sharepoint.com'+serverRelUrl,{headers:{Authorization:`Bearer ${spToken}`}});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const blob=await r.blob();
@@ -10884,7 +10887,7 @@ async function gerarLinkViewer(tipo){
   }
 
   // Serializar itens com anexos embutidos
-  const itensSer=await Promise.all(prepItems.map(async i=>{
+  const itensSer=await Promise.all(itensSrc.map(async i=>{
     const anexos=[];
     for(const a of (i.attachments||[])){
       try{
