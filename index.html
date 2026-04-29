@@ -114,6 +114,37 @@ tr:hover td{background:var(--bg3)}
 .b-pend{background:var(--amber-bg);color:var(--amber)}.b-na{background:var(--gray-bg);color:var(--gray)}
 .warn-box{background:#FEF3C7;border:1px solid #FCD34D;border-radius:var(--r);padding:10px 14px;margin-bottom:1rem;font-size:13px;color:#92400E;display:none}
 .warn-box.show{display:block}
+/* VIEWER (apresentação pública CA) */
+.viewer-screen{min-height:100vh;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.viewer-header{background:var(--fj-blue);color:#fff;padding:0;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.viewer-header-inner{max-width:900px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.viewer-header-logo{width:28px;height:28px;background:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:var(--fj-blue);flex-shrink:0}
+.viewer-header-title{font-size:15px;font-weight:600;flex:1}
+.viewer-header-meta{font-size:12px;color:rgba(255,255,255,.7)}
+.viewer-body{max-width:900px;margin:0 auto;padding:2rem 24px 4rem}
+.viewer-cover{background:#fff;border-radius:16px;padding:2.5rem 2rem;margin-bottom:1.5rem;border:0.5px solid #dde2ee;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem}
+.viewer-cover-tipo{font-size:22px;font-weight:700;color:var(--fj-blue)}
+.viewer-cover-data{font-size:13px;color:var(--text2)}
+.viewer-cover-count{font-size:12px;color:var(--text3);background:var(--bg3);padding:4px 12px;border-radius:20px;margin-top:.5rem}
+.viewer-item{background:#fff;border-radius:12px;border:0.5px solid #dde2ee;margin-bottom:1rem;overflow:hidden;page-break-inside:avoid}
+.viewer-item-header{padding:14px 20px;display:flex;align-items:flex-start;gap:12px;border-bottom:0.5px solid #eef1f6}
+.viewer-item-num{width:28px;height:28px;border-radius:50%;background:var(--fj-blue);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.viewer-item-titulo{font-size:15px;font-weight:600;color:var(--text);flex:1;line-height:1.35}
+.viewer-item-body{padding:14px 20px;display:flex;flex-direction:column;gap:10px}
+.viewer-sec{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.viewer-content{font-size:13px;color:var(--text);line-height:1.6;background:var(--bg3);border-radius:8px;padding:10px 14px;white-space:pre-wrap}
+.viewer-content.empty{color:var(--text3);font-style:italic;background:transparent;padding:0}
+.viewer-proposta{font-size:13px;color:var(--text);line-height:1.6;background:#EFF6FF;border-left:3px solid var(--fj-blue2);border-radius:0 8px 8px 0;padding:10px 14px;white-space:pre-wrap}
+.viewer-footer{text-align:center;font-size:11px;color:var(--text3);margin-top:2rem;padding-top:1rem;border-top:0.5px solid #dde2ee}
+/* Modal link partilha */
+.share-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center}
+.share-modal-bg.open{display:flex}
+.share-modal{background:#fff;border-radius:14px;width:100%;max-width:480px;padding:24px;margin:1rem;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.share-modal h3{font-size:16px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.share-modal p{font-size:13px;color:var(--text2);margin-bottom:14px}
+.share-link-box{display:flex;gap:8px;align-items:center}
+.share-link-input{flex:1;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:12px;color:var(--text);background:var(--bg3);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media print{.viewer-header{display:none}.viewer-body{padding-top:0}}
 /* KPI hierarchy */
 .kpi-proj-block{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r-lg);margin-bottom:10px;overflow:hidden}
 .kpi-proj-hdr{padding:12px 16px;background:var(--bg3);display:flex;align-items:center;gap:10px;cursor:pointer;border-bottom:0.5px solid var(--border)}
@@ -547,6 +578,35 @@ tr:hover td{background:var(--bg3)}
       Entrar com Microsoft
     </button>
     <div id="login-msg" style="margin-top:1rem;font-size:13px;color:#666"></div>
+  </div>
+</div>
+
+<!-- VIEWER (apresentação pública CA — sem login) -->
+<div id="viewer-screen" style="display:none">
+  <div class="viewer-header">
+    <div class="viewer-header-inner">
+      <div class="viewer-header-logo">FJ</div>
+      <div class="viewer-header-title" id="vw-title">Reunião com CAdm</div>
+      <div class="viewer-header-meta" id="vw-meta"></div>
+    </div>
+  </div>
+  <div class="viewer-body" id="vw-body"></div>
+</div>
+
+<!-- MODAL: partilhar link CA -->
+<div id="share-modal-bg" class="share-modal-bg" onclick="if(event.target===this)closeShareModal()">
+  <div class="share-modal">
+    <h3>🔗 Link de apresentação — CA</h3>
+    <p>Este link dá acesso à ordem de trabalhos desta sessão sem necessitar de login. Partilha com os membros do Conselho de Administração.</p>
+    <div class="share-link-box">
+      <input type="text" id="share-link-input" class="share-link-input" readonly>
+      <button class="btn btn-primary btn-sm" onclick="copyShareLink()">Copiar</button>
+    </div>
+    <div id="share-size-warn" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">⚠️ Qualquer pessoa com este link consegue ver os assuntos e descarregar os anexos. Não partilhes publicamente.</div>
+    <div style="margin-top:16px;text-align:right">
+      <button class="btn btn-sm" onclick="closeShareModal()">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -2232,6 +2292,7 @@ let T={conf:false,atras:false};
 let carrItems=[],carrIdx=0,carrDec={},fsOpen=false,currReuniao='';
 
 async function init(){
+  if(initViewerMode())return; // apresentação pública — não precisa de login
   await msalI.initialize();
   const r=await msalI.handleRedirectPromise();
   if(r){user=r.account;spToken=r.accessToken;await loadUserGroups();showApp();}
@@ -3251,6 +3312,8 @@ function guardarSessao(){
   showNotif('Sessão guardada! Estará disponível amanhã.','success');
   fecharPrep();
   loadSavedSessions();
+  // Para reuniões do CA, gerar link de apresentação pública
+  if(tipo==='Reunião com CAdm') gerarLinkViewer(tipo);
 }
 
 function loadSavedSessions(){
@@ -10804,6 +10867,116 @@ async function gfSubmitPago() {
   }
 }
 
+
+// ═══ VIEWER PÚBLICO CA ═══════════════════════════════════════════
+async function gerarLinkViewer(tipo){
+  // Mostrar progresso
+  showNotif('A preparar apresentação com anexos…','success');
+  const btn=document.querySelector('[onclick*="guardarSessao"]');
+  if(btn){btn.disabled=true;btn.textContent='A processar…';}
+
+  // Converter um anexo SP para dataURL (Base64)
+  async function fetchAnexoBase64(serverRelUrl){
+    const r=await fetch('https://fjuventude.sharepoint.com'+serverRelUrl,{headers:{Authorization:`Bearer ${spToken}`}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const blob=await r.blob();
+    return new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res({dataUrl:rd.result,type:blob.type});rd.onerror=rej;rd.readAsDataURL(blob);});
+  }
+
+  // Serializar itens com anexos embutidos
+  const itensSer=await Promise.all(prepItems.map(async i=>{
+    const anexos=[];
+    for(const a of (i.attachments||[])){
+      try{
+        const {dataUrl,type}=await fetchAnexoBase64(a.url);
+        anexos.push({name:a.name,dataUrl,type});
+      }catch(e){
+        console.warn('Anexo não descarregado:',a.name,e);
+        anexos.push({name:a.name,dataUrl:null,type:null});
+      }
+    }
+    return {
+      id:i.id,titulo:i.titulo,tipo:i.tipo,
+      responsavel:i.responsavel||'',
+      notas:i.notas||'',proposta:i.proposta||'',
+      estado:i.estado||'Em aberto',
+      attachments:anexos
+    };
+  }));
+
+  if(btn){btn.disabled=false;btn.textContent='Guardar';}
+
+  const payload={v:2,tipo,data:today(),items:itensSer};
+  const token=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const link=window.location.href.split('#')[0]+'#viewer='+token;
+  const sizeMB=(token.length/1024/1024).toFixed(1);
+
+  document.getElementById('share-link-input').value=link;
+  // Mostrar aviso de tamanho no modal
+  const aviso=document.getElementById('share-size-warn');
+  if(aviso) aviso.textContent=`Tamanho do link: ${sizeMB} MB${parseFloat(sizeMB)>3?' — pode ser lento a carregar':''}`;
+  document.getElementById('share-modal-bg').classList.add('open');
+}
+function copyShareLink(){
+  const inp=document.getElementById('share-link-input');
+  inp.select();inp.setSelectionRange(0,99999);
+  navigator.clipboard.writeText(inp.value).then(()=>showNotif('Link copiado!','success'));
+}
+function closeShareModal(){
+  document.getElementById('share-modal-bg').classList.remove('open');
+}
+
+function initViewerMode(){
+  const hash=window.location.hash;
+  if(!hash.startsWith('#viewer='))return false;
+  const token=hash.slice(8);
+  try{
+    const data=JSON.parse(decodeURIComponent(escape(atob(token))));
+    if(!data||!data.items)return false;
+    renderViewer(data);
+    return true;
+  }catch(e){console.error('Viewer token inválido',e);return false;}
+}
+
+function renderViewer(data){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('viewer-screen').style.display='block';
+  document.title='Ordem de Trabalhos — '+data.tipo+' | Fundação da Juventude';
+  document.getElementById('vw-title').textContent=data.tipo;
+  const dt=data.data?new Date(data.data).toLocaleDateString('pt-PT',{day:'2-digit',month:'long',year:'numeric'}):'';
+  document.getElementById('vw-meta').textContent=dt;
+  const DM2={Aprovado:'✅ Aprovado','Não aprovado':'❌ Não aprovado',Pendente:'⏳ Pendente','—':'—'};
+  const body=document.getElementById('vw-body');
+  const coverHtml=`
+    <div class="viewer-cover">
+      <div style="width:48px;height:48px;background:var(--fj-blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;margin-bottom:.5rem">FJ</div>
+      <div class="viewer-cover-tipo">${data.tipo}</div>
+      <div class="viewer-cover-data">Fundação da Juventude${dt?' · '+dt:''}</div>
+      <div class="viewer-cover-count">${data.items.length} assunto${data.items.length!==1?'s':''} na ordem de trabalhos</div>
+    </div>`;
+  const itemsHtml=data.items.map((it,idx)=>{
+    const isD=it.tipo==='Deliberativo';
+    return `<div class="viewer-item">
+      <div class="viewer-item-header">
+        <div class="viewer-item-num">${idx+1}</div>
+        <div style="flex:1">
+          <div class="viewer-item-titulo">${it.titulo||'—'}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <span class="badge ${isD?'b-delib':'b-info'}">${it.tipo||'—'}</span>
+            ${it.responsavel?`<span class="badge b-na">👤 ${it.responsavel}</span>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="viewer-item-body">
+        ${it.notas?`<div><div class="viewer-sec">Contextualização</div><div class="viewer-content">${it.notas.replace(/\n/g,'<br>')}</div></div>`:''}
+        ${isD&&it.proposta?`<div><div class="viewer-sec">Proposta de Decisão</div><div class="viewer-proposta">${it.proposta.replace(/\n/g,'<br>')}</div></div>`:''}
+        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map(a=>a.dataUrl?`<a href="${a.dataUrl}" download="${a.name}" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;text-decoration:none;border:0.5px solid #c3d9f0">📎 ${a.name}</a>`:`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg3);color:var(--text3);border-radius:20px;padding:3px 10px;font-size:11px;border:0.5px solid var(--border)">📎 ${a.name}</span>`).join('')}</div></div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  const footerHtml=`<div class="viewer-footer">Fundação da Juventude · Documento confidencial · Apenas para membros do Conselho de Administração</div>`;
+  body.innerHTML=coverHtml+itemsHtml+footerHtml;
+}
 
 init();
 </script>
