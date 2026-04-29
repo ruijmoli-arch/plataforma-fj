@@ -3301,6 +3301,8 @@ function iniciarComPrep(){
   if(!prepItems.length){alert('Adiciona pelo menos um assunto.');return;}
   carrItems=prepItems;carrIdx=0;carrDec={};currReuniao=gv('r-tipo');
   el('prep-wrap').style.display='none';
+  el('reuniao-setup').style.display='none';
+  el('hist-reunioes-wrap').style.display='none';
   el('carr-wrap').style.display='block';
   el('sumario-wrap').style.display='none';
   el('carr-nome').textContent=currReuniao;
@@ -3387,6 +3389,7 @@ function iniciarReuniao(){
   if(!lista.length){alert('Nenhum assunto encontrado.');return;}
   carrItems=lista;carrIdx=0;carrDec={};currReuniao=tipo;
   el('reuniao-setup').style.display='none';
+  el('hist-reunioes-wrap').style.display='none';
   el('carr-wrap').style.display='block';
   el('sumario-wrap').style.display='none';
   el('carr-nome').textContent=tipo;
@@ -3693,6 +3696,7 @@ function renderFS(){
 // SUMÁRIO
 function mostrarSumario(){
   el('carr-wrap').style.display='none';
+  el('hist-reunioes-wrap').style.display='block';
   el('sumario-wrap').style.display='block';
   if(fsOpen)closeFS();
   el('sumario-meta').textContent=`${currReuniao} · ${carrItems.length} assunto${carrItems.length!==1?'s':''} · ${new Date().toLocaleDateString('pt-PT')}`;
@@ -3711,6 +3715,7 @@ function mostrarSumario(){
 }
 function novaReuniao(){
   el('reuniao-setup').style.display='block';
+  el('hist-reunioes-wrap').style.display='block';
   el('carr-wrap').style.display='none';
   el('sumario-wrap').style.display='none';
   loadItems();
