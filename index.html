@@ -2418,17 +2418,22 @@ function onUserSelChange(selectEl,emailHiddenId){
   if(ef)ef.value=opt?.dataset?.email||'';
 }
 
+
 // ── Download autenticado de ficheiros SharePoint ──
 async function downloadSPFile(serverRelUrl,name){
-  try{
-    await getSPToken();
-    const r=await fetch('https://fjuventude.sharepoint.com'+serverRelUrl,{headers:{Authorization:`Bearer ${spToken}`}});
-    if(!r.ok){showNotif('Erro ao descarregar o ficheiro.','error');return;}
-    const blob=await r.blob();
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  }catch(e){showNotif('Erro: '+e.message,'error');}
+  // Abre directamente — o browser usa a sessão Microsoft do utilizador (sem CORS)
+  window.open('https://fjuventude.sharepoint.com'+serverRelUrl,'_blank');
 }
+
+
+
+
+
+
+
+
+
+
 
 // Determina o role principal e os departamentos onde pode aprovar como Diretor de Área.
 // Chama esta função e depois acede a _financeRole (role principal) e _financeDepts (depts de aprovação).
@@ -2887,7 +2892,7 @@ function openForm(id){
     setTog('conf',!!i.confidencial);setTog('atras',!!i.atrasado);
     if(i.attachments?.length){
       el('existing-attachments').innerHTML=i.attachments.map(a=>`
-        <div class="attach-item"><a href="${SP}${a.url}" target="_blank">&#128206; ${a.name}</a>
+        <div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">&#128206; ${a.name}</a>
         <button class="attach-remove" onclick="removeAttach('FJ_Assuntos',${id},'${a.name}')">&#10005;</button></div>`).join('');
     }
     if(i.historicoDecisoes){
@@ -3014,7 +3019,7 @@ function openExtForm(id){
     sv2('fe-part',i.participantes||'');sv2('fe-resumo',i.resumo||'');sv2('fe-passos',i.proximosPassos||'');
     if(i.attachments?.length){
       el('fe-attachments').innerHTML=i.attachments.map(a=>`
-        <div class="attach-item"><a href="${SP}${a.url}" target="_blank">&#128206; ${a.name}</a>
+        <div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">&#128206; ${a.name}</a>
         <button class="attach-remove" onclick="removeAttach('FJ_ReunioesExternas',${id},'${a.name}')">&#10005;</button></div>`).join('');
     }
   }else{
@@ -3405,7 +3410,7 @@ function renderCarr(){
 
 function renderContentHTML(it){
   const isD=it.tipo==='Deliberativo';
-  const attHtml=it.attachments?.length?`<div style="margin-bottom:1.25rem;display:flex;gap:6px;flex-wrap:wrap">${it.attachments.map(a=>`<a href="${SP}${a.url}" target="_blank" class="badge" style="background:var(--blue-l);color:var(--blue-d)">&#128206; ${a.name}</a>`).join('')}</div>`:'';
+  const attHtml=it.attachments?.length?`<div style="margin-bottom:1.25rem;display:flex;gap:6px;flex-wrap:wrap">${it.attachments.map(a=>`<a href="https://fjuventude.sharepoint.com${a.url}" target="_blank" class="badge" style="background:var(--blue-l);color:var(--blue-d)">&#128206; ${a.name}</a>`).join('')}</div>`:'';
   const histEnc=it.encaminhamento&&it.encaminhamento!=='—'?`<div class="hist-enc-box">&#128257; Encaminhado anteriormente: <strong>${it.encaminhamento}</strong>${it.historicoDecisoes?`<br><small>${it.historicoDecisoes.split('\n---\n').pop()}</small>`:''}</div>`:'';
   return `
     <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
@@ -3658,7 +3663,7 @@ function renderFS(){
   el('fs-prev').disabled=carrIdx===0;
   el('fs-next').textContent=carrIdx===total-1?'Ver sumário →':'Seguinte →';
   const isD=it.tipo==='Deliberativo';
-  const attHtml=it.attachments?.length?`<div style="margin-bottom:1.75rem;display:flex;gap:8px;flex-wrap:wrap">${it.attachments.map(a=>`<a href="${SP}${a.url}" target="_blank" class="badge" style="background:var(--blue-l);color:var(--blue-d)">&#128206; ${a.name}</a>`).join('')}</div>`:'';
+  const attHtml=it.attachments?.length?`<div style="margin-bottom:1.75rem;display:flex;gap:8px;flex-wrap:wrap">${it.attachments.map(a=>`<a href="https://fjuventude.sharepoint.com${a.url}" target="_blank" class="badge" style="background:var(--blue-l);color:var(--blue-d)">&#128206; ${a.name}</a>`).join('')}</div>`:'';
   const histEnc=it.encaminhamento&&it.encaminhamento!=='—'?`<div class="hist-enc-box" style="background:rgba(99,59,6,.1);border-color:rgba(99,59,6,.3);color:var(--amber)">&#128257; Encaminhado: <strong>${it.encaminhamento}</strong></div>`:'';
   el('fs-content').innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
@@ -5700,7 +5705,7 @@ function openTarFormEdit(compId){
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');
   sv2('ftar-resp',t.responsavel||'');sv2('ftar-email',t.responsavelEmail||'');
   sv2('ftar-inicio',t.dataInicio||'');sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');sv2('ftar-notas',t.notas||'');
-  el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="${SP}${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
+  el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
 }
 function closeTarForm(){el('frm-pl-tar-ov').style.display='none';plEditTarId=null;}
 
