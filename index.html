@@ -10872,52 +10872,20 @@ async function gfSubmitPago() {
 // ═══ VIEWER PÚBLICO CA ═══════════════════════════════════════════
 async function gerarLinkViewer(tipo, snapshotItems){
   const itensSrc = snapshotItems || prepItems;
-  // Mostrar progresso
-  showNotif('A preparar apresentação com anexos…','success');
-  const btn=document.querySelector('[onclick*="guardarSessao"]');
-  if(btn){btn.disabled=true;btn.textContent='A processar…';}
-
-  // Converter um anexo SP para dataURL (Base64)
-  async function fetchAnexoBase64(serverRelUrl){
-    await getSPToken();
-    const r=await fetch('https://fjuventude.sharepoint.com'+serverRelUrl,{headers:{Authorization:`Bearer ${spToken}`}});
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const blob=await r.blob();
-    return new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res({dataUrl:rd.result,type:blob.type});rd.onerror=rej;rd.readAsDataURL(blob);});
-  }
-
-  // Serializar itens com anexos embutidos
-  const itensSer=await Promise.all(itensSrc.map(async i=>{
-    const anexos=[];
-    for(const a of (i.attachments||[])){
-      try{
-        const {dataUrl,type}=await fetchAnexoBase64(a.url);
-        anexos.push({name:a.name,dataUrl,type});
-      }catch(e){
-        console.warn('Anexo não descarregado:',a.name,e);
-        anexos.push({name:a.name,dataUrl:null,type:null});
-      }
-    }
-    return {
-      id:i.id,titulo:i.titulo,tipo:i.tipo,
+  const payload={
+    v:3, tipo, data:today(),
+    items: itensSrc.map(i=>({
+      id:i.id, titulo:i.titulo, tipo:i.tipo,
       responsavel:i.responsavel||'',
-      notas:i.notas||'',proposta:i.proposta||'',
-      estado:i.estado||'Em aberto',
-      attachments:anexos
-    };
-  }));
-
-  if(btn){btn.disabled=false;btn.textContent='Guardar';}
-
-  const payload={v:2,tipo,data:today(),items:itensSer};
+      notas:i.notas||'', proposta:i.proposta||'',
+      attachments:(i.attachments||[]).map(a=>({name:a.name, url:a.url}))
+    }))
+  };
   const token=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   const link=window.location.href.split('#')[0]+'#viewer='+token;
-  const sizeMB=(token.length/1024/1024).toFixed(1);
-
   document.getElementById('share-link-input').value=link;
-  // Mostrar aviso de tamanho no modal
   const aviso=document.getElementById('share-size-warn');
-  if(aviso) aviso.textContent=`Tamanho do link: ${sizeMB} MB${parseFloat(sizeMB)>3?' — pode ser lento a carregar':''}`;
+  if(aviso) aviso.textContent='';
   document.getElementById('share-modal-bg').classList.add('open');
 }
 function viewerDownload(encodedDataUrl, name){
@@ -10989,7 +10957,7 @@ function renderViewer(data){
       <div class="viewer-item-body">
         ${it.notas?`<div><div class="viewer-sec">Contextualização</div><div class="viewer-content">${it.notas.replace(/\n/g,'<br>')}</div></div>`:''}
         ${isD&&it.proposta?`<div><div class="viewer-sec">Proposta de Decisão</div><div class="viewer-proposta">${it.proposta.replace(/\n/g,'<br>')}</div></div>`:''}
-        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map((a,ai)=>a.dataUrl?`<button onclick="viewerDownload('${encodeURIComponent(a.dataUrl)}','${a.name.replace(/'/g,"\\'")}')" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid #c3d9f0">📎 ${a.name}</button>`:`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg3);color:var(--text3);border-radius:20px;padding:3px 10px;font-size:11px;border:0.5px solid var(--border)">📎 ${a.name}</span>`).join('')}</div></div>`:''}
+        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map(a=>`<a href="https://fjuventude.sharepoint.com${a.url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;text-decoration:none;border:0.5px solid #c3d9f0">📎 ${a.name}</a>`).join('')}</div></div>`:''}
       </div>
     </div>`;
   }).join('');
