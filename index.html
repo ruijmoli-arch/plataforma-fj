@@ -10920,6 +10920,22 @@ async function gerarLinkViewer(tipo, snapshotItems){
   if(aviso) aviso.textContent=`Tamanho do link: ${sizeMB} MB${parseFloat(sizeMB)>3?' — pode ser lento a carregar':''}`;
   document.getElementById('share-modal-bg').classList.add('open');
 }
+function viewerDownload(encodedDataUrl, name){
+  try{
+    const dataUrl=decodeURIComponent(encodedDataUrl);
+    // Converter dataURL → Blob → objectURL (browsers bloqueiam data: URLs directos)
+    const [header,b64]=dataUrl.split(',');
+    const mime=header.match(/:(.*?);/)[1];
+    const bytes=atob(b64);
+    const arr=new Uint8Array(bytes.length);
+    for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
+    const blob=new Blob([arr],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }catch(e){console.error('viewerDownload error',e);}
+}
+
 function copyShareLink(){
   const inp=document.getElementById('share-link-input');
   inp.select();inp.setSelectionRange(0,99999);
@@ -10973,7 +10989,7 @@ function renderViewer(data){
       <div class="viewer-item-body">
         ${it.notas?`<div><div class="viewer-sec">Contextualização</div><div class="viewer-content">${it.notas.replace(/\n/g,'<br>')}</div></div>`:''}
         ${isD&&it.proposta?`<div><div class="viewer-sec">Proposta de Decisão</div><div class="viewer-proposta">${it.proposta.replace(/\n/g,'<br>')}</div></div>`:''}
-        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map(a=>a.dataUrl?`<a href="${a.dataUrl}" download="${a.name}" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;text-decoration:none;border:0.5px solid #c3d9f0">📎 ${a.name}</a>`:`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg3);color:var(--text3);border-radius:20px;padding:3px 10px;font-size:11px;border:0.5px solid var(--border)">📎 ${a.name}</span>`).join('')}</div></div>`:''}
+        ${it.attachments?.length?`<div><div class="viewer-sec">Anexos</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${it.attachments.map((a,ai)=>a.dataUrl?`<button onclick="viewerDownload('${encodeURIComponent(a.dataUrl)}','${a.name.replace(/'/g,"\\'")}')" style="display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue-d);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid #c3d9f0">📎 ${a.name}</button>`:`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg3);color:var(--text3);border-radius:20px;padding:3px 10px;font-size:11px;border:0.5px solid var(--border)">📎 ${a.name}</span>`).join('')}</div></div>`:''}
       </div>
     </div>`;
   }).join('');
