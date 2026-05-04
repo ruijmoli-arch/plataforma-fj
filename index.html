@@ -3236,24 +3236,20 @@ async function extLoadAll() {
 async function extLoadReunoes() {
   const d = await spRead(
     `${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items` +
-    `?$select=*,AttachmentFiles,Departamento/Id,Departamento/Title,Responsavel/Id,Responsavel/Title,Responsavel/EMail` +
-    `&$expand=AttachmentFiles,Departamento,Responsavel&$orderby=DataReuniao desc&$top=500`
+    `?$select=*,AttachmentFiles&$expand=AttachmentFiles&$orderby=DataReuniao desc&$top=500`
   );
   extItems = (d.d?.results || []).map(r => ({
-    id:              r.Id,
-    titulo:          r.Title || '',
-    entidade:        r.Entidade || '',
-    data:            r.DataReuniao ? r.DataReuniao.split('T')[0] : '',
-    local:           r.Local || '',
-    departamentoId:  r.DepartamentoId || r.Departamento?.Id || null,
-    departamento:    normalizeDep(r.Departamento?.Title || ''),
-    responsavelSpId: r.ResponsavelId || r.Responsavel?.Id || null,
-    responsavel:     r.Responsavel?.Title || '',
-    responsavelEmail:r.Responsavel?.EMail || '',
-    participantes:   r.Participantes || '',
-    resumo:          r.Resumo || '',
-    proximosPassos:  r.ProximosPassos || '',
-    attachments:     (r.AttachmentFiles?.results || []).map(a => ({ name: a.FileName, url: a.ServerRelativeUrl }))
+    id:             r.Id,
+    titulo:         r.Title || '',
+    entidade:       r.Entidade || '',
+    data:           r.DataReuniao ? r.DataReuniao.split('T')[0] : '',
+    local:          r.Local || '',
+    departamento:   normalizeDep(typeof r.Departamento === 'string' ? r.Departamento : (r.Departamento?.Title || '')),
+    responsavel:    typeof r.Responsavel === 'string' ? r.Responsavel : (r.Responsavel?.Title || ''),
+    participantes:  r.Participantes || '',
+    resumo:         r.Resumo || '',
+    proximosPassos: r.ProximosPassos || '',
+    attachments:    (r.AttachmentFiles?.results || []).map(a => ({ name: a.FileName, url: a.ServerRelativeUrl }))
   }));
   renderExtTable();
 }
@@ -3424,29 +3420,12 @@ async function saveExt() {
       Entidade:       el('fe-entidade').value.trim() || null,
       DataReuniao:    dataVal + 'T00:00:00Z',
       Local:          el('fe-local').value.trim() || null,
+      Departamento:   depVal,
+      Responsavel:    respVal,
       Participantes:  el('fe-part').value.trim() || null,
       Resumo:         el('fe-resumo').value.trim() || null,
       ProximosPassos: el('fe-passos').value.trim() || null
     };
-    // Departamento — lookup para FJ_Departamentos: enviar DepartamentoId (inteiro)
-    const depItem = plDepartamentos?.find(d => (d.Title || d.nome || '') === depVal);
-    if (depItem) {
-      body.DepartamentoId = depItem.id || depItem.ID || depItem.spId;
-    } else {
-      showNotif('Departamento não encontrado na lista. Verifica as opções.', 'error');
-      btn.disabled = false; btn.textContent = 'Guardar'; return;
-    }
-    // Responsavel — Person field: enviar ResponsavelId (SP user ID via email)
-    const respEmail = el('fe-resp-email')?.value?.trim() || '';
-    if (respEmail) {
-      const uid = await getSpUID(respEmail);
-      if (uid) body.ResponsavelId = uid;
-      else { showNotif('Não foi possível encontrar o utilizador no SharePoint.', 'error'); btn.disabled = false; btn.textContent = 'Guardar'; return; }
-    } else if (editExtId) {
-      // Em edição sem alterar responsável: reutilizar o spId guardado
-      const existing = extItems.find(x => x.id === editExtId);
-      if (existing?.responsavelSpId) body.ResponsavelId = existing.responsavelSpId;
-    }
 
     let itemId = editExtId;
     if (editExtId) {
