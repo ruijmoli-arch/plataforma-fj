@@ -3257,14 +3257,14 @@ async function extLoadReunoes() {
 async function extLoadTarefas() {
   const d = await spRead(
     `${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items` +
-    `?$select=*,ReuniaoExternaId/Id,ReuniaoExternaId/Title` +
-    `&$expand=ReuniaoExternaId&$orderby=DataLimite asc&$top=500`
+    `?$select=*,ReunioExternaId/Id,ReunioExternaId/Title` +
+    `&$expand=ReunioExternaId&$orderby=DataLimite asc&$top=500`
   );
   extTarefas = (d.d?.results || []).map(r => ({
     id:            r.Id,
     titulo:        r.Title || '',
-    reuniaoId:     r.ReuniaoExternaId?.Id || null,
-    reuniaoTitulo: r.ReuniaoExternaId?.Title || '',
+    reuniaoId:     r.ReunioExternaId?.Id || null,
+    reuniaoTitulo: r.ReunioExternaId?.Title || '',
     responsavel:   r.Responsavel || '',
     dataLimite:    r.DataLimite ? r.DataLimite.split('T')[0] : '',
     estado:        r.Estado || 'Por fazer',
@@ -3447,7 +3447,7 @@ async function saveExt() {
         const tarBody = {
           __metadata:        { type: tarType },
           Title:             t.titulo,
-          ReuniaoExternaIdId: itemId,
+          ReunioExternaIdId: itemId,
           Responsavel:       t.responsavel,
           Estado:            t.estado,
           Notas:             t.notas
@@ -3621,7 +3621,7 @@ async function extSaveAddTarefa() {
     const body = {
       __metadata:        { type: tarType },
       Title:             titulo,
-      ReuniaoExternaIdId: _extDetailReuniaoId,
+      ReunioExternaIdId: _extDetailReuniaoId,
       Responsavel:       el('ext-add-tar-resp')?.value || '',
       Estado:            el('ext-add-tar-estado')?.value || 'Por fazer',
       Notas:             el('ext-add-tar-notas')?.value.trim() || ''
@@ -5130,7 +5130,7 @@ async function loadTarefas(){
 
   // ── 2) FJ_TarefasReuniao ────────────────────────
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items?$select=*,AttachmentFiles,ReuniaoExternaId/Title&$expand=AttachmentFiles,ReuniaoExternaId&$orderby=DataLimite asc&$top=1000`);
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items?$select=*,AttachmentFiles,ReunioExternaId/Title&$expand=AttachmentFiles,ReunioExternaId&$orderby=DataLimite asc&$top=1000`);
     const rt=d.d.results.map(r=>({
       id:'r_'+r.Id, spId:r.Id, lista:'FJ_TarefasReuniao', origem:'Reunião',
       titulo:r.Title||'',
@@ -5141,7 +5141,7 @@ async function loadTarefas(){
       projetoId:null, acaoId:null,
       responsavel:r.Responsavel||'', responsavelEmail:'',
       dep:normalizeDep(r.Departamento||''),
-      contexto:r.ReuniaoExternaId?.Title||'',
+      contexto:r.ReunioExternaId?.Title||'',
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     all=[...all,...rt];
