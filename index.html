@@ -342,9 +342,11 @@ tr:hover td{background:var(--bg3)}
 .hier-proj-hdr:hover{background:#dbeafe}
 .hier-acao-wrap{border-top:0.5px solid var(--bd);display:none}
 .hier-acao-wrap.open{display:block}
-.hier-acao-row{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 36px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background .1s;background:#F0FDF4;border-left:4px solid #3A7D5F}
+.hier-acao-row{display:flex;align-items:center;gap:8px;padding:9px 16px 9px 36px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background .1s;background:#F0FDF4;border-left:4px solid #3A7D5F}
 .hier-acao-row:last-child{border-bottom:none}
 .hier-acao-row:hover{background:#dcfce7}
+.hier-acao-name{flex:1;min-width:0;font-size:13px;font-weight:500;color:var(--g1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hier-dep-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.02em;flex-shrink:0}
 .hier-tasks{background:#FFFBF0;border-top:0.5px solid var(--bd);padding:.75rem 1rem;display:none;border-left:4px solid #D97706}
 .hier-tasks.open{display:block}
 .hier-task-row{border-bottom:1.5px dashed #fde68a !important}
@@ -1102,10 +1104,11 @@ tr:hover td{background:var(--bg3)}
                   <div style="grid-column:1/-1">
                     <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Tarefas / Compromissos da reunião</label>
                     <div id="fe-tarefas-list" style="margin-bottom:8px"></div>
-                    <div style="display:grid;grid-template-columns:3fr 2fr 1fr auto;gap:8px;align-items:end">
+                    <div style="display:grid;grid-template-columns:3fr 2fr 1fr 1fr auto;gap:8px;align-items:end">
                       <input type="text" id="fe-tar-titulo" placeholder="Descrição da tarefa..." style="padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
                       <select id="fe-tar-resp" class="user-resp-sel" style="font-size:13px;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:#fff;color:var(--text)"><option value="">— Responsável —</option></select>
                       <input type="date" id="fe-tar-data" style="padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                      <select id="fe-tar-estado" style="font-size:13px;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:#fff;color:var(--text)"><option>Por fazer</option><option>Em curso</option></select>
                       <button type="button" class="btn btn-primary btn-sm" onclick="addTarefaInline()">+ Adicionar</button>
                     </div>
                   </div>
@@ -1136,8 +1139,8 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="table-wrap">
           <table>
-            <colgroup><col style="width:8%"><col style="width:22%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:25%"><col style="width:10%"></colgroup>
-            <thead><tr><th>Data</th><th>Título</th><th>Entidade</th><th>Departamento</th><th>Responsável</th><th>Próximos passos</th><th>Ações</th></tr></thead>
+            <colgroup><col style="width:8%"><col style="width:20%"><col style="width:13%"><col style="width:10%"><col style="width:10%"><col style="width:14%"><col style="width:25%"></colgroup>
+            <thead><tr><th>Data</th><th>Título</th><th>Entidade</th><th>Departamento</th><th>Responsável</th><th>Tarefas</th><th>Ações</th></tr></thead>
             <tbody id="tbody-ext"></tbody>
           </table>
         </div>
@@ -1202,17 +1205,14 @@ tr:hover td{background:var(--bg3)}
           </div>
         </div>
         <div class="toolbar">
-          <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qt" placeholder="Pesquisar..." oninput="renderTarefasTable()"></div>
-          <select class="flt" id="fft-dep" onchange="renderTarefasTable()"><option value="">Departamento: todos</option></select>
-          <select class="flt" id="fft-est" onchange="renderTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
-          <select class="flt" id="fft-prior" onchange="renderTarefasTable()"><option value="">Prioridade: todas</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
-          <button class="btn" onclick="loadRnTarefas()">&#8635;</button>
-          <button class="btn btn-primary" onclick="openRnTarForm()">+ Nova tarefa</button>
+          <div class="search-wrap"><span class="si">&#9906;</span><input type="text" id="qt" placeholder="Pesquisar tarefa ou reunião..." oninput="renderExtTarefasTable()"></div>
+          <select class="flt" id="fft-est" onchange="renderExtTarefasTable()"><option value="">Estado: todos</option><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
+          <button class="btn" onclick="extLoadAll()">&#8635;</button>
         </div>
         <div class="table-wrap">
           <table>
-            <colgroup><col style="width:25%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup>
-            <thead><tr><th>Tarefa</th><th>Responsável</th><th>Data</th><th>Estado</th><th>Prioridade</th><th>Departamento</th><th>Projeto</th><th>Ações</th></tr></thead>
+            <colgroup><col style="width:25%"><col style="width:20%"><col style="width:15%"><col style="width:12%"><col style="width:13%"><col style="width:15%"></colgroup>
+            <thead><tr><th>Tarefa</th><th>Reunião</th><th>Responsável</th><th>Data limite</th><th>Estado</th><th>Ações</th></tr></thead>
             <tbody id="tbody-tar"></tbody>
           </table>
         </div>
@@ -2185,7 +2185,72 @@ tr:hover td{background:var(--bg3)}
 
 </div><!-- /module-co -->
 
-<!-- Modal de detalhe de registo de correio -->
+<!-- Modal de detalhe de reunião externa -->
+<div id="ext-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;overflow-y:auto" onclick="if(event.target===this)extCloseDetail()">
+  <div style="max-width:720px;margin:48px auto;padding:0 1rem 2rem">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+      <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">🤝</span>
+          <span id="ext-detail-title" style="font-size:16px;font-weight:600;color:#fff">Detalhe da Reunião</span>
+        </div>
+        <button onclick="extCloseDetail()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div id="ext-detail-body" style="padding:24px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de nova tarefa (a partir do detalhe) -->
+<div id="ext-add-tar-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;overflow-y:auto" onclick="if(event.target===this)extCloseAddTarModal()">
+  <div style="max-width:560px;margin:48px auto;padding:0 1rem 2rem">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+      <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">📋</span><span style="font-size:16px;font-weight:600;color:#fff">Nova tarefa</span></div>
+        <button onclick="extCloseAddTarModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="padding:24px">
+        <div class="fgrid">
+          <div class="fg" style="grid-column:1/-1"><label>Descrição *</label><input type="text" id="ext-add-tar-titulo" placeholder="Descreve a tarefa..."></div>
+          <div class="fg"><label>Responsável</label><select id="ext-add-tar-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select></div>
+          <div class="fg"><label>Data limite</label><input type="date" id="ext-add-tar-data"></div>
+          <div class="fg"><label>Estado</label><select id="ext-add-tar-estado"><option>Por fazer</option><option>Em curso</option></select></div>
+          <div class="fg" style="grid-column:1/-1"><label>Notas</label><textarea id="ext-add-tar-notas" style="min-height:60px" placeholder="Contexto ou instruções..."></textarea></div>
+        </div>
+        <div class="panel-footer">
+          <button class="btn" onclick="extCloseAddTarModal()">Cancelar</button>
+          <button class="btn btn-primary" id="ext-add-tar-save-btn" onclick="extSaveAddTarefa()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edição de tarefa externa -->
+<div id="ext-tar-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:700;overflow-y:auto" onclick="if(event.target===this)extCloseTarModal()">
+  <div style="max-width:560px;margin:48px auto;padding:0 1rem 2rem">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+      <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">📋</span><span style="font-size:16px;font-weight:600;color:#fff">Editar Tarefa</span></div>
+        <button onclick="extCloseTarModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div style="padding:24px">
+        <input type="hidden" id="ext-edit-tar-id">
+        <div class="fgrid">
+          <div class="fg" style="grid-column:1/-1"><label>Descrição *</label><input type="text" id="ext-edit-tar-titulo" placeholder="Descrição da tarefa..."></div>
+          <div class="fg"><label>Responsável</label><select id="ext-edit-tar-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select></div>
+          <div class="fg"><label>Data limite</label><input type="date" id="ext-edit-tar-data"></div>
+          <div class="fg"><label>Estado</label><select id="ext-edit-tar-estado"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select></div>
+          <div class="fg" style="grid-column:1/-1"><label>Notas</label><textarea id="ext-edit-tar-notas" style="min-height:60px"></textarea></div>
+        </div>
+        <div class="panel-footer">
+          <button class="btn" onclick="extCloseTarModal()">Cancelar</button>
+          <button class="btn btn-primary" id="ext-tar-save-btn" onclick="extSaveTarefaEdit()">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="co-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;overflow-y:auto">
   <div style="max-width:700px;margin:48px auto;padding:0 1rem 2rem">
     <div class="panel" style="box-shadow:0 12px 40px rgba(0,0,0,.22);border-radius:16px;padding:0;overflow:hidden">
@@ -2463,7 +2528,7 @@ console.log('MSAL Instance criada com sucesso');
 
 let user=null,spToken=null,graphToken=null;
 let userGroups=[];
-let items=[],extItems=[],rnTarefas=[];
+let items=[];
 let editId=null,editExtId=null,editTarId=null,rnEditTarId=null;
 let T={conf:false,atras:false};
 let carrItems=[],carrIdx=0,carrDec={},fsOpen=false,currReuniao='';
@@ -2851,7 +2916,7 @@ function showApp(){
   // Carrega departamentos globalmente (fonte de verdade para todos os módulos)
   loadDepartamentos();
   loadSharedProjetos();
-  loadItems();loadExtItems();loadRnTarefas();loadHistReunioes();loadSavedSessions();
+  loadItems();extLoadAll();loadHistReunioes();loadSavedSessions();
 }
 
 
@@ -3145,297 +3210,431 @@ async function deleteItem(id){
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
-// REUNIÕES EXTERNAS
+// ═══ REUNIÕES EXTERNAS — reescrito seguindo padrão Correio ═══
+const EXT_LIST     = 'FJ_ReunioesExternas';
+const EXT_TAR_LIST = 'FJ_TarefasReuniao';
+
+let extItems    = [];
+let extTarefas  = [];
+
+// ── Reset do filtro de datas ─────────────────────
 function resetExtFilters(){
-  const f=el('ffe-from'),t=el('ffe-to');
-  if(f)f.value='';if(t)t.value='';
+  ['ffe-from','ffe-to'].forEach(id=>{const f=el(id);if(f)f.value='';});
   const dep=el('ffe-dep');if(dep)dep.value='';
   const q=el('qe');if(q)q.value='';
   loadExtItems();
 }
+
+// ── Carregar reuniões ────────────────────────────
 async function loadExtItems(){
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items?$select=*,AttachmentFiles,Departamento/Title,Responsavel/Title&$expand=AttachmentFiles,Departamento,Responsavel&$orderby=DataReuniao desc&$top=500`);
-    extItems=d.d.results.map(r=>({
-      id:r.Id,etag:r.__metadata?.etag||'*',
-      titulo:r.Title||'',entidade:r.Entidade||'',
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items?$select=*,AttachmentFiles,Departamento/Title,Responsavel/Title&$expand=AttachmentFiles,Departamento,Responsavel&$orderby=DataReuniao desc&$top=500`);
+    extItems=(d.d?.results||[]).map(r=>({
+      id:r.Id, titulo:r.Title||'', entidade:r.Entidade||'',
       data:r.DataReuniao?r.DataReuniao.split('T')[0]:'',
-      local:r.Local||'',participantes:r.Participantes||'',
-      resumo:r.Resumo||'',proximosPassos:r.ProximosPassos||'',
-      departamento:normalizeDep(r.Departamento?.Title||r.Departamento||''),responsavel:r.Responsavel?.Title||'',
+      local:r.Local||'', participantes:r.Participantes||'',
+      resumo:r.Resumo||'', proximosPassos:r.ProximosPassos||'',
+      departamento:normalizeDep(r.Departamento?.Title||r.Departamento||''),
+      responsavel:r.Responsavel?.Title||'',
       attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
     }));
     renderExtTable();
-  }catch(e){console.warn('Ext items error',e);}
+  }catch(e){console.warn('loadExtItems:',e);showNotif('Erro ao carregar reuniões: '+e.message,'error');}
 }
+
+// ── Carregar tarefas ─────────────────────────────
+async function extLoadTarefas(){
+  try{
+    const d=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items?$select=*,ReuniaoExternaId/Id,ReuniaoExternaId/Title&$expand=ReuniaoExternaId&$orderby=DataLimite asc&$top=500`);
+    extTarefas=(d.d?.results||[]).map(r=>({
+      id:r.Id, titulo:r.Title||'',
+      reuniaoId:r.ReuniaoExternaId?.Id||null,
+      reuniaoTitulo:r.ReuniaoExternaId?.Title||'',
+      responsavel:r.Responsavel||'',
+      dataLimite:r.DataLimite?r.DataLimite.split('T')[0]:'',
+      estado:r.Estado||'Por fazer',
+      notas:r.Notas||''
+    }));
+    renderExtTarefasTable();
+    extRenderStats();
+  }catch(e){console.warn('extLoadTarefas:',e);}
+}
+
+async function extLoadAll(){
+  await loadExtItems();
+  await extLoadTarefas();
+}
+
+// ── Stats ────────────────────────────────────────
+function extRenderStats(){
+  const hoje=today();
+  const pend=extTarefas.filter(t=>t.estado!=='Concluída'&&t.estado!=='Cancelada');
+  if(el('ext-s-total'))   el('ext-s-total').textContent=extItems.length;
+  if(el('ext-s-tarefas')) el('ext-s-tarefas').textContent=pend.length;
+  if(el('t-total'))       el('t-total').textContent=extTarefas.length;
+  if(el('t-pfazer'))      el('t-pfazer').textContent=extTarefas.filter(t=>t.estado==='Por fazer').length;
+  if(el('t-emcurso'))     el('t-emcurso').textContent=extTarefas.filter(t=>t.estado==='Em curso').length;
+  if(el('t-atrasadas'))   el('t-atrasadas').textContent=extTarefas.filter(t=>t.dataLimite&&t.dataLimite<hoje&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
+}
+
+// ── Tabela de reuniões ───────────────────────────
 function renderExtTable(){
   const q=(el('qe')||{value:''}).value.toLowerCase();
-  const fd_=gv('ffe-dep'),ff=gv('ffe-from'),ft=gv('ffe-to');
+  const dep=gv('ffe-dep'), ff=gv('ffe-from'), ft=gv('ffe-to');
   let list=extItems.filter(i=>{
-    if(!userCanView(i.departamento))return false; // visibilidade por departamento
+    if(!userCanView(i.departamento))return false;
     if(q&&!(i.titulo.toLowerCase().includes(q)||i.entidade.toLowerCase().includes(q)))return false;
-    if(fd_&&i.departamento!==fd_)return false;
+    if(dep&&i.departamento!==dep)return false;
     if(ff&&i.data&&i.data<ff)return false;
     if(ft&&i.data&&i.data>ft)return false;
     return true;
   });
-  const tb=el('tbody-ext');
-  if(!list.length){tb.innerHTML=`<tr><td colspan="7"><div class="empty">Nenhuma reunião externa.<br>Clique em "+ Nova reunião".</div></td></tr>`;el('tcount-ext').textContent='';return;}
-  tb.innerHTML=list.map(i=>`<tr>
-    <td>${fd(i.data)}</td>
-    <td style="font-weight:500" title="${i.titulo}">${i.titulo}${i.attachments?.length?` <span class="badge" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">&#128206; ${i.attachments.length}</span>`:''}</td>
-    <td>${i.entidade||'—'}</td>
-    <td><span class="badge b-gestao" style="font-size:10px">${i.departamento||'—'}</span></td>
-    <td>${i.responsavel||'—'}</td>
-    <td title="${i.proximosPassos}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.proximosPassos||'—'}</td>
-    <td><div class="actions">
-      <button class="btn btn-sm" onclick="editExt(${i.id})">Editar</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteExt(${i.id})">&#10005;</button>
-    </div></td>
-  </tr>`).join('');
+  const tb=el('tbody-ext');if(!tb)return;
+  if(!list.length){tb.innerHTML=`<tr><td colspan="7"><div class="empty">Nenhuma reunião.<br>Clique em "+ Nova reunião".</div></td></tr>`;el('tcount-ext').textContent='';return;}
+  tb.innerHTML=list.map(i=>{
+    const nTar=extTarefas.filter(t=>t.reuniaoId===i.id).length;
+    const pend=extTarefas.filter(t=>t.reuniaoId===i.id&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
+    return`<tr>
+      <td>${fd(i.data)}</td>
+      <td style="font-weight:500" title="${i.titulo}">${i.titulo}${i.attachments?.length?` <span class="badge" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">📎 ${i.attachments.length}</span>`:''}</td>
+      <td>${i.entidade||'—'}</td>
+      <td>${i.departamento?depBadgeAcao(i.departamento):'—'}</td>
+      <td>${i.responsavel||'—'}</td>
+      <td>${nTar?`<span class="badge" style="background:${pend?'var(--amber-bg)':'var(--green-bg)'};color:${pend?'var(--amber)':'var(--green)'}">📋 ${pend} pend. / ${nTar}</span>`:'—'}</td>
+      <td><div class="actions">
+        <button class="btn btn-sm" onclick="extOpenDetail(${i.id})">Ver</button>
+        <button class="btn btn-sm" onclick="openExtForm(${i.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteExt(${i.id})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
   el('tcount-ext').textContent=`${list.length} reunião${list.length!==1?'es':''}`;
 }
+
+// ── Tabela de tarefas ────────────────────────────
+function renderExtTarefasTable(){
+  const q=(el('qt')||{value:''}).value.toLowerCase();
+  const fe=gv('fft-est'), fp=gv('fft-prior');
+  const hoje=today();
+  let list=extTarefas.filter(i=>{
+    if(q&&!i.titulo.toLowerCase().includes(q)&&!i.reuniaoTitulo.toLowerCase().includes(q))return false;
+    if(fe&&i.estado!==fe)return false;
+    return true;
+  });
+  const tb=el('tbody-tar');if(!tb)return;
+  if(!list.length){tb.innerHTML=`<tr><td colspan="6"><div class="empty">Sem tarefas de reuniões externas.</div></td></tr>`;if(el('tcount-tar'))el('tcount-tar').textContent='';return;}
+  const EM2={'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado'};
+  tb.innerHTML=list.map(i=>{
+    const atrasada=i.dataLimite&&i.dataLimite<hoje&&i.estado!=='Concluída'&&i.estado!=='Cancelada';
+    return`<tr style="${atrasada?'background:#fff8f8':''}">
+      <td style="font-weight:500">${i.titulo}</td>
+      <td style="font-size:12px;color:var(--text2)">${i.reuniaoTitulo||'—'}</td>
+      <td>${i.responsavel||'—'}</td>
+      <td style="${atrasada?'color:var(--red);font-weight:600':''}">${fd(i.dataLimite)}${atrasada?' ⚠️':''}</td>
+      <td><span class="badge ${EM2[i.estado]||'b-na'}">${i.estado}</span></td>
+      <td><div class="actions">
+        <button class="btn btn-sm" onclick="extOpenTarEdit(${i.id})">Editar</button>
+        ${i.estado!=='Concluída'?`<button class="btn btn-sm btn-green" onclick="extConcluirTarefa(${i.id})">✓</button>`:''}
+        <button class="btn btn-sm btn-danger" onclick="extDeleteTarefa(${i.id})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  if(el('tcount-tar'))el('tcount-tar').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
+}
+
+// ── Formulário de reunião ────────────────────────
+let feInlineTarefas=[];
+
 function openExtForm(id){
   editExtId=id||null;
   feInlineTarefas=[];renderInlineTarefas();
-  const modal = el('frm-ext-ov');
-  if(!modal) {
-    console.error('Modal frm-ext-ov não encontrado!');
-    return;
-  }
+  const modal=el('frm-ext-ov');
+  if(!modal)return;
   modal.style.display='block';
   el('fe-attachments').innerHTML='';el('fe-file').value='';
   if(id){
     const i=extItems.find(x=>x.id===id);if(!i)return;
     el('frm-ext-title').textContent='Editar reunião externa';
     sv2('fe-titulo',i.titulo);sv2('fe-entidade',i.entidade);sv2('fe-data',i.data);
-    sv2('fe-local',i.local||'');sv2('fe-dep',i.departamento||'Gestão');sv2('fe-resp',i.responsavel||'');
+    sv2('fe-local',i.local||'');sv2('fe-dep',i.departamento||'');sv2('fe-resp',i.responsavel||'');
     sv2('fe-part',i.participantes||'');sv2('fe-resumo',i.resumo||'');sv2('fe-passos',i.proximosPassos||'');
     if(i.attachments?.length){
       el('fe-attachments').innerHTML=i.attachments.map(a=>`
-        <div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">&#128206; ${a.name}</a>
-        <button class="attach-remove" onclick="removeAttach('FJ_ReunioesExternas',${id},'${a.name}')">&#10005;</button></div>`).join('');
+        <div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📎 ${a.name}</a>
+        <button class="attach-remove" onclick="removeAttach('${EXT_LIST}',${id},'${a.name.replace(/'/g,"\\'")}')">✕</button></div>`).join('');
     }
   }else{
     el('frm-ext-title').textContent='Nova reunião externa';
-    ['fe-titulo','fe-entidade','fe-local','fe-resp','fe-resp-email','fe-part','fe-resumo','fe-passos'].forEach(id=>sv2(id,''));
-    sv2('fe-data',today());sv2('fe-dep','Gestão');
+    ['fe-titulo','fe-entidade','fe-local','fe-part','fe-resumo','fe-passos'].forEach(x=>sv2(x,''));
+    sv2('fe-data',today());sv2('fe-dep','');sv2('fe-resp','');
   }
 }
 function editExt(id){openExtForm(id);}
-function closeExtForm(){const m=el('frm-ext-ov');m.style.display='none';editExtId=null;}
+function closeExtForm(){const m=el('frm-ext-ov');if(m)m.style.display='none';editExtId=null;}
+
+// ── Guardar reunião ──────────────────────────────
 async function saveExt(){
   const titulo=el('fe-titulo').value.trim();
   if(!titulo){alert('Por favor indique o título.');return;}
   const btn=el('save-ext-btn');btn.textContent='A guardar...';btn.disabled=true;
   try{
-    const body={__metadata:{type:'SP.Data.FJ_x005f_ReunioesExternasListItem'},
-      Title:titulo,Entidade:gv('fe-entidade'),Local:gv('fe-local'),
-      Participantes:gv2t('fe-part'),Resumo:gv2t('fe-resumo'),ProximosPassos:gv2t('fe-passos')
+    // Tipo dinâmico — mesma abordagem do Correio
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')?$select=ListItemEntityTypeFullName`);
+    const listType=meta.d.ListItemEntityTypeFullName;
+
+    const body={__metadata:{type:listType},
+      Title:titulo,
+      Entidade:gv('fe-entidade'),
+      Local:gv('fe-local'),
+      Participantes:gv2t('fe-part'),
+      Resumo:gv2t('fe-resumo'),
+      ProximosPassos:gv2t('fe-passos')
     };
     if(gv('fe-data'))body.DataReuniao=gv('fe-data')+'T00:00:00Z';
-    // Departamento (campo Lookup para FJ_Departamentos)
+    // Departamento lookup
     const depVal=gv('fe-dep');
-    if(depVal){
-      // Garantir que os departamentos estão carregados
-      if(!plDepartamentos?.length){
-        try{await loadDepartamentos();}catch(e){console.warn('loadDepartamentos fallback failed',e);}
-      }
-      const depItem=plDepartamentos?.find(d=>d.Title===depVal||d.nome===depVal);
-      if(depItem) body.DepartamentoId=depItem.id||depItem.ID;
-      // Se não encontrou ID, não inclui o campo — evita HTTP 400 com Lookup
+    if(depVal&&plDepartamentos?.length){
+      const depItem=plDepartamentos.find(d=>d.Title===depVal||d.nome===depVal);
+      if(depItem)body.DepartamentoId=depItem.id||depItem.ID;
     }
-    // Responsável FJ (Person lookup via email)
-    const respEmail=gv('fe-resp-email');
+    // Responsável — person lookup (opcional, falha silenciosamente)
+    const respEmail=gv('fe-resp-email')||'';
     if(respEmail){
-      try{const uid=await getSpUID(respEmail);if(uid)body.ResponsavelId=uid;}catch(e){console.warn('Responsavel lookup failed',e);}
+      try{const uid=await getSpUID(respEmail);if(uid)body.ResponsavelId=uid;}
+      catch(e){console.warn('Responsavel lookup:',e);}
     }
+
     let itemId=editExtId;
     if(editExtId){
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items(${editExtId})`,body,'MERGE','*');
+      await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items(${editExtId})`,body,'MERGE','*');
     }else{
-      const r=await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items`,body,'POST');
+      const r=await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items`,body,'POST');
       const d=await r.json();itemId=d.d.Id;
     }
+    // Anexos
     const files=el('fe-file').files;
-    for(const f of files)await uploadAttachment('FJ_ReunioesExternas',itemId,f);
-    if(feInlineTarefas.length)await saveInlineTarefas(itemId,titulo);
-    closeExtForm();await loadExtItems();await loadRnTarefas();showNotif('Reunião externa guardada!','success');
+    for(const f of files)try{await uploadAttachment(EXT_LIST,itemId,f);}catch(e){console.warn('Attach:',e);}
+    // Tarefas inline
+    if(feInlineTarefas.length)await extSaveInlineTarefas(itemId,titulo);
+
+    const nTarefas=feInlineTarefas.length;
+    feInlineTarefas=[];
+    closeExtForm();
+    await extLoadAll();
+    showNotif('Reunião guardada!'+(nTarefas?` e ${nTarefas} tarefa(s) criada(s)`:''),'success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
+
+// ── Eliminar reunião ─────────────────────────────
 async function deleteExt(id){
   if(!confirm('Eliminar esta reunião?'))return;
   try{
-    await getSPToken();const digest=await getDigest();
-    await fetch(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items(${id})`,{method:'DELETE',headers:{Authorization:`Bearer ${spToken}`,'X-RequestDigest':digest,'IF-MATCH':'*'}});
-    await loadExtItems();showNotif('Eliminado.','success');
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items(${id})`,null,'DELETE');
+    await extLoadAll();showNotif('Eliminado.','success');
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
-// INLINE TASKS FOR EXT MEETINGS
-let feInlineTarefas=[];
+// ── Tarefas inline no form ───────────────────────
 function addTarefaInline(){
-  const titulo=document.getElementById('fe-tar-titulo').value.trim();
+  const titulo=el('fe-tar-titulo')?.value.trim();
   if(!titulo)return;
-  const resp=document.getElementById('fe-tar-resp').value.trim();
-  const data=document.getElementById('fe-tar-data').value;
-  feInlineTarefas.push({titulo,resp,data});
-  document.getElementById('fe-tar-titulo').value='';
-  document.getElementById('fe-tar-resp').value='';
-  document.getElementById('fe-tar-data').value='';
+  const resp=el('fe-tar-resp')?.value||'';
+  const data=el('fe-tar-data')?.value||'';
+  const estado=el('fe-tar-estado')?.value||'Por fazer';
+  feInlineTarefas.push({titulo,resp,data,estado,_uid:Date.now()});
+  el('fe-tar-titulo').value='';
+  el('fe-tar-data').value='';
   renderInlineTarefas();
 }
-function removeInlineTarefa(idx){
-  feInlineTarefas.splice(idx,1);
+function removeInlineTarefa(uid){
+  feInlineTarefas=feInlineTarefas.filter(t=>t._uid!==uid);
   renderInlineTarefas();
 }
 function renderInlineTarefas(){
-  const list=document.getElementById('fe-tarefas-list');
-  if(!list) {
-    console.warn('Elemento fe-tarefas-list não encontrado');
-    return;
-  }
+  const list=el('fe-tarefas-list');if(!list)return;
   if(!feInlineTarefas.length){list.innerHTML='';return;}
-  list.innerHTML=feInlineTarefas.map((t,i)=>`
+  list.innerHTML=feInlineTarefas.map(t=>`
     <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:4px">
-      <div style="flex:1;font-size:13px;font-weight:500">${t.titulo}</div>
-      <div style="font-size:12px;color:var(--text2)">${t.resp||'—'}</div>
-      <div style="font-size:12px;color:var(--text2)">${t.data?fd(t.data):'—'}</div>
-      <button class="btn btn-sm btn-danger" onclick="removeInlineTarefa(${i})">&#10005;</button>
+      <span style="font-size:16px">📋</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">${t.titulo}</div>
+        <div style="font-size:11px;color:var(--text2)">${t.resp||'Sem responsável'} · ${t.data?fd(t.data):'Sem data'} · ${t.estado}</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="removeInlineTarefa(${t._uid})">✕</button>
     </div>`).join('');
 }
-async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
-  if(!feInlineTarefas.length) return;
+
+async function extSaveInlineTarefas(reuniaoId,reuniaoTitulo){
+  if(!feInlineTarefas.length)return;
   try{
-    const listType='SP.Data.FJ_x005f_TarefasReuniaoListItem';
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType=meta.d.ListItemEntityTypeFullName;
     for(const t of feInlineTarefas){
-      const body={__metadata:{type:listType},
-        Title:t.titulo,
-        Estado:'Por fazer',
-        Prioridade:'Média'
-      };
-      if(reuniaoId) body.ReuniaoExternaIdId=parseInt(reuniaoId);
+      const body={__metadata:{type:tarType},Title:t.titulo,Estado:t.estado||'Por fazer'};
+      if(reuniaoId)body.ReuniaoExternaIdId=parseInt(reuniaoId);
       if(t.resp)body.Responsavel=t.resp;
-      const depVal=document.getElementById('fe-dep')?.value;if(depVal)body.Departamento=depVal;
       if(t.data)body.DataLimite=t.data+'T00:00:00Z';
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
+      await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`,body,'POST');
     }
-    feInlineTarefas=[];
-    renderInlineTarefas();
+    feInlineTarefas=[];renderInlineTarefas();
   }catch(e){
-    console.warn('saveInlineTarefas error:',e.message);
     showNotif('Aviso: algumas tarefas não foram guardadas — '+e.message,'error');
+    console.warn('extSaveInlineTarefas:',e);
   }
 }
 
-// TAREFAS
-async function loadRnTarefas(){
+// ── Detalhe de reunião (modal) ───────────────────
+function extOpenDetail(id){
+  const r=extItems.find(x=>x.id===id);if(!r)return;
+  const modal=el('ext-detail-modal');
+  const body=el('ext-detail-body');
+  const title=el('ext-detail-title');
+  if(!modal||!body||!title)return;
+  title.textContent=r.titulo;
+
+  const tarefas=extTarefas.filter(t=>t.reuniaoId===id);
+  const EM={'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado'};
+  const eBadge=e=>`<span class="badge ${EM[e]||'b-na'}">${e}</span>`;
+
+  body.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Data</div><div style="font-size:13px">${fd(r.data)}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Entidade</div><div style="font-size:13px">${r.entidade||'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Local</div><div style="font-size:13px">${r.local||'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Departamento</div><div style="font-size:13px">${r.departamento||'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Responsável FJ</div><div style="font-size:13px">${r.responsavel||'—'}</div></div>
+    </div>
+    ${r.participantes?`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Participantes</div><div style="font-size:13px;line-height:1.6">${r.participantes.replace(/\n/g,'<br>')}</div></div>`:''}
+    ${r.resumo?`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Resumo</div><div style="font-size:13px;line-height:1.6">${r.resumo.replace(/\n/g,'<br>')}</div></div>`:''}
+    ${r.proximosPassos?`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--blue-d);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Próximos Passos</div><div style="font-size:13px;line-height:1.6;color:var(--blue-d)">${r.proximosPassos.replace(/\n/g,'<br>')}</div></div>`:''}
+    ${r.attachments?.length?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📎 Anexos</div><div class="attach-list">${r.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📄 ${a.name}</a><button class="attach-remove" onclick="removeAttach('${EXT_LIST}',${r.id},'${a.name.replace(/'/g,"\\'")}');extOpenDetail(${r.id})">✕</button></div>`).join('')}</div></div>`:''}
+    <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-top:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600">📋 Tarefas associadas ${tarefas.length?`<span style="background:var(--bg3);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:400;color:var(--text2)">${tarefas.length}</span>`:''}</div>
+        <button class="btn btn-sm btn-primary" onclick="extOpenAddTarefaModal(${id})">+ Nova tarefa</button>
+      </div>
+      ${!tarefas.length?'<div style="color:var(--text3);font-size:13px">Sem tarefas associadas a esta reunião.</div>':
+        tarefas.map(t=>`
+          <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500;margin-bottom:3px">${t.titulo}</div>
+              <div style="font-size:11px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <span>${t.responsavel||'Sem responsável'}</span>
+                ${t.dataLimite?`<span>· ${fd(t.dataLimite)}</span>`:''}
+                <span>· ${eBadge(t.estado)}</span>
+              </div>
+              ${t.notas?`<div style="font-size:11px;color:var(--text2);margin-top:4px;font-style:italic">${t.notas}</div>`:''}
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="btn btn-sm" onclick="extOpenTarEdit(${t.id},${id})">Editar</button>
+              ${t.estado!=='Concluída'?`<button class="btn btn-sm btn-green" onclick="extConcluirTarefa(${t.id},${id})">✓</button>`:''}
+              <button class="btn btn-sm btn-danger" onclick="extDeleteTarefa(${t.id},${id})">✕</button>
+            </div>
+          </div>`).join('')}
+    </div>`;
+  modal.style.display='block';
+}
+function extCloseDetail(){const m=el('ext-detail-modal');if(m)m.style.display='none';}
+
+// ── Modal para adicionar tarefa à reunião ────────
+let _extDetailReuniaoId=null;
+function extOpenAddTarefaModal(reuniaoId){
+  _extDetailReuniaoId=reuniaoId;
+  ['ext-add-tar-titulo','ext-add-tar-data','ext-add-tar-notas'].forEach(x=>{const e=el(x);if(e)e.value='';});
+  sv2('ext-add-tar-estado','Por fazer');
+  const m=el('ext-add-tar-modal');if(m)m.style.display='block';
+}
+function extCloseAddTarModal(){const m=el('ext-add-tar-modal');if(m)m.style.display='none';}
+async function extSaveAddTarefa(){
+  const titulo=el('ext-add-tar-titulo')?.value.trim();
+  if(!titulo){showNotif('Indica a descrição da tarefa.','error');return;}
+  const btn=el('ext-add-tar-save-btn');if(btn){btn.disabled=true;btn.textContent='A guardar...';}
   try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items?$select=*,ReuniaoExternaId/Title&$expand=ReuniaoExternaId&$orderby=DataLimite asc&$top=500`);
-    rnTarefas=d.d.results.map(r=>({
-      id:r.Id,etag:r.__metadata?.etag||'*',
-      titulo:r.Title||'',notas:r.Notas||'',
-      responsavel:r.Responsavel||'',
-      data:r.DataLimite?r.DataLimite.split('T')[0]:'',
-      estado:r.Estado||'Por fazer',prioridade:r.Prioridade||'Média',
-      departamento:normalizeDep(r.Departamento||''),
-      reuniaoOrigem:r.ReuniaoExternaId?.Title||'',
-      projetoId:null,acaoId:null
-    }));
-    renderTarefasTable();renderTarefasStats();
-  }catch(e){console.warn('Tarefas error',e);}
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType=meta.d.ListItemEntityTypeFullName;
+    const respSel=el('ext-add-tar-resp');
+    const resp=respSel?.value||'';
+    const data=el('ext-add-tar-data')?.value||'';
+    const body={__metadata:{type:tarType},Title:titulo,Estado:gv('ext-add-tar-estado')||'Por fazer'};
+    if(_extDetailReuniaoId)body.ReuniaoExternaIdId=parseInt(_extDetailReuniaoId);
+    if(resp)body.Responsavel=resp;
+    if(data)body.DataLimite=data+'T00:00:00Z';
+    const notas=el('ext-add-tar-notas')?.value.trim();
+    if(notas)body.Notas=notas;
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`,body,'POST');
+    showNotif('Tarefa criada!','success');
+    extCloseAddTarModal();
+    await extLoadAll();
+    extOpenDetail(_extDetailReuniaoId);
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+  if(btn){btn.disabled=false;btn.textContent='Guardar';}
 }
-function renderTarefasStats(){
-  el('t-total').textContent=rnTarefas.length;
-  el('t-pfazer').textContent=rnTarefas.filter(t=>t.estado==='Por fazer').length;
-  el('t-emcurso').textContent=rnTarefas.filter(t=>t.estado==='Em curso').length;
-  const hoje=today();
-  el('t-atrasadas').textContent=rnTarefas.filter(t=>t.data&&t.data<hoje&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
+
+// ── Editar tarefa ────────────────────────────────
+let _extEditTarParentId=null;
+function extOpenTarEdit(tarId,reuniaoId){
+  const t=extTarefas.find(x=>x.id===tarId);if(!t)return;
+  _extEditTarParentId=reuniaoId||t.reuniaoId;
+  el('ext-edit-tar-id').value=tarId;
+  el('ext-edit-tar-titulo').value=t.titulo;
+  el('ext-edit-tar-data').value=t.dataLimite||'';
+  el('ext-edit-tar-notas').value=t.notas||'';
+  sv2('ext-edit-tar-estado',t.estado||'Por fazer');
+  sv2('ext-edit-tar-resp',t.responsavel||'');
+  el('ext-tar-modal').style.display='block';
 }
-function renderTarefasTable(){
-  const q=(el('qt')||{value:''}).value.toLowerCase();
-  const fe=gv('fft-est'),fd_=gv('fft-dep'),fp=gv('fft-prior');
-  const hoje=today();
-  let list=rnTarefas.filter(i=>{
-    if(!userCanView(i.departamento))return false; // visibilidade por departamento
-    if(q&&!i.titulo.toLowerCase().includes(q))return false;
-    if(fe&&i.estado!==fe)return false;
-    if(fd_&&i.departamento!==fd_)return false;
-    if(fp&&i.prioridade!==fp)return false;
-    return true;
-  });
-  const tb=el('tbody-tar');
-  if(!list.length){tb.innerHTML=`<tr><td colspan="8"><div class="empty">Nenhuma tarefa.<br>Clique em "+ Nova tarefa".</div></td></tr>`;el('tcount-tar').textContent='';return;}
-  const PM={'Alta':'b-alta','Média':'b-media','Baixa':'b-baixa'};
-  const EM2={'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado'};
-  tb.innerHTML=list.map(i=>{
-    const atrasada=i.data&&i.data<hoje&&i.estado!=='Concluída'&&i.estado!=='Cancelada';
-    return `<tr style="${atrasada?'background:#fff8f8':''}">
-      <td style="font-weight:500" title="${i.titulo}">${i.titulo}</td>
-      <td>${i.responsavel||'—'}</td>
-      <td style="${atrasada?'color:var(--red);font-weight:600':''}">${fd(i.data)}${atrasada?' ⚠️':''}</td>
-      <td>${bdg(EM2,i.estado)}</td>
-      <td>${bdg(PM,i.prioridade)}</td>
-      <td>${i.departamento||'—'}</td>
-      <td>${i.projeto||'—'}</td>
-      <td><div class="actions">
-        <button class="btn btn-sm" onclick="editTar(${i.id})">Editar</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteTar(${i.id})">&#10005;</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-  el('tcount-tar').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
-}
-function openRnTarForm(id){
-  rnEditTarId=id||null;
-  el('frm-tar-ov').style.display='block';
-  if(id){
-    const t=rnTarefas.find(x=>x.id===id);if(!t)return;
-    el('frm-tar-title').textContent='Editar tarefa';
-    sv2('ft-titulo',t.titulo);sv2('ft-desc',t.descricao||'');sv2('ft-resp',t.responsavel||'');
-    sv2('ft-data',t.data);sv2('ft-estado',t.estado);sv2('ft-prior',t.prioridade);
-    sv2('ft-dep',t.departamento||'Gestão');sv2('ft-proj',t.projeto||'');
-    sv2('ft-origem',t.origem||'Reunião Externa');sv2('ft-reuniao-orig',t.reuniaoOrigem||'');
-  }else{
-    el('frm-tar-title').textContent='Nova tarefa';
-    ['ft-titulo','ft-desc','ft-resp','ft-proj','ft-reuniao-orig'].forEach(id=>sv2(id,''));
-    sv2('ft-data','');sv2('ft-estado','Por fazer');sv2('ft-prior','Média');sv2('ft-dep','Gestão');sv2('ft-origem','Reunião Externa');
-  }
-}
-function editTar(id){openRnTarForm(id);}
-function closeRnTarForm(){el('frm-tar-ov').style.display='none';rnEditTarId=null;}
-async function saveTarefa(){
-  const titulo=el('ft-titulo').value.trim();
-  if(!titulo){alert('Por favor indique o título.');return;}
-  const btn=el('save-tar-btn');btn.textContent='A guardar...';btn.disabled=true;
+function extCloseTarModal(){el('ext-tar-modal').style.display='none';}
+async function extSaveTarefaEdit(){
+  const id=parseInt(el('ext-edit-tar-id').value);
+  const titulo=el('ext-edit-tar-titulo').value.trim();
+  if(!titulo){showNotif('Indica a descrição.','error');return;}
+  const btn=el('ext-tar-save-btn');if(btn){btn.disabled=true;btn.textContent='A guardar...';}
   try{
-    const listType='SP.Data.FJ_x005f_TarefasReuniaoListItem';
-    const body={__metadata:{type:listType},
-      Title:titulo,
-      Estado:gv('ft-estado')||'Por fazer',
-      Prioridade:gv('ft-prior')||'Média'
-    };
-    const respVal=gv('ft-resp');if(respVal)body.Responsavel=respVal;
-    const depVal=gv('ft-dep');if(depVal)body.Departamento=depVal;
-    const dataVal=gv('ft-data');if(dataVal)body.DataLimite=dataVal+'T00:00:00Z';
-    if(rnEditTarId){
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items(${rnEditTarId})`,body,'MERGE','*');
-    }else{
-      await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
-    }
-    closeRnTarForm();await loadRnTarefas();showNotif('Tarefa guardada!','success');
-  }catch(e){showNotif('Erro ao guardar tarefa: '+e.message,'error');console.error('saveTarefa:',e);}
-  finally{btn.textContent='Guardar';btn.disabled=false;}
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType=meta.d.ListItemEntityTypeFullName;
+    const resp=el('ext-edit-tar-resp')?.value||'';
+    const dataVal=el('ext-edit-tar-data')?.value||null;
+    const body={__metadata:{type:tarType},Title:titulo,Estado:gv('ext-edit-tar-estado')||'Por fazer',Notas:el('ext-edit-tar-notas')?.value.trim()||''};
+    if(resp)body.Responsavel=resp;
+    if(dataVal)body.DataLimite=dataVal+'T00:00:00Z';
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${id})`,body,'MERGE','*');
+    showNotif('Tarefa atualizada.','success');
+    extCloseTarModal();
+    await extLoadAll();
+    if(_extEditTarParentId)extOpenDetail(_extEditTarParentId);
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+  if(btn){btn.disabled=false;btn.textContent='Guardar';}
 }
-async function deleteTar(id){
-  if(!confirm('Eliminar esta tarefa?'))return;
+
+// ── Concluir tarefa ──────────────────────────────
+async function extConcluirTarefa(tarId,reuniaoId){
   try{
-    await getSPToken();const digest=await getDigest();
-    await fetch(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items(${id})`,{method:'DELETE',headers:{Authorization:`Bearer ${spToken}`,'X-RequestDigest':digest,'IF-MATCH':'*'}});
-    await loadRnTarefas();showNotif('Eliminado.','success');
+    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${tarId})`,{__metadata:{type:meta.d.ListItemEntityTypeFullName},Estado:'Concluída'},'MERGE','*');
+    showNotif('Tarefa concluída! ✓','success');
+    await extLoadAll();
+    if(reuniaoId)extOpenDetail(reuniaoId);
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
+
+// ── Eliminar tarefa ──────────────────────────────
+async function extDeleteTarefa(tarId,reuniaoId){
+  if(!confirm('Eliminar esta tarefa?'))return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${tarId})`,null,'DELETE');
+    showNotif('Eliminado.','success');
+    await extLoadAll();
+    if(reuniaoId)extOpenDetail(reuniaoId);
+    else renderExtTarefasTable();
+  }catch(e){showNotif('Erro: '+e.message,'error');}
+}
+
+// ── Alias para compatibilidade ───────────────────
+async function loadRnTarefas(){await extLoadTarefas();}
+function renderTarefasTable(){renderExtTarefasTable();}
+function renderTarefasStats(){extRenderStats();}
+
 
 // PREP MODE & SAVED SESSIONS
 let prepItems=[];
@@ -4138,6 +4337,23 @@ function pendingAprovCount(){
 
 function badgeHTML(c,t){return `<span class="bdg ${c}">${t||'—'}</span>`;}
 function depB(d){if(!d)return'';return badgeHTML('b-l',d);}
+function depBadgeAcao(d){
+  if(!d)return'';
+  const map={
+    'E. Gestão':    {bg:'#DBEAFE',c:'#1E3A8A'},
+    'Gestão':       {bg:'#DBEAFE',c:'#1E3A8A'},
+    'Op. Norte':    {bg:'#D1FAE5',c:'#065F46'},
+    'Op Norte':     {bg:'#D1FAE5',c:'#065F46'},
+    'Op. Sul':      {bg:'#A7F3D0',c:'#047857'},
+    'Op Sul':       {bg:'#A7F3D0',c:'#047857'},
+    'Impacto':      {bg:'#FEF3C7',c:'#92400E'},
+    'Financeiro':   {bg:'#EDE9FE',c:'#5B21B6'},
+    'CA':           {bg:'#1E3A5F',c:'#fff'},
+    'CAdm':         {bg:'#1E3A5F',c:'#fff'},
+  };
+  const s=map[d]||{bg:'#E5E7EB',c:'#374151'};
+  return `<span class="hier-dep-badge" style="background:${s.bg};color:${s.c}">${d}</span>`;
+}
 function estB(e){
   const colors={'Concluída':'b-g','Em Curso':'b-b','Atrasada':'b-r','todo':'b-gray','Média':'b-y','Alta':'b-o','Crítica':'b-r','Baixa':'b-gray'};
   return badgeHTML(colors[e]||'b-gray',e);
@@ -5027,7 +5243,7 @@ function renderHier(){
       <div class="hier-proj-hdr" onclick="toggleHier(${p.id})">
         <span class="rag rag-${rag}"></span>
         <span style="font-size:14px;font-weight:700;color:var(--g1);flex:1">${p.nome}</span>
-        ${depB(p.dep)}
+        ${depBadgeAcao(p.dep)}
         <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} tarefas${pct!==null?' · '+pct+'% conc.':''}</span>
         ${isDir?`<button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>`:''}
         ${isDir?`<button class="btn btn-sm" style="font-size:11px" onclick="event.stopPropagation();openProjetoForm(${p.id})" title="Editar projeto">✎</button>`:''}
@@ -5042,8 +5258,8 @@ function renderHier(){
           return`<div class="hier-acao-row" onclick="toggleHierAcao(${a.id})">
             <span class="rag rag-${r}"></span>
             <span class="hier-acao-name">${a.nome}</span>
-            ${a.dep?depB(a.dep):''}
-            <span style="font-size:11px;color:var(--tx3)">${conc}/${ts.length} tarefas</span>
+            ${depBadgeAcao(a.dep)}
+            <span style="font-size:11px;color:var(--tx3);white-space:nowrap;flex-shrink:0">${conc}/${ts.length} tarefas</span>
             ${isDir?`<button class="btn btn-sm" onclick="event.stopPropagation();openAcaoForm(${p.id},${a.id})">Editar</button>`:''}
             ${isDir?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delAcao(${a.id})">✕</button>`:''}
             <button class="btn btn-sm btn-or" onclick="event.stopPropagation();openTarFormForAcao(${a.id})">+ Tarefa</button>
