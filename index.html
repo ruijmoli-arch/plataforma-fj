@@ -6,6 +6,8 @@
 <title>Plataforma Interna — Fundação da Juventude</title>
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <style>
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -987,9 +989,10 @@ tr:hover td{background:var(--bg3)}
           <p style="font-size:14px;color:var(--text2);margin-bottom:1.5rem">Seleciona o tipo de reunião para carregar os assuntos.</p>
           <select id="r-tipo" onchange="loadSavedSessions()"><option>Reunião com CAdm</option><option>Reunião Gestão</option><option>Reunião O.Norte</option><option>Reunião O.Sul</option><option>Reunião Financeiro</option><option>Reunião Impacto</option></select>
           <select id="r-filtro"><option value="todos">Incluir todos os assuntos</option><option value="abertos">Apenas não concluídos</option><option value="pendentes">Apenas pendentes de decisão</option></select>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:1rem">
             <button class="btn" style="padding:12px;font-size:14px" onclick="prepararReuniao()">&#128203; Preparar ordem de trabalhos</button>
             <button class="btn btn-orange" style="padding:12px;font-size:14px" onclick="iniciarReuniao()">&#9654; Iniciar reunião</button>
+            <button class="btn" style="padding:12px;font-size:14px;background:#1D9E75;color:#fff;border-color:#1D9E75" onclick="abrirGerarDocumento()">&#128196; Gerar documento</button>
           </div>
           <div id="saved-sessions-wrap" class="saved-sessions"></div>
         </div>
@@ -2187,6 +2190,38 @@ tr:hover td{background:var(--bg3)}
   </div>
 
 </div><!-- /module-co -->
+
+<!-- Modal Gerar Documento de Reunião -->
+<div id="gerar-doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;overflow-y:auto" onclick="if(event.target===this)fecharGerarDocumento()">
+  <div style="max-width:680px;margin:48px auto;padding:0 1rem 2rem">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+      <div style="background:#1D9E75;padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📄</span>
+          <div>
+            <div style="font-size:16px;font-weight:600;color:#fff" id="gd-titulo">Gerar documento de reunião</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.75)" id="gd-subtitulo">Seleciona os assuntos a incluir</div>
+          </div>
+        </div>
+        <button onclick="fecharGerarDocumento()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+      <div id="gd-lista" style="max-height:52vh;overflow-y:auto"></div>
+      <div style="padding:14px 20px;border-top:0.5px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:16px">
+          <span style="font-size:13px;color:var(--text2)" id="gd-count">0 assuntos selecionados</span>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="checkbox" id="gd-anexos" checked style="margin:0"> incluir anexos
+          </label>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="fecharGerarDocumento()">Cancelar</button>
+          <button class="btn" onclick="gdToggleAll()" style="font-size:12px">Sel. todos</button>
+          <button id="gd-btn-gerar" class="btn" onclick="gerarDocumentoPDF()" style="background:#1D9E75;color:#fff;border-color:#1D9E75;min-width:110px">📄 Gerar PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Modal de detalhe de reunião externa -->
 <div id="ext-detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;overflow-y:auto" onclick="if(event.target===this)extCloseDetail()">
@@ -3753,6 +3788,346 @@ async function loadRnTarefas() { await extLoadTarefas(); }
 function renderTarefasTable() { renderExtTarefasTable(); }
 function renderTarefasStats() { extRenderStats(); }
 function deleteExt(id) { extDeleteReuniao(id); }
+
+// ═══ GERAR DOCUMENTO DE REUNIÃO ═══
+let _gdItems = []; // todos os assuntos da reunião
+let _gdSel   = new Set(); // ids selecionados
+
+function abrirGerarDocumento() {
+  const tipo   = gv('r-tipo');
+  const filtro = gv('r-filtro');
+  let lista = items.filter(i => i.reuniao === tipo);
+  if (filtro === 'abertos')   lista = lista.filter(i => i.estado !== 'Concluído' && i.estado !== 'Cancelado');
+  if (filtro === 'pendentes') lista = lista.filter(i => i.decisao === 'Pendente');
+  if (!lista.length) { showNotif('Nenhum assunto encontrado para este tipo de reunião.', 'error'); return; }
+
+  _gdItems = lista;
+  _gdSel   = new Set(lista.map(i => i.id)); // todos selecionados por padrão
+
+  el('gd-titulo').textContent    = 'Gerar documento — ' + tipo;
+  el('gd-subtitulo').textContent = lista.length + ' assuntos encontrados';
+  el('gerar-doc-modal').style.display = 'block';
+  _gdRenderLista();
+}
+
+function fecharGerarDocumento() {
+  el('gerar-doc-modal').style.display = 'none';
+}
+
+function _gdRenderLista() {
+  const wrap = el('gd-lista');
+  wrap.innerHTML = _gdItems.map((it, idx) => {
+    const sel = _gdSel.has(it.id);
+    const isD = it.tipo === 'Deliberativo';
+    const hasAtt = it.attachments?.length > 0;
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:0.5px solid var(--border);cursor:pointer;background:${sel ? '#fff' : '#f8f8f8'};transition:background .1s" onclick="_gdToggle(${it.id})">
+      <div style="margin-top:2px;flex-shrink:0">
+        <div style="width:18px;height:18px;border-radius:4px;border:1.5px solid ${sel ? '#1D9E75' : '#c8d0e0'};background:${sel ? '#1D9E75' : 'transparent'};display:flex;align-items:center;justify-content:center;transition:all .15s">
+          ${sel ? '<svg width="11" height="9" viewBox="0 0 11 9"><polyline points="1.5,4.5 4.5,7.5 9.5,1.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+        </div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;background:${isD ? '#E6F1FB' : '#EAF3DE'};color:${isD ? '#0C447C' : '#27500A'}">${it.tipo}</span>
+          ${hasAtt ? `<span style="font-size:10px;color:var(--amber)">📎 ${it.attachments.length} anexo${it.attachments.length !== 1 ? 's' : ''}</span>` : ''}
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px">${idx + 1}. ${it.titulo}</div>
+        <div style="font-size:11px;color:var(--text2)">${it.responsavel || '—'} · ${it.estado} · ${it.decisao}</div>
+      </div>
+    </div>`;
+  }).join('');
+  _gdUpdateCount();
+}
+
+function _gdToggle(id) {
+  if (_gdSel.has(id)) _gdSel.delete(id);
+  else _gdSel.add(id);
+  _gdRenderLista();
+}
+
+function gdToggleAll() {
+  if (_gdSel.size === _gdItems.length) _gdSel = new Set();
+  else _gdSel = new Set(_gdItems.map(i => i.id));
+  _gdRenderLista();
+}
+
+function _gdUpdateCount() {
+  el('gd-count').textContent = `${_gdSel.size} assunto${_gdSel.size !== 1 ? 's' : ''} selecionado${_gdSel.size !== 1 ? 's' : ''}`;
+}
+
+// ── Geração do PDF ────────────────────────────────────────────────────
+async function gerarDocumentoPDF() {
+  const selecionados = _gdItems.filter(i => _gdSel.has(i.id));
+  if (!selecionados.length) { showNotif('Seleciona pelo menos um assunto.', 'error'); return; }
+  const comAnexos = el('gd-anexos').checked;
+  const tipo      = gv('r-tipo');
+
+  const btn = el('gd-btn-gerar');
+  btn.disabled = true; btn.textContent = 'A gerar...';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const W = 210, H = 297, M = 18, CW = W - M * 2;
+    const BLUE = [0, 48, 135], GREEN = [29, 158, 117], AMBER = [186, 117, 23];
+    const GR1 = [26, 26, 46], GR2 = [90, 98, 120], GR3 = [200, 208, 224];
+
+    // Helper para texto com quebras e retorno da altura usada
+    function addSection(label, content, y, bgRGB, accentRGB) {
+      if (!content || !content.trim()) return y;
+      // cabeçalho da secção
+      doc.setFillColor(...bgRGB);
+      doc.rect(M, y, CW, 7, 'F');
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(accentRGB || GR2));
+      doc.text(label.toUpperCase(), M + 3, y + 4.8);
+      y += 7;
+      // conteúdo
+      if (accentRGB) { doc.setDrawColor(...accentRGB); doc.setLineWidth(0.6); doc.line(M, y, M, y + 0.1); } // placeholder
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...GR1);
+      const linhas = doc.splitTextToSize(content.trim(), CW - 6);
+      // barra lateral para proposta
+      if (accentRGB) {
+        const h = linhas.length * 5 + 8;
+        doc.setFillColor(...accentRGB.map(c => Math.min(255, c + 190)));
+        doc.rect(M, y, CW, h, 'F');
+        doc.setDrawColor(...accentRGB);
+        doc.setLineWidth(1.2);
+        doc.line(M, y, M, y + h);
+        doc.setLineWidth(0.2);
+      }
+      doc.text(linhas, M + (accentRGB ? 4 : 3), y + 5);
+      y += linhas.length * 5 + 10;
+      return y;
+    }
+
+    function newPageIfNeeded(y, needed) {
+      if (y + needed > H - 20) { doc.addPage(); return 22; }
+      return y;
+    }
+
+    // ── CAPA ──────────────────────────────────────────────────────────
+    doc.setFillColor(...BLUE);
+    doc.rect(0, 0, W, 55, 'F');
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.setTextColor(255, 255, 255); doc.setGState(new doc.GState({ opacity: 0.7 }));
+    doc.text('FUNDAÇÃO DA JUVENTUDE', M, 22);
+    doc.setGState(new doc.GState({ opacity: 1 }));
+    doc.setFontSize(22); doc.setFont('helvetica', 'bold');
+    doc.text('Ordem de Trabalhos', M, 35);
+    doc.setFontSize(12); doc.setFont('helvetica', 'normal');
+    doc.text(`${tipo} · ${new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}`, M, 46);
+    doc.setTextColor(...GR1);
+
+    // linha separadora
+    doc.setDrawColor(...GR3); doc.setLineWidth(0.4);
+    doc.line(M, 62, W - M, 62);
+
+    // ── ÍNDICE ────────────────────────────────────────────────────────
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...GR2);
+    doc.text('ÍNDICE', M, 70);
+    let y = 76;
+    selecionados.forEach((it, idx) => {
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...GR1);
+      const label = `${idx + 1}.  ${it.titulo}`;
+      const truncated = doc.splitTextToSize(label, CW - 20)[0];
+      doc.text(truncated, M, y);
+      // linha ponteada
+      doc.setDrawColor(...GR3); doc.setLineWidth(0.2);
+      const textW = doc.getTextWidth(truncated);
+      doc.setLineDashPattern([0.5, 1], 0);
+      doc.line(M + textW + 2, y - 1, W - M - 8, y - 1);
+      doc.setLineDashPattern([], 0);
+      doc.text(`p.${idx + 2}`, W - M - 6, y, { align: 'right' });
+      y += 7;
+      if (y > H - 20) { doc.addPage(); y = 22; }
+    });
+
+    // ── ASSUNTOS ──────────────────────────────────────────────────────
+    for (let idx = 0; idx < selecionados.length; idx++) {
+      const it = selecionados[idx];
+      doc.addPage();
+      y = 18;
+
+      // barra de cor do tipo
+      const isD = it.tipo === 'Deliberativo';
+      doc.setFillColor(...(isD ? BLUE : GREEN));
+      doc.rect(0, 0, W, 3, 'F');
+
+      // numeração
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...GR2);
+      doc.text(`Ponto ${idx + 1} de ${selecionados.length}`, M, y); y += 6;
+
+      // título
+      doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...GR1);
+      const tLines = doc.splitTextToSize(it.titulo, CW - 30);
+      doc.text(tLines, M, y); y += tLines.length * 7 + 2;
+
+      // badge tipo
+      const badgeW = isD ? 22 : 20;
+      doc.setFillColor(...(isD ? [230, 241, 251] : [234, 243, 222]));
+      doc.roundedRect(W - M - badgeW, 18, badgeW, 6.5, 2, 2, 'F');
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(isD ? [12, 68, 124] : [39, 80, 10]));
+      doc.text(it.tipo, W - M - badgeW / 2, 22.5, { align: 'center' });
+
+      // linha separadora
+      doc.setDrawColor(...(isD ? BLUE : GREEN)); doc.setLineWidth(0.8);
+      doc.line(M, y, W - M, y); y += 5;
+
+      // metadados em 3 colunas
+      doc.setFillColor(238, 241, 246);
+      doc.rect(M, y, CW, 12, 'F');
+      const cols = [
+        ['RESPONSÁVEL', it.responsavel || '—'],
+        ['ESTADO', it.estado || '—'],
+        ['DECISÃO', it.decisao || '—'],
+      ];
+      const colW = CW / 3;
+      cols.forEach(([label, val], ci) => {
+        const cx = M + ci * colW;
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GR2);
+        doc.text(label, cx + 3, y + 4.5);
+        doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
+        doc.text(val, cx + 3, y + 10);
+        if (ci < 2) { doc.setDrawColor(...GR3); doc.setLineWidth(0.3); doc.line(cx + colW, y, cx + colW, y + 12); }
+      });
+      y += 16;
+
+      // secções de conteúdo
+      y = addSection('Contextualização', it.notas, y, [238, 241, 246], null);
+      y = addSection('Proposta de decisão', it.proposta, y, [230, 241, 251], [24, 95, 165]);
+
+      // histórico
+      if (it.historicoDecisoes && it.historicoDecisoes.trim()) {
+        y = newPageIfNeeded(y, 30);
+        doc.setFillColor(238, 241, 246); doc.rect(M, y, CW, 7, 'F');
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GR2);
+        doc.text('HISTÓRICO DE DECISÕES', M + 3, y + 4.8); y += 9;
+        const entries = it.historicoDecisoes.split('\n').filter(l => l.trim());
+        entries.forEach(entry => {
+          y = newPageIfNeeded(y, 12);
+          const match = entry.match(/^\[([^\]]+)\]\s*(.*)/) ;
+          if (match) {
+            doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GR2);
+            doc.text(match[1], M + 2, y + 4);
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
+            const txt = doc.splitTextToSize(match[2], CW - 30);
+            doc.text(txt, M + 32, y + 4);
+            y += txt.length * 4.5 + 3;
+          } else {
+            doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
+            const txt = doc.splitTextToSize(entry, CW - 4);
+            doc.text(txt, M + 2, y + 4); y += txt.length * 4.5 + 3;
+          }
+        });
+        y += 4;
+      }
+
+      // lista de anexos (referência)
+      if (comAnexos && it.attachments?.length) {
+        y = newPageIfNeeded(y, 20);
+        doc.setFillColor(...[250, 238, 218]); doc.rect(M, y, CW, 7, 'F');
+        doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...AMBER);
+        doc.text('ANEXOS', M + 3, y + 4.8); y += 9;
+        it.attachments.forEach((a, ai) => {
+          doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
+          doc.text(`Anexo ${ai + 1} — ${a.name}`, M + 3, y); y += 6;
+        });
+        y += 4;
+      }
+    }
+
+    // ── PÁGINAS DE ANEXO ─────────────────────────────────────────────
+    let pdfBytes = null;
+    if (comAnexos) {
+      const anexosPDF = [];
+      for (const it of selecionados) {
+        for (let ai = 0; ai < (it.attachments || []).length; ai++) {
+          const a = it.attachments[ai];
+          if (!a.name.toLowerCase().endsWith('.pdf')) continue;
+          try {
+            const progMsg = el('gd-progress-msg');
+            if (progMsg) progMsg.textContent = `A obter anexo: ${a.name}`;
+            const resp = await fetch(`https://fjuventude.sharepoint.com${a.url}`, {
+              headers: { Authorization: `Bearer ${spToken}` }
+            });
+            if (!resp.ok) continue;
+            const bytes = await resp.arrayBuffer();
+            anexosPDF.push({ titulo: it.titulo, name: a.name, num: ai + 1, total: it.attachments.filter(x => x.name.toLowerCase().endsWith('.pdf')).length, bytes });
+          } catch(e) { console.warn('Erro ao obter anexo:', a.name, e); }
+        }
+      }
+
+      if (anexosPDF.length && window.PDFLib) {
+        const { PDFDocument, rgb, degrees } = PDFLib;
+        const mainBytes = doc.output('arraybuffer');
+        const merged = await PDFDocument.create();
+
+        // copiar páginas do documento principal
+        const mainPdf = await PDFDocument.load(mainBytes);
+        const mainPages = await merged.copyPages(mainPdf, mainPdf.getPageIndices());
+        mainPages.forEach(p => merged.addPage(p));
+
+        // para cada anexo: página de marca de água + páginas do PDF
+        for (const anx of anexosPDF) {
+          // página de marca de água
+          const wPage = merged.addPage([595, 842]);
+          const { width, height } = wPage.getSize();
+          const font = await merged.embedFont(PDFLib.StandardFonts.HelveticaBold);
+          const fontN = await merged.embedFont(PDFLib.StandardFonts.Helvetica);
+
+          wPage.drawRectangle({ x: 0, y: height - 80, width, height: 80, color: rgb(0.107, 0.62, 0.459) });
+          wPage.drawText('ANEXO', { x: 40, y: height - 35, size: 20, font, color: rgb(1,1,1) });
+          wPage.drawText(`Assunto: ${anx.titulo}`, { x: 40, y: height - 56, size: 11, font: fontN, color: rgb(0.9, 1, 0.95) });
+          wPage.drawText(`Ficheiro: ${anx.name} (${anx.num} de ${anx.total})`, { x: 40, y: height - 70, size: 10, font: fontN, color: rgb(0.8, 0.95, 0.88) });
+
+          // marca de água diagonal em cada página do anexo
+          const anxPdf = await PDFDocument.load(anx.bytes);
+          const anxPages = await merged.copyPages(anxPdf, anxPdf.getPageIndices());
+          anxPages.forEach(p => {
+            merged.addPage(p);
+            const { width: pw, height: ph } = p.getSize();
+            p.drawText(`ANEXO · ${anx.titulo} · ${anx.num}/${anx.total}`, {
+              x: pw / 2 - 150, y: ph / 2 - 10,
+              size: 18, font, color: rgb(0.8, 0.8, 0.8),
+              opacity: 0.25, rotate: degrees(45)
+            });
+          });
+        }
+
+        pdfBytes = await merged.save();
+      }
+    }
+
+    // download
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `OT_${tipo.replace(/\s+/g, '_')}_${dateStr}.pdf`;
+
+    if (pdfBytes) {
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    } else {
+      doc.save(fileName);
+    }
+
+    fecharGerarDocumento();
+    showNotif('Documento gerado com sucesso! 📄', 'success');
+  } catch(e) {
+    showNotif('Erro ao gerar documento: ' + e.message, 'error');
+    console.error('gerarDocumentoPDF:', e);
+  } finally {
+    btn.disabled = false; btn.textContent = '📄 Gerar PDF';
+  }
+}
 
 // PREP MODE & SAVED SESSIONS
 let prepItems=[];
