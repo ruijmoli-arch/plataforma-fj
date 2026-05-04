@@ -648,9 +648,10 @@ tr:hover td{background:var(--bg3)}
       <button class="module-tab active" id="tab-rn" onclick="switchModule('rn')">🤝 Reuniões</button>
       <button class="module-tab" id="tab-pl" onclick="switchModule('pl')">📊 Planeamento</button>
       <button class="module-tab" id="tab-gf" onclick="switchModule('gf')">💰 Financeiro</button>
-      <button class="module-tab" id="tab-au" onclick="switchModule('au')">🏖️ Ausências</button      <button class="module-tab" id="tab-co" onclick="switchModule('co')">📬 Correio</button>
-653	      <button class="module-tab" id="tab-st" onclick="switchModule('st')" style="display:none">⚙️ Definições</button>
-654	    </div>   <div class="topbar-right">
+      <button class="module-tab" id="tab-au" onclick="switchModule('au')">🏖️ Ausências</button>
+      <button class="module-tab" id="tab-co" onclick="switchModule('co')">📬 Correio</button>
+    </div>
+    <div class="topbar-right">
       <div style="text-align:right">
         <div id="user-name" style="font-size:13px"></div>
         <div id="user-email" style="font-size:11px;opacity:.6"></div>
@@ -2418,62 +2419,9 @@ tr:hover td{background:var(--bg3)}
   </div>
 </div>
 </div><!-- /main -->
-2422	</div><!-- /layout -->
-2423	
-2424	<!-- MÓDULO DEFINIÇÕES (ST) -->
-2425	<div id="module-st" style="display:none">
-2426	  <div class="sidebar" id="sidebar-st">
-2427	    <div class="sidebar-label">Definições</div>
-2428	    <div class="nav-item active" id="st-nav-permissoes" onclick="stNav('permissoes')">
-2429	      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM2 14c0-3 3-5 6-5s6 2 6 5"/></svg>
-2430	      Permissões de Acesso
-2431	    </div>
-2432	  </div>
-2433	  <div class="      <div id="st-page-permissoes">
-2433	        <div class="page-header">
-2434	          <div class="page-title">🛡️ Gestão de Permissões</div>
-2435	          <div class="page-desc">Selecione um colaborador para configurar os seus acessos granulares.</div>
-2436	        </div>
-2437	        
-2438	        <div style="display:grid; grid-template-columns: 350px 1fr; gap: 24px; align-items: start;">
-2439	          <!-- Lista de Utilizadores -->
-2440	          <div class="panel" style="padding:0; overflow:hidden;">
-2441	            <div style="padding:16px; border-bottom:1px solid var(--border);">
-2442	              <input type="text" id="st-perm-search" placeholder="Procurar colaborador..." oninput="stRenderUserList()" style="width:100%">
-2443	            </div>
-2444	            <div id="st-user-list" style="max-height: 600px; overflow-y: auto;">
-2445	              <div class="empty" style="padding:2rem">A carregar...</div>
-2446	            </div>
-2447	          </div>
-2448	          
-2449	          <!-- Painel de Configuração -->
-2450	          <div id="st-config-panel" class="panel" style="display:none;">
-2451	            <div id="st-config-header" style="margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border);">
-2452	              <div style="display:flex; align-items:center; gap:16px;">
-2453	                <div id="st-user-avatar" class="user-avatar" style="width:48px; height:48px; font-size:18px;"></div>
-2454	                <div>
-2455	                  <div id="st-user-name" style="font-size:18px; font-weight:700;"></div>
-2456	                  <div id="st-user-email" style="font-size:13px; color:var(--text3);"></div>
-2457	                </div>
-2458	              </div>
-2459	            </div>
-2460	            
-2461	            <div id="st-modules-config" style="display:flex; flex-direction:column; gap:20px;">
-2462	              <!-- Os módulos serão injetados aqui via JS -->
-2463	            </div>
-2464	            
-2465	            <div style="margin-top:32px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px;">
-2466	              <button class="btn" onclick="stResetConfig()">Cancelar</button>
-2467	              <button class="btn btn-primary" id="st-save-btn" onclick="stSavePermissions()">Guardar Alterações</button>
-2468	            </div>
-2469	          </div>
-2470	          
-2471	          <div id="st-no-selection" class="panel" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem; color:var(--text3);">
-2472	            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom:16px; opacity:0.5;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-2473	            <div>Selecione um colaborador à esquerda para gerir as suas permissões.</div>
-2474	          </div>
-2475	        </div>
-2476	      </div>2455	</div>- Overlay global de novo projeto (acessível de qualquer módulo) -->
+</div><!-- /layout -->
+
+<!-- Overlay global de novo projeto (acessível de qualquer módulo) -->
 <div id="frm-proj-ov-global" class="overlay">
   <div class="panel">
     <div class="panel-title" id="frm-proj-title-global">Novo projeto</div>
@@ -2619,7 +2567,7 @@ function getCores(tipo){return REUNIAO_CORES[tipo]||REUNIAO_CORES['Reunião com 
 let _currentModule='rn';
 function switchModule(mod){
   _currentModule=mod;
-  ['rn','pl','gf','au','co','st'].forEach(m=>{
+  ['rn','pl','gf','au','co'].forEach(m=>{
     document.getElementById('tab-'+m)?.classList.toggle('active',m===mod);
     const sb=document.getElementById('sidebar-'+m);
     const mc=document.getElementById('module-'+m);
@@ -2634,9 +2582,8 @@ function switchModule(mod){
   if(mod==='rn')showPage('assuntos');
   if(mod==='au'){if(!_auLoaded){_auLoaded=true;auInit();}else auNav('dashboard');}
   if(mod==='co'){if(!_coLoaded){_coLoaded=true;coInit();}else coNav('registo');}
-  if(mod==='st'){if(!_stLoaded){_stLoaded=true;stInit();}else stNav('permissoes');}
 }
-let _plLoaded=false,_gfLoaded=false,_auLoaded=false,_coLoaded=false,_stLoaded=false;
+let _plLoaded=false,_gfLoaded=false,_auLoaded=false,_coLoaded=false;
 
 // ── SHARED PROJECTS ──
 let sharedProjetos=[];
@@ -3060,11 +3007,7 @@ function showApp(){
   // Carregar utilizadores do SharePoint e determinar permissões
   loadFJUtilizadores().then(()=>{
     // Atualizar UI baseado nas permissões
-    const isPE = userCargo() === 'Presidente Executivo';
-    if(isPE || isAdmin()){
-      const stTab = document.getElementById('tab-st');
-      if(stTab) stTab.style.display = 'block';
-      
+    if(isAdmin()){
       const adminLabel=document.getElementById('admin-section-label');
       const adminNav=document.getElementById('nav-admin');
       if(adminLabel) adminLabel.style.display='block';
@@ -11841,208 +11784,6 @@ function coOpenTarEdit(id) {
   document.getElementById('co-tar-modal').style.display = 'block';
 }
 function coCloseTarModal() { document.getElementById('co-tar-modal').style.display = 'none'; }
-
-// ═══ MÓDULO DEFINIÇÕES (ST) ═══
-let _stLoaded = false;
-function stInit() {
-  stNav('permissoes');
-}
-
-function stNav(page) {
-  ['permissoes'].forEach(p => {
-    const elPage = document.getElementById('st-page-' + p);
-    const elNav = document.getElementById('st-nav-' + p);
-    if(elPage) elPage.style.display = (p === page ? 'block' : 'none');
-    if(elNav) elNav.classList.toggle('active', p === page);
-  });
-  if(page === 'permissoes') stRenderPermissoes();
-}
-
-let _stSelectedUserId = null;
-let _stCurrentPerms = {};
-
-function stRenderPermissoes() {
-  stRenderUserList();
-}
-
-function stRenderUserList() {
-  const container = document.getElementById('st-user-list');
-  if(!container) return;
-  
-  const search = (document.getElementById('st-perm-search')?.value || '').toLowerCase();
-  const filtered = fjUtilizadores.filter(u => 
-    u.titulo.toLowerCase().includes(search) || 
-    u.email.toLowerCase().includes(search)
-  );
-  
-  if(!filtered.length) {
-    container.innerHTML = '<div class="empty" style="padding:2rem">Nenhum colaborador encontrado.</div>';
-    return;
-  }
-  
-  container.innerHTML = filtered.map(u => `
-    <div class="st-user-item ${String(u.id) === String(_stSelectedUserId) ? 'active' : ''}" 
-         onclick="stSelectUser('${u.id}')"
-         style="padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:all .2s; ${String(u.id) === String(_stSelectedUserId) ? 'background:var(--blue-l); border-left:4px solid var(--fj-blue);' : ''}">
-      <div style="font-weight:600; font-size:14px;">${u.titulo}</div>
-      <div style="font-size:11px; color:var(--text3);">${u.email}</div>
-    </div>
-  `).join('');
-}
-
-function stSelectUser(userId) {
-  _stSelectedUserId = userId;
-  const u = fjUtilizadores.find(x => String(x.id) === String(userId));
-  if(!u) return;
-  
-  // Mostrar painel e esconder aviso
-  document.getElementById('st-config-panel').style.display = 'block';
-  document.getElementById('st-no-selection').style.display = 'none';
-  
-  // Atualizar cabeçalho
-  document.getElementById('st-user-name').textContent = u.titulo;
-  document.getElementById('st-user-email').textContent = u.email;
-  const initials = u.titulo.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-  document.getElementById('st-user-avatar').textContent = initials;
-  
-  // Carregar permissões (Simulação por agora, depois lerá do SharePoint)
-  _stCurrentPerms = stGetDefaultPerms(u);
-  stRenderConfigModules();
-  stRenderUserList(); // Atualizar estado ativo na lista
-}
-
-function stGetDefaultPerms(u) {
-  // Lógica inicial baseada no cargo/equipa atual
-  const isDir = u.cargo === 'Diretor' || u.cargo === 'Presidente Executivo';
-  const isPE = u.cargo === 'Presidente Executivo';
-  
-  return {
-    rn: { enabled: u.equipa.length > 0 || isDir, level: isDir ? 'total' : 'dept', depts: [...u.equipa] },
-    pl: { enabled: true, level: isDir ? 'total' : 'dept', depts: [...u.equipa] },
-    gf: { enabled: u.equipa.includes('Financeiro') || isDir, level: isDir ? 'total' : 'dept', depts: [...u.equipa], approver: isDir ? 2 : 0 },
-    au: { enabled: true, level: isDir ? 'total' : 'dept', depts: [...u.equipa], approver: isDir ? 2 : 0 },
-    co: { enabled: true, level: isDir ? 'total' : 'dept', depts: [...u.equipa] }
-  };
-}
-
-function stRenderConfigModules() {
-  const container = document.getElementById('st-modules-config');
-  if(!container) return;
-  
-  const modules = [
-    { id: 'rn', name: '🤝 Reuniões', desc: 'Acesso a atas, assuntos e condução de reuniões.' },
-    { id: 'pl', name: '📊 Planeamento', desc: 'Acesso a projetos, ações e tarefas semanais.' },
-    { id: 'gf', name: '💰 Financeiro', desc: 'Acesso a orçamentos, solicitações e aprovações.' },
-    { id: 'au', name: '🏖️ Ausências', desc: 'Acesso a férias, faltas e teletrabalho.' },
-    { id: 'co', name: '📬 Correio', desc: 'Acesso ao registo de correspondência.' }
-  ];
-  
-  container.innerHTML = modules.map(m => {
-    const p = _stCurrentPerms[m.id];
-    return `
-      <div class="panel" style="background:var(--bg2); border:1px solid ${p.enabled ? 'var(--fj-blue)' : 'var(--border)'};">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <div>
-            <div style="font-weight:700; font-size:15px;">${m.name}</div>
-            <div style="font-size:12px; color:var(--text3);">${m.desc}</div>
-          </div>
-          <div style="width:40px; height:22px; background:${p.enabled ? 'var(--green-mid)' : 'var(--border2)'}; border-radius:11px; position:relative; cursor:pointer" onclick="stToggleModule('${m.id}')">
-            <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; ${p.enabled ? 'right:2px' : 'left:2px'}; transition:all .2s"></div>
-          </div>
-        </div>
-        
-        ${p.enabled ? `
-          <div style="padding-top:12px; border-top:1px solid var(--border); display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-            <div>
-              <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text3); display:block; margin-bottom:8px;">Nível de Visibilidade</label>
-              <select onchange="stSetLevel('${m.id}', this.value)" style="width:100%">
-                <option value="own" ${p.level === 'own' ? 'selected' : ''}>Apenas o Próprio</option>
-                <option value="dept" ${p.level === 'dept' ? 'selected' : ''}>Departamentos Específicos</option>
-                <option value="total" ${p.level === 'total' ? 'selected' : ''}>Total (Organização)</option>
-              </select>
-            </div>
-            ${(m.id === 'gf' || m.id === 'au') ? `
-              <div>
-                <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text3); display:block; margin-bottom:8px;">Poder de Aprovação</label>
-                <select onchange="stSetApprover('${m.id}', this.value)" style="width:100%">
-                  <option value="0" ${p.approver === 0 ? 'selected' : ''}>Nenhum</option>
-                  <option value="1" ${p.approver === 1 ? 'selected' : ''}>Nível 1 (Área)</option>
-                  <option value="2" ${p.approver === 2 ? 'selected' : ''}>Nível 2 (Final)</option>
-                </select>
-              </div>
-            ` : ''}
-          </div>
-          
-          ${p.level === 'dept' ? `
-            <div style="margin-top:12px;">
-              <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text3); display:block; margin-bottom:8px;">Departamentos com Acesso</label>
-              <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
-                ${plDepartamentos.map(d => `
-                  <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
-                    <input type="checkbox" ${p.depts.includes(d.Title) ? 'checked' : ''} onchange="stToggleDept('${m.id}', '${d.Title}')">
-                    ${d.Title}
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
-        ` : ''}
-      </div>
-    `;
-  }).join('');
-}
-
-function stToggleModule(modId) {
-  _stCurrentPerms[modId].enabled = !_stCurrentPerms[modId].enabled;
-  stRenderConfigModules();
-}
-
-function stSetLevel(modId, level) {
-  _stCurrentPerms[modId].level = level;
-  stRenderConfigModules();
-}
-
-function stSetApprover(modId, val) {
-  _stCurrentPerms[modId].approver = parseInt(val);
-}
-
-function stToggleDept(modId, dept) {
-  const idx = _stCurrentPerms[modId].depts.indexOf(dept);
-  if(idx === -1) _stCurrentPerms[modId].depts.push(dept);
-  else _stCurrentPerms[modId].depts.splice(idx, 1);
-}
-
-function stResetConfig() {
-  _stSelectedUserId = null;
-  document.getElementById('st-config-panel').style.display = 'none';
-  document.getElementById('st-no-selection').style.display = 'flex';
-  stRenderUserList();
-}
-
-async function stSavePermissions() {
-  const btn = document.getElementById('st-save-btn');
-  btn.disabled = true;
-  btn.textContent = 'A guardar...';
-  
-  showNotif('A gravar permissões no SharePoint...', 'info');
-  
-  try {
-    // Aqui implementaremos a escrita real no campo PermissoesJSON da lista FJ_Utilizadores
-    // await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Utilizadores')/items(${_stSelectedUserId})`, {
-    //   PermissoesJSON: JSON.stringify(_stCurrentPerms)
-    // }, 'MERGE', '*');
-    
-    setTimeout(() => {
-      showNotif('Permissões gravadas com sucesso!', 'success');
-      btn.disabled = false;
-      btn.textContent = 'Guardar Alterações';
-    }, 1000);
-  } catch(e) {
-    showNotif('Erro ao gravar: ' + e.message, 'error');
-    btn.disabled = false;
-    btn.textContent = 'Guardar Alterações';
-  }
-}
 
 async function coSaveTarefaEdit() {
   const id      = parseInt(document.getElementById('co-edit-tar-id').value);
