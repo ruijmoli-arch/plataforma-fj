@@ -3924,28 +3924,37 @@ function _gdUpdateCount() {
 // Normaliza texto para WinAnsi (jsPDF)
 function _gdSafe(str) {
   if (!str) return '';
-  return String(str)
-    .normalize('NFD')                          // Decompõe caracteres (ex: ç -> c + ¸)
-    .replace(/[\u0300-\u036f]/g, function(m) { // Remove diacríticos, mas mantém os básicos do Latin-1 se possível
-       // Lista de diacríticos comuns que queremos manter se o jsPDF suportar (WinAnsi/Latin-1)
-       // No entanto, para segurança total com WinAnsi, muitas vezes é melhor remover ou mapear manualmente
-       return ''; 
-    })
-    .normalize('NFC')                          // Recompõe o que sobrou
-    .replace(/[^\x00-\xFF]/g, c => {           // Substitui o que ainda estiver fora do Latin-1 (WinAnsi)
-      const map = {
-        '\u2019':"'", '\u2018':"'",
-        '\u201C':'"', '\u201D':'"',
-        '\u2013':'-', '\u2014':'-',
-        '\u2026':'...', '\u20AC':'EUR',
-        '\u0131':'i', '\u0130':'I',
-        '\u2116':'No', '\u2122':'TM',
-        '\u2022':'-', '\u2219':'-', '\u25CF':'-', // Bullets
-        '\u2192':'->', '\u2190':'<-', '\u2194':'<->', // Setas
-        '\u2713':'OK', '\u2714':'OK',             // Checkmarks
-      };
-      return map[c] ?? '';
-    });
+  // 1. Mapeamento manual de caracteres comuns problemáticos
+  const map = {
+    '\u2019':"'", '\u2018':"'", '\u201C':'"', '\u201D':'"',
+    '\u2013':'-', '\u2014':'-', '\u2026':'...', '\u20AC':'EUR',
+    '\u2192':'->', '\u2190':'<-', '\u2194':'<->',
+    '\u25BC':' ', '\u25B2':' ', '\u25B6':' ', '\u25C0':' ', // Setas/Triângulos
+    '\u2713':'OK', '\u2714':'OK', '\u2022':'-',
+  };
+  
+  let s = String(str);
+  // Substituir caracteres do mapa
+  for (let key in map) {
+    s = s.split(key).join(map[key]);
+  }
+
+  // 2. Normalização agressiva para remover diacríticos combinados (como a cedilha 0x0327)
+  // NFD separa o caractere base do diacrítico, depois removemos o diacrítico
+  s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+
+  // 3. Remoção final de QUALQUER caractere que não seja Latin-1 (0-255)
+  // O jsPDF com WinAnsi só aceita caracteres nesta gama.
+  let final = "";
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if (code <= 255) {
+      final += s[i];
+    } else {
+      final += " "; // Substitui por espaço se for desconhecido
+    }
+  }
+  return final;
 }
 
 async function gerarDocumentoPDF() {
@@ -4242,7 +4251,7 @@ async function gerarDocumentoPDF() {
               sepPage.drawLine({ start:{x:60,y:sh/2+40}, end:{x:sw-60,y:sh/2+40}, thickness:1, color:rgb(0.64,0.18,0.18) });
               sepPage.drawText('Não Anexado por não estar em PDF', { x:sw/2-120, y:sh/2+15, size:14, font:fontB, color:rgb(0.64,0.18,0.18) });
               const ext = anx.name.split('.').pop().toUpperCase();
-              sepPage.drawText(`Formato: ${ext}  ·  Ficheiro: ${anx.name}`, { x:sw/2-140, y:sh/2-10, size:10, font:fontN, color:rgb(0.4,0.4,0.4) });
+              sepPage.drawText(_gdSafe(`Formato: ${ext}  ·  Ficheiro: ${anx.name}`), { x:sw/2-140, y:sh/2-10, size:10, font:fontN, color:rgb(0.4,0.4,0.4) });
               sepPage.drawText('Para consultar este anexo, aceda ao ficheiro original no SharePoint.', { x:sw/2-180, y:sh/2-28, size:9, font:fontN, color:rgb(0.5,0.5,0.5) });
             }
           }
