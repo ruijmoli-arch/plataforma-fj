@@ -3856,6 +3856,18 @@ function _gdUpdateCount() {
 }
 
 // ── Geração do PDF ────────────────────────────────────────────────────
+// Normaliza texto para WinAnsi (jsPDF): decompõe diacríticos combinados → formas precompostas
+function _gdSafe(str) {
+  if (!str) return '';
+  // NFC: converte diacríticos combinados (ex: ı + cedilha → ç) em caracteres precompostos
+  return String(str).normalize('NFC')
+    // Substitui qualquer caractere fora do WinAnsi (Basic Latin + Latin-1 Supplement)
+    .replace(/[^\x00-\xFF]/g, c => {
+      const map = { '\u2019':"'", '\u2018':"'", '\u201C':'"', '\u201D':'"', '\u2013':'-', '\u2014':'-', '\u2026':'...', '\u20AC':'EUR', '\u00B0':'o' };
+      return map[c] || '?';
+    });
+}
+
 async function gerarDocumentoPDF() {
   const selecionados = _gdItems.filter(i => _gdSel.has(i.id));
   if (!selecionados.length) { showNotif('Seleciona pelo menos um assunto.', 'error'); return; }
@@ -3880,13 +3892,13 @@ async function gerarDocumentoPDF() {
       doc.rect(M, y, CW, 7, 'F');
       doc.setFontSize(8); doc.setFont('helvetica', 'bold');
       doc.setTextColor(...(accentRGB || GR2));
-      doc.text(label.toUpperCase(), M + 3, y + 4.8);
+      doc.text(_gdSafe(label.toUpperCase()), M + 3, y + 4.8);
       y += 7;
       // conteúdo
       if (accentRGB) { doc.setDrawColor(...accentRGB); doc.setLineWidth(0.6); doc.line(M, y, M, y + 0.1); } // placeholder
       doc.setFontSize(10); doc.setFont('helvetica', 'normal');
       doc.setTextColor(...GR1);
-      const linhas = doc.splitTextToSize(content.trim(), CW - 6);
+      const linhas = doc.splitTextToSize(_gdSafe(content.trim()), CW - 6);
       // barra lateral para proposta
       if (accentRGB) {
         const h = linhas.length * 5 + 8;
@@ -3912,12 +3924,12 @@ async function gerarDocumentoPDF() {
     doc.rect(0, 0, W, 55, 'F');
     doc.setFontSize(10); doc.setFont('helvetica', 'normal');
     doc.setTextColor(255, 255, 255); doc.setGState(new doc.GState({ opacity: 0.7 }));
-    doc.text('FUNDAÇÃO DA JUVENTUDE', M, 22);
+    doc.text(_gdSafe('FUNDAÇÃO DA JUVENTUDE'), M, 22);
     doc.setGState(new doc.GState({ opacity: 1 }));
     doc.setFontSize(22); doc.setFont('helvetica', 'bold');
-    doc.text('Ordem de Trabalhos', M, 35);
+    doc.text(_gdSafe('Ordem de Trabalhos'), M, 35);
     doc.setFontSize(12); doc.setFont('helvetica', 'normal');
-    doc.text(`${tipo} · ${new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}`, M, 46);
+    doc.text(_gdSafe(`${tipo} · ${new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}`), M, 46);
     doc.setTextColor(...GR1);
 
     // linha separadora
@@ -3927,12 +3939,12 @@ async function gerarDocumentoPDF() {
     // ── ÍNDICE ────────────────────────────────────────────────────────
     doc.setFontSize(9); doc.setFont('helvetica', 'bold');
     doc.setTextColor(...GR2);
-    doc.text('ÍNDICE', M, 70);
+    doc.text(_gdSafe('ÍNDICE'), M, 70);
     let y = 76;
     selecionados.forEach((it, idx) => {
       doc.setFontSize(10); doc.setFont('helvetica', 'normal');
       doc.setTextColor(...GR1);
-      const label = `${idx + 1}.  ${it.titulo}`;
+      const label = _gdSafe(`${idx + 1}.  ${it.titulo}`);
       const truncated = doc.splitTextToSize(label, CW - 20)[0];
       doc.text(truncated, M, y);
       // linha ponteada
@@ -3960,12 +3972,12 @@ async function gerarDocumentoPDF() {
       // numeração
       doc.setFontSize(9); doc.setFont('helvetica', 'normal');
       doc.setTextColor(...GR2);
-      doc.text(`Ponto ${idx + 1} de ${selecionados.length}`, M, y); y += 6;
+      doc.text(_gdSafe(`Ponto ${idx + 1} de ${selecionados.length}`), M, y); y += 6;
 
       // título
       doc.setFontSize(16); doc.setFont('helvetica', 'bold');
       doc.setTextColor(...GR1);
-      const tLines = doc.splitTextToSize(it.titulo, CW - 30);
+      const tLines = doc.splitTextToSize(_gdSafe(it.titulo), CW - 30);
       doc.text(tLines, M, y); y += tLines.length * 7 + 2;
 
       // badge tipo
@@ -3974,7 +3986,7 @@ async function gerarDocumentoPDF() {
       doc.roundedRect(W - M - badgeW, 18, badgeW, 6.5, 2, 2, 'F');
       doc.setFontSize(8); doc.setFont('helvetica', 'bold');
       doc.setTextColor(...(isD ? [12, 68, 124] : [39, 80, 10]));
-      doc.text(it.tipo, W - M - badgeW / 2, 22.5, { align: 'center' });
+      doc.text(_gdSafe(it.tipo), W - M - badgeW / 2, 22.5, { align: 'center' });
 
       // linha separadora
       doc.setDrawColor(...(isD ? BLUE : GREEN)); doc.setLineWidth(0.8);
@@ -3984,17 +3996,17 @@ async function gerarDocumentoPDF() {
       doc.setFillColor(238, 241, 246);
       doc.rect(M, y, CW, 12, 'F');
       const cols = [
-        ['RESPONSÁVEL', it.responsavel || '—'],
-        ['ESTADO', it.estado || '—'],
-        ['DECISÃO', it.decisao || '—'],
+        ['RESPONSÁVEL', _gdSafe(it.responsavel || '—')],
+        ['ESTADO', _gdSafe(it.estado || '—')],
+        ['DECISÃO', _gdSafe(it.decisao || '—')],
       ];
       const colW = CW / 3;
       cols.forEach(([label, val], ci) => {
         const cx = M + ci * colW;
         doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GR2);
-        doc.text(label, cx + 3, y + 4.5);
+        doc.text(_gdSafe(label), cx + 3, y + 4.5);
         doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
-        doc.text(val, cx + 3, y + 10);
+        doc.text(_gdSafe(val), cx + 3, y + 10);
         if (ci < 2) { doc.setDrawColor(...GR3); doc.setLineWidth(0.3); doc.line(cx + colW, y, cx + colW, y + 12); }
       });
       y += 16;
@@ -4008,21 +4020,21 @@ async function gerarDocumentoPDF() {
         y = newPageIfNeeded(y, 30);
         doc.setFillColor(238, 241, 246); doc.rect(M, y, CW, 7, 'F');
         doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GR2);
-        doc.text('HISTÓRICO DE DECISÕES', M + 3, y + 4.8); y += 9;
+        doc.text(_gdSafe('HISTÓRICO DE DECISÕES'), M + 3, y + 4.8); y += 9;
         const entries = it.historicoDecisoes.split('\n').filter(l => l.trim());
         entries.forEach(entry => {
           y = newPageIfNeeded(y, 12);
           const match = entry.match(/^\[([^\]]+)\]\s*(.*)/) ;
           if (match) {
             doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GR2);
-            doc.text(match[1], M + 2, y + 4);
+            doc.text(_gdSafe(match[1]), M + 2, y + 4);
             doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
-            const txt = doc.splitTextToSize(match[2], CW - 30);
+            const txt = doc.splitTextToSize(_gdSafe(match[2]), CW - 30);
             doc.text(txt, M + 32, y + 4);
             y += txt.length * 4.5 + 3;
           } else {
             doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
-            const txt = doc.splitTextToSize(entry, CW - 4);
+            const txt = doc.splitTextToSize(_gdSafe(entry), CW - 4);
             doc.text(txt, M + 2, y + 4); y += txt.length * 4.5 + 3;
           }
         });
@@ -4034,10 +4046,10 @@ async function gerarDocumentoPDF() {
         y = newPageIfNeeded(y, 20);
         doc.setFillColor(...[250, 238, 218]); doc.rect(M, y, CW, 7, 'F');
         doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...AMBER);
-        doc.text('ANEXOS', M + 3, y + 4.8); y += 9;
+        doc.text(_gdSafe('ANEXOS'), M + 3, y + 4.8); y += 9;
         it.attachments.forEach((a, ai) => {
           doc.setFontSize(9.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GR1);
-          doc.text(`Anexo ${ai + 1} — ${a.name}`, M + 3, y); y += 6;
+          doc.text(_gdSafe(`Anexo ${ai + 1} — ${a.name}`), M + 3, y); y += 6;
         });
         y += 4;
       }
