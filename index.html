@@ -3859,15 +3859,22 @@ function _gdUpdateCount() {
 }
 
 // ── Geração do PDF ────────────────────────────────────────────────────
-// Normaliza texto para WinAnsi (jsPDF): decompõe diacríticos combinados → formas precompostas
+// Normaliza texto para WinAnsi (jsPDF)
 function _gdSafe(str) {
   if (!str) return '';
-  // NFC: converte diacríticos combinados (ex: ı + cedilha → ç) em caracteres precompostos
-  return String(str).normalize('NFC')
-    // Substitui qualquer caractere fora do WinAnsi (Basic Latin + Latin-1 Supplement)
-    .replace(/[^\x00-\xFF]/g, c => {
-      const map = { '\u2019':"'", '\u2018':"'", '\u201C':'"', '\u201D':'"', '\u2013':'-', '\u2014':'-', '\u2026':'...', '\u20AC':'EUR', '\u00B0':'o' };
-      return map[c] || '?';
+  return String(str)
+    .normalize('NFC')                          // tenta pré-compor diacríticos combinados
+    .replace(/[\u0300-\u036F]/g, '')           // remove diacríticos combinados que sobraram (ex: U+0327 cedilha combinada)
+    .replace(/[^\x00-\xFF]/g, c => {           // substitui o que ainda estiver fora do Latin-1
+      const map = {
+        '\u2019':"'", '\u2018':"'",
+        '\u201C':'"', '\u201D':'"',
+        '\u2013':'-', '\u2014':'-',
+        '\u2026':'...', '\u20AC':'EUR',
+        '\u0131':'i',                           // ı → i
+        '\u0130':'I',                           // İ → I
+      };
+      return map[c] ?? '';
     });
 }
 
@@ -4079,8 +4086,9 @@ async function gerarDocumentoPDF() {
       const allAnexos = [];
       for (const it of selecionados) {
         for (const a of (it.attachments || [])) {
-          allAnexos.push({ titulo: it.titulo, name: a.name, url: a.url,
-            isPDF: a.name.toLowerCase().endsWith('.pdf') });
+          if (a.name.toLowerCase().endsWith('.pdf')) {
+            allAnexos.push({ titulo: it.titulo, name: a.name, url: a.url, isPDF: true });
+          }
         }
       }
 
