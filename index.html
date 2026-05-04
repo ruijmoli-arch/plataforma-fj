@@ -3925,16 +3925,24 @@ function _gdUpdateCount() {
 function _gdSafe(str) {
   if (!str) return '';
   return String(str)
-    .normalize('NFC')                          // tenta pré-compor diacríticos combinados
-    .replace(/[\u0300-\u036F]/g, '')           // remove diacríticos combinados que sobraram (ex: U+0327 cedilha combinada)
-    .replace(/[^\x00-\xFF]/g, c => {           // substitui o que ainda estiver fora do Latin-1
+    .normalize('NFD')                          // Decompõe caracteres (ex: ç -> c + ¸)
+    .replace(/[\u0300-\u036f]/g, function(m) { // Remove diacríticos, mas mantém os básicos do Latin-1 se possível
+       // Lista de diacríticos comuns que queremos manter se o jsPDF suportar (WinAnsi/Latin-1)
+       // No entanto, para segurança total com WinAnsi, muitas vezes é melhor remover ou mapear manualmente
+       return ''; 
+    })
+    .normalize('NFC')                          // Recompõe o que sobrou
+    .replace(/[^\x00-\xFF]/g, c => {           // Substitui o que ainda estiver fora do Latin-1 (WinAnsi)
       const map = {
         '\u2019':"'", '\u2018':"'",
         '\u201C':'"', '\u201D':'"',
         '\u2013':'-', '\u2014':'-',
         '\u2026':'...', '\u20AC':'EUR',
-        '\u0131':'i',                           // ı → i
-        '\u0130':'I',                           // İ → I
+        '\u0131':'i', '\u0130':'I',
+        '\u2116':'No', '\u2122':'TM',
+        '\u2022':'-', '\u2219':'-', '\u25CF':'-', // Bullets
+        '\u2192':'->', '\u2190':'<-', '\u2194':'<->', // Setas
+        '\u2713':'OK', '\u2714':'OK',             // Checkmarks
       };
       return map[c] ?? '';
     });
@@ -4205,11 +4213,11 @@ async function gerarDocumentoPDF() {
             sepPage.drawText(`${globalAnexo} / ${allAnexos.length}`, { x: sw - 80, y: sh - 40, size: 20, font: fontB, color: rgb(1,1,1) });
             sepPage.drawLine({ start: { x: 40, y: sh - 53 }, end: { x: sw - 40, y: sh - 53 }, thickness: 0.5, color: rgb(1,1,1,0.4) });
 
-            const tituloTrunc = titulo.length > 70 ? titulo.slice(0,70)+'...' : titulo;
+            const tituloTrunc = _gdSafe(titulo.length > 70 ? titulo.slice(0,70)+'...' : titulo);
             sepPage.drawText('ASSUNTO:', { x: 40, y: sh - 68, size: 9, font: fontB, color: rgb(1,1,1,0.8) });
             sepPage.drawText(tituloTrunc, { x: 105, y: sh - 68, size: 9, font: fontN, color: rgb(1,1,1) });
             sepPage.drawText('FICHEIRO:', { x: 40, y: sh - 82, size: 9, font: fontB, color: rgb(1,1,1,0.8) });
-            sepPage.drawText(anx.name, { x: 105, y: sh - 82, size: 9, font: fontN, color: rgb(1,1,1) });
+            sepPage.drawText(_gdSafe(anx.name), { x: 105, y: sh - 82, size: 9, font: fontN, color: rgb(1,1,1) });
 
             if (anx.isPDF && anx.bytes) {
               // PDF obtido com sucesso — incluir páginas
@@ -4223,7 +4231,7 @@ async function gerarDocumentoPDF() {
                   p.drawRectangle({ x: 0, y: 0, width: pw, height: 18, color: rgb(0.95, 0.99, 0.97) });
                   p.drawLine({ start:{x:0,y:18}, end:{x:pw,y:18}, thickness:0.3, color:rgb(0.114,0.620,0.459) });
                   p.drawText(
-                    `ANEXO ${globalAnexo}/${allAnexos.length} · ${titulo.slice(0,45)} · ${anx.name} · pag. ${pi+1}`,
+                    _gdSafe(`ANEXO ${globalAnexo}/${allAnexos.length} · ${titulo.slice(0,45)} · ${anx.name} · pag. ${pi+1}`),
                     { x:12, y:5, size:7, font:fontN, color:rgb(0.3,0.5,0.4) }
                   );
                 });
