@@ -4047,6 +4047,21 @@ async function gerarDocumentoPDF() {
       if (y > H - 20) { doc.addPage(); y = 22; }
     });
 
+    // ── PRÉ-CÁLCULO DE ANEXOS GLOBAIS ────────────────────────────────
+    const allAnexosMap = new Map(); // Map de anexo URL/Nome para ID global
+    let globalCounter = 0;
+    if (comAnexos) {
+      selecionados.forEach(it => {
+        (it.attachments || []).forEach(a => {
+          if (a.name.toLowerCase().endsWith('.pdf')) {
+            globalCounter++;
+            allAnexosMap.set(it.id + '_' + a.name, globalCounter);
+          }
+        });
+      });
+    }
+    const totalAnexosGlobais = globalCounter;
+
     // ── ASSUNTOS ──────────────────────────────────────────────────────
     for (let idx = 0; idx < selecionados.length; idx++) {
       const it = selecionados[idx];
@@ -4139,9 +4154,14 @@ async function gerarDocumentoPDF() {
         it.attachments.forEach((a, ai) => {
           y = newPageIfNeeded(y, 8);
           const isPDF = a.name.toLowerCase().endsWith('.pdf');
+          const globalId = allAnexosMap.get(it.id + '_' + a.name);
+          
           doc.setFontSize(9.5); doc.setFont('helvetica', 'normal');
           doc.setTextColor(...GR1);
-          doc.text(_gdSafe(`Anexo ${ai + 1} — ${a.name}`), M + 3, y);
+          
+          const label = isPDF ? `Anexo ${globalId} — ${a.name}` : `Anexo (Local) ${ai + 1} — ${a.name}`;
+          doc.text(_gdSafe(label), M + 3, y);
+          
           if (!isPDF) {
             doc.setFontSize(8); doc.setFont('helvetica', 'italic');
             doc.setTextColor(163, 45, 45); // vermelho escuro
@@ -4150,7 +4170,7 @@ async function gerarDocumentoPDF() {
           } else {
             doc.setFontSize(8); doc.setFont('helvetica', 'normal');
             doc.setTextColor(29, 158, 117); // verde
-            doc.text(_gdSafe('Incluído em anexo'), M + 8, y + 5);
+            doc.text(_gdSafe(`Incluído no final do documento como Anexo ${globalId} de ${totalAnexosGlobais}`), M + 8, y + 5);
             y += 11;
           }
         });
@@ -4166,7 +4186,8 @@ async function gerarDocumentoPDF() {
       for (const it of selecionados) {
         for (const a of (it.attachments || [])) {
           if (a.name.toLowerCase().endsWith('.pdf')) {
-            allAnexos.push({ titulo: it.titulo, name: a.name, url: a.url, isPDF: true });
+            const globalId = allAnexosMap.get(it.id + '_' + a.name);
+            allAnexos.push({ titulo: it.titulo, name: a.name, url: a.url, isPDF: true, globalId: globalId });
           }
         }
       }
@@ -4210,7 +4231,7 @@ async function gerarDocumentoPDF() {
         for (const [titulo, anexosDoAssunto] of Object.entries(byTitulo)) {
           for (let ai = 0; ai < anexosDoAssunto.length; ai++) {
             const anx = anexosDoAssunto[ai];
-            globalAnexo++;
+            const globalId = anx.globalId;
 
             // Página separadora para todos os anexos
             const sepPage = merged.addPage([595, 842]);
@@ -4219,7 +4240,7 @@ async function gerarDocumentoPDF() {
             const headerColor = anx.isPDF && anx.bytes ? rgb(0.114, 0.620, 0.459) : rgb(0.64, 0.18, 0.18);
             sepPage.drawRectangle({ x: 0, y: sh - 100, width: sw, height: 100, color: headerColor });
             sepPage.drawText('ANEXO', { x: 40, y: sh - 40, size: 28, font: fontB, color: rgb(1,1,1) });
-            sepPage.drawText(`${globalAnexo} / ${allAnexos.length}`, { x: sw - 80, y: sh - 40, size: 20, font: fontB, color: rgb(1,1,1) });
+            sepPage.drawText(`${globalId} / ${totalAnexosGlobais}`, { x: sw - 80, y: sh - 40, size: 20, font: fontB, color: rgb(1,1,1) });
             sepPage.drawLine({ start: { x: 40, y: sh - 53 }, end: { x: sw - 40, y: sh - 53 }, thickness: 0.5, color: rgb(1,1,1,0.4) });
 
             const tituloTrunc = _gdSafe(titulo.length > 70 ? titulo.slice(0,70)+'...' : titulo);
@@ -4240,7 +4261,7 @@ async function gerarDocumentoPDF() {
                   p.drawRectangle({ x: 0, y: 0, width: pw, height: 18, color: rgb(0.95, 0.99, 0.97) });
                   p.drawLine({ start:{x:0,y:18}, end:{x:pw,y:18}, thickness:0.3, color:rgb(0.114,0.620,0.459) });
                   p.drawText(
-                    _gdSafe(`ANEXO ${globalAnexo}/${allAnexos.length} · ${titulo.slice(0,45)} · ${anx.name} · pag. ${pi+1}`),
+                    _gdSafe(`ANEXO ${globalId}/${totalAnexosGlobais} · ${titulo.slice(0,45)} · ${anx.name} · pag. ${pi+1}`),
                     { x:12, y:5, size:7, font:fontN, color:rgb(0.3,0.5,0.4) }
                   );
                 });
