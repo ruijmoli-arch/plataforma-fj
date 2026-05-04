@@ -1464,8 +1464,53 @@ tr:hover td{background:var(--bg3)}
           <select class="flt" id="ff-h-dep" onchange="renderHier()"><option value="">Todos os departamentos</option></select>
           <select class="flt" id="ff-h-col" onchange="renderHier()"><option value="">Todos os colaboradores</option></select>
           <button class="btn btn-primary" onclick="openProjetoForm()">+ Novo projeto</button>
+          <button class="btn btn-green" onclick="openPresMode()" title="Modo Apresentação para TV">📺 Modo Apresentação</button>
         </div>
         <div id="hier-container"></div>
+      </div>
+
+      <!-- MODO APRESENTAÇÃO (TV FRIENDLY) -->
+      <div id="pl-pres-mode" style="display:none; position:fixed; inset:0; background:#001529; z-index:2000; color:#fff; font-family:inherit; overflow:hidden; flex-direction:column;">
+        <!-- Header do Modo Apresentação -->
+        <div style="padding:20px 40px; background:#002140; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
+          <div style="display:flex; align-items:center; gap:20px">
+            <div style="width:48px; height:48px; background:var(--fj-orange); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold;">FJ</div>
+            <div>
+              <div id="pres-proj-name" style="font-size:24px; font-weight:700; color:#fff;">Nome do Projeto</div>
+              <div id="pres-acao-info" style="font-size:16px; color:rgba(255,255,255,0.6);">Ação 1 de X</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:15px; align-items:center;">
+            <button class="btn" onclick="prevPresAcao()" style="padding:12px 24px; font-size:18px; background:rgba(255,255,255,0.1); color:#fff; border:none;">← Anterior</button>
+            <button class="btn" onclick="nextPresAcao()" style="padding:12px 24px; font-size:18px; background:var(--fj-orange); color:#fff; border:none;">Próxima →</button>
+            <button class="btn btn-danger" onclick="closePresMode()" style="padding:12px 24px; font-size:18px; margin-left:20px;">Sair</button>
+          </div>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <div style="flex:1; display:flex; overflow:hidden;">
+          <!-- Sidebar de Ações -->
+          <div id="pres-sidebar" style="width:350px; background:rgba(0,0,0,0.2); border-right:1px solid rgba(255,255,255,0.1); overflow-y:auto; padding:20px;">
+            <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px;">Ações do Projeto</div>
+            <div id="pres-acao-list"></div>
+          </div>
+          
+          <!-- Área de Tarefas -->
+          <div style="flex:1; padding:40px; overflow-y:auto; background:radial-gradient(circle at top right, rgba(0,48,135,0.2), transparent);">
+            <div id="pres-acao-title" style="font-size:36px; font-weight:800; margin-bottom:10px; color:var(--fj-orange);">Título da Ação</div>
+            <div id="pres-acao-meta" style="font-size:18px; color:rgba(255,255,255,0.7); margin-bottom:40px; display:flex; gap:30px;">
+              <span id="pres-acao-resp">Responsável: —</span>
+              <span id="pres-acao-dates">Datas: —</span>
+            </div>
+            
+            <div style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
+              <div style="font-size:20px; font-weight:600; color:rgba(255,255,255,0.9);">Tarefas Ordenadas por Prazo</div>
+              <button class="btn btn-primary" id="pres-add-task-btn" style="padding:8px 20px; font-size:16px;">+ Nova Tarefa</button>
+            </div>
+            
+            <div id="pres-tasks-container"></div>
+          </div>
+        </div>
       </div>
 
       <!-- GANTT -->
@@ -5942,6 +5987,124 @@ function toggleHier(projId){
   arr.style.transform=open?'rotate(180deg)':'';
   plHierOpen[`p_${projId}`]=open;
 }
+/* ===== MODO APRESENTAÇÃO ===== */
+let presCurrentProjId = null;
+let presCurrentAcaoIdx = 0;
+let presAcoes = [];
+
+function openPresMode() {
+  const projId = gv('fa-proj') || gv('ft-proj') || gv('ff-g-proj');
+  if (!projId) {
+    // Se não houver projeto selecionado nos filtros, tenta pegar o primeiro projeto visível na hierarquia
+    const firstProj = plProjetos.find(p => p.estado === 'active' || p.estado === 'Ativo');
+    if (!firstProj) {
+      showNotif('Por favor, selecione um projeto primeiro.', 'warn');
+      return;
+    }
+    presCurrentProjId = firstProj.id;
+  } else {
+    presCurrentProjId = parseInt(projId);
+  }
+
+  const proj = plProjetos.find(p => String(p.id) === String(presCurrentProjId));
+  if (!proj) return;
+
+  presAcoes = plAcoes.filter(a => String(a.projetoId) === String(presCurrentProjId));
+  if (presAcoes.length === 0) {
+    showNotif('Este projeto não tem ações definidas.', 'warn');
+    return;
+  }
+
+  presCurrentAcaoIdx = 0;
+  el('pl-pres-mode').style.display = 'flex';
+  renderPresContent();
+}
+
+function closePresMode() {
+  el('pl-pres-mode').style.display = 'none';
+}
+
+function renderPresContent() {
+  const proj = plProjetos.find(p => String(p.id) === String(presCurrentProjId));
+  const acao = presAcoes[presCurrentAcaoIdx];
+  if (!proj || !acao) return;
+
+  // Header
+  el('pres-proj-name').textContent = proj.nome;
+  el('pres-acao-info').textContent = `Ação ${presCurrentAcaoIdx + 1} de ${presAcoes.length}`;
+
+  // Sidebar
+  el('pres-acao-list').innerHTML = presAcoes.map((a, idx) => `
+    <div onclick="presGoToAcao(${idx})" style="padding:15px; border-radius:10px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; background:${idx === presCurrentAcaoIdx ? 'var(--fj-orange)' : 'rgba(255,255,255,0.05)'}; border:1px solid ${idx === presCurrentAcaoIdx ? 'var(--fj-orange)' : 'rgba(255,255,255,0.1)'};">
+      <div style="font-size:14px; font-weight:600; color:${idx === presCurrentAcaoIdx ? '#fff' : 'rgba(255,255,255,0.9)'};">${a.nome}</div>
+      <div style="font-size:11px; color:${idx === presCurrentAcaoIdx ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)'}; margin-top:4px;">${a.dep || 'Sem dep.'}</div>
+    </div>
+  `).join('');
+
+  // Main Content
+  el('pres-acao-title').textContent = acao.nome;
+  el('pres-acao-resp').textContent = `Responsável: ${acao.responsavel || '—'}`;
+  el('pres-acao-dates').textContent = `Datas: ${acao.dataInicio ? fd(acao.dataInicio) : '—'} → ${acao.dataFim ? fd(acao.dataFim) : '—'}`;
+
+  // Botão de nova tarefa
+  el('pres-add-task-btn').onclick = () => openTarFormForAcao(acao.id);
+
+  // Tarefas ordenadas por data limite
+  const ts = plTarefas.filter(t => String(t.acaoId) === String(acao.id))
+    .sort((a, b) => {
+      if (!a.dataLimite) return 1;
+      if (!b.dataLimite) return -1;
+      return new Date(a.dataLimite) - new Date(b.dataLimite);
+    });
+
+  const container = el('pres-tasks-container');
+  if (ts.length === 0) {
+    container.innerHTML = '<div style="font-size:20px; color:rgba(255,255,255,0.3); padding:40px; text-align:center; border:2px dashed rgba(255,255,255,0.1); border-radius:20px;">Sem tarefas nesta ação.</div>';
+  } else {
+    container.innerHTML = ts.map(t => {
+      const isOverdue = t.dataLimite && new Date(t.dataLimite) < new Date() && t.estado !== 'Concluída';
+      return `
+      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:15px; padding:20px; margin-bottom:15px; display:flex; align-items:center; gap:20px; transition:transform 0.2s;" onmouseover="this.style.transform='translateX(10px)'" onmouseout="this.style.transform='none'">
+        <input type="checkbox" ${t.estado === 'Concluída' ? 'checked' : ''} onchange="toggleTar('${t.id}',this.checked); setTimeout(renderPresContent, 500);" style="width:24px; height:24px; cursor:pointer; accent-color:var(--fj-orange);">
+        <div style="flex:1;">
+          <div style="font-size:20px; font-weight:500; color:${t.estado === 'Concluída' ? 'rgba(255,255,255,0.4)' : '#fff'}; text-decoration:${t.estado === 'Concluída' ? 'line-through' : 'none'};">${t.titulo}</div>
+          <div style="display:flex; gap:20px; margin-top:8px; font-size:14px; color:rgba(255,255,255,0.5);">
+            <span>👤 ${t.responsavel || '—'}</span>
+            <span style="color:${isOverdue ? '#ff4d4f' : 'inherit'}; font-weight:${isOverdue ? '700' : 'normal'};">📅 Prazo: ${fd(t.dataLimite)}</span>
+            <span>${estB(t.prioridade)}</span>
+            <span>${estB(t.estado)}</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn" onclick="openTarFormEdit('${t.id}')" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 15px;">✎ Editar</button>
+          <button class="btn btn-danger" onclick="delPlTarefa('${t.id}')" style="padding:8px 15px;">✕</button>
+        </div>
+      </div>
+    `}).join('');
+  }
+}
+
+function nextPresAcao() {
+  if (presCurrentAcaoIdx < presAcoes.length - 1) {
+    presCurrentAcaoIdx++;
+    renderPresContent();
+  } else {
+    showNotif('Fim das ações do projeto.', 'info');
+  }
+}
+
+function prevPresAcao() {
+  if (presCurrentAcaoIdx > 0) {
+    presCurrentAcaoIdx--;
+    renderPresContent();
+  }
+}
+
+function presGoToAcao(idx) {
+  presCurrentAcaoIdx = idx;
+  renderPresContent();
+}
+
 function toggleHierAcao(acaoId){
   const panel=el(`hier-t-${acaoId}`);
   const open=panel.classList.toggle('open');
