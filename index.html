@@ -872,40 +872,87 @@ tr:hover td{background:var(--bg3)}
           <div class="stat"><span class="stat-n" id="s-aprov" style="color:var(--green-mid)">—</span><span class="stat-l">Aprovados</span></div>
           <div class="stat"><span class="stat-n" id="s-pend" style="color:var(--amber)">—</span><span class="stat-l">Pendentes</span></div>
         </div>
-        <div class="overlay" id="frm-ov">
-          <div class="panel">
-            <div class="panel-title" id="frm-title">Novo assunto</div>
-            <div class="fgrid">
-              <div class="fg" style="grid-column:1/-1"><label>Assunto *</label><input type="text" id="f-titulo" placeholder="Título do assunto ou proposta"></div>
-              <div class="fg"><label>Tipo de reunião *</label>
-                <select id="f-reuniao"><option>Reunião com CAdm</option><option>Reunião Gestão</option><option>Reunião O.Norte</option><option>Reunião O.Sul</option><option>Reunião Financeiro</option><option>Reunião Impacto</option></select>
+        <div id="frm-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:600;background:rgba(0,0,0,.45);overflow-y:auto" onclick="if(event.target===this)closeForm()">
+          <div style="max-width:780px;margin:48px auto;padding:0 1rem 2rem">
+            <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+              <!-- Cabeçalho -->
+              <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:18px">📋</span>
+                  <span id="frm-title" style="font-size:16px;font-weight:600;color:#fff">Novo assunto</span>
+                </div>
+                <button onclick="closeForm()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
               </div>
-              <div class="fg"><label>Data</label><input type="date" id="f-data"></div>
-              <div class="fg"><label>Tipo *</label><select id="f-tipo"><option>Deliberativo</option><option>Informativo</option></select></div>
-              <div class="fg"><label>Responsável</label>
-                <select id="f-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select>
+              <!-- Corpo -->
+              <div style="padding:24px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Assunto *</label>
+                    <input type="text" id="f-titulo" placeholder="Título do assunto ou proposta" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Tipo de reunião *</label>
+                    <select id="f-reuniao" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Reunião com CAdm</option><option>Reunião Gestão</option><option>Reunião O.Norte</option><option>Reunião O.Sul</option><option>Reunião Financeiro</option><option>Reunião Impacto</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data</label>
+                    <input type="date" id="f-data" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Tipo *</label>
+                    <select id="f-tipo" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Deliberativo</option><option>Informativo</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável</label>
+                    <select id="f-resp" class="user-resp-sel" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Estado</label>
+                    <select id="f-estado" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Em aberto</option><option>Em processo</option><option>Concluído</option><option>Cancelado</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Encaminhamento</label>
+                    <select id="f-enc" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>—</option><option>Presidente Executivo</option><option>Segue para CA</option><option>Ambos</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Decisão</label>
+                    <select id="f-dec" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Pendente</option><option>Aprovado</option><option>Não aprovado</option><option>N/A</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Nível origem</label>
+                    <select id="f-nivel-origem" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Departamento</option><option>Gestão</option><option>CA</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Nível atual</label>
+                    <select id="f-nivel-atual" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Departamento</option><option>Gestão</option><option>CA</option></select>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Contextualização / Notas</label>
+                    <textarea id="f-notas" placeholder="Contexto e observações..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:80px;resize:vertical"></textarea>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Proposta de Decisão <span style="font-size:11px;color:var(--text3);text-transform:none;font-weight:400">(apenas deliberativos)</span></label>
+                    <textarea id="f-proposta" placeholder="Descreve a proposta de decisão..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:70px;resize:vertical"></textarea>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <div style="background:var(--bg3);border:1.5px dashed var(--border2);border-radius:8px;padding:14px 16px">
+                      <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📎 Anexos</label>
+                      <input type="file" id="f-file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" style="font-size:13px;font-family:inherit;color:var(--text);width:100%">
+                      <div class="attach-list" id="existing-attachments" style="margin-top:8px"></div>
+                    </div>
+                  </div>
+                  <div style="grid-column:1/-1;display:flex;gap:24px">
+                    <div style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;color:var(--text2)">Confidencial</label><button class="toggle" id="t-conf" onclick="tog('conf')"></button><span id="l-conf" style="font-size:12px;color:var(--text2)">Não</span></div>
+                    <div style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;color:var(--text2)">Atrasado</label><button class="toggle" id="t-atras" onclick="tog('atras')"></button><span id="l-atras" style="font-size:12px;color:var(--text2)">Não</span></div>
+                  </div>
+                  <div style="grid-column:1/-1" id="hist-dec-panel"></div>
+                </div>
               </div>
-              <div class="fg"><label>Estado</label><select id="f-estado"><option>Em aberto</option><option>Em processo</option><option>Concluído</option><option>Cancelado</option></select></div>
-              <div class="fg"><label>Encaminhamento</label><select id="f-enc"><option>—</option><option>Presidente Executivo</option><option>Segue para CA</option><option>Ambos</option></select></div>
-              <div class="fg"><label>Decisão</label><select id="f-dec"><option>Pendente</option><option>Aprovado</option><option>Não aprovado</option><option>N/A</option></select></div>
-              <div class="fg"><label>Nível origem</label><select id="f-nivel-origem"><option>Departamento</option><option>Gestão</option><option>CA</option></select></div>
-              <div class="fg"><label>Nível atual</label><select id="f-nivel-atual"><option>Departamento</option><option>Gestão</option><option>CA</option></select></div>
-              <div class="fg" style="grid-column:1/-1"><label>Contextualização / Notas</label><textarea id="f-notas" placeholder="Contexto e observações..."></textarea></div>
-              <div class="fg" style="grid-column:1/-1"><label>Proposta de Decisão <span style="font-size:11px;color:var(--text3)">(apenas deliberativos)</span></label><textarea id="f-proposta" placeholder="Descreve a proposta de decisão..."></textarea></div>
-              <div class="fg" style="grid-column:1/-1">
-                <label>Anexos</label>
-                <input type="file" id="f-file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" style="padding:6px">
-                <div class="attach-list" id="existing-attachments"></div>
+              <!-- Rodapé -->
+              <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg3)">
+                <button class="btn" onclick="closeForm()" style="min-width:90px">Cancelar</button>
+                <button class="btn btn-primary" id="save-btn" onclick="saveItem()" style="min-width:110px">Guardar</button>
               </div>
-            </div>
-            <div style="display:flex;gap:24px;margin-top:14px">
-              <div style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;color:var(--text2)">Confidencial</label><button class="toggle" id="t-conf" onclick="tog('conf')"></button><span id="l-conf" style="font-size:12px;color:var(--text2)">Não</span></div>
-              <div style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;color:var(--text2)">Atrasado</label><button class="toggle" id="t-atras" onclick="tog('atras')"></button><span id="l-atras" style="font-size:12px;color:var(--text2)">Não</span></div>
-            </div>
-            <div id="hist-dec-panel"></div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-btn" onclick="saveItem()">Guardar</button>
             </div>
           </div>
         </div>
@@ -1001,43 +1048,81 @@ tr:hover td{background:var(--bg3)}
       <!-- REUNIÕES EXTERNAS -->
       <div class="page" id="page-externas">
         <div class="page-title">Reuniões com entidades externas</div>
-        <div class="overlay" id="frm-ext-ov">
-          <div class="panel">
-            <div class="panel-title" id="frm-ext-title">Nova reunião externa</div>
-            <div class="fgrid">
-              <div class="fg" style="grid-column:1/-1"><label>Título / Assunto da reunião *</label><input type="text" id="fe-titulo" placeholder="Ex: Reunião com IPDJ sobre candidatura X"></div>
-              <div class="fg"><label>Entidade *</label><input type="text" id="fe-entidade" placeholder="Nome da entidade ou organização"></div>
-              <div class="fg"><label>Data *</label><input type="date" id="fe-data"></div>
-              <div class="fg"><label>Local</label><input type="text" id="fe-local" placeholder="Presencial ou Online"></div>
-              <div class="fg"><label>Departamento</label>
-                <select id="fe-dep"></select>
+        <div id="frm-ext-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:600;background:rgba(0,0,0,.45);overflow-y:auto" onclick="if(event.target===this)closeExtForm()">
+          <div style="max-width:780px;margin:48px auto;padding:0 1rem 2rem">
+            <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+              <!-- Cabeçalho -->
+              <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:18px">🤝</span>
+                  <span id="frm-ext-title" style="font-size:16px;font-weight:600;color:#fff">Nova reunião externa</span>
+                </div>
+                <button onclick="closeExtForm()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
               </div>
-              <div class="fg"><label>Responsável FJ</label>
-                <select id="fe-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fe-resp-email')" style="width:100%"><option value="">— Selecionar —</option></select>
-                <input type="hidden" id="fe-resp-email">
-              </div>
-              <div class="fg" style="grid-column:1/-1"><label>Participantes</label><textarea id="fe-part" placeholder="Lista de participantes da reunião..."></textarea></div>
-              <div class="fg" style="grid-column:1/-1"><label>Resumo da reunião *</label><textarea id="fe-resumo" placeholder="Principais pontos discutidos na reunião..." style="min-height:120px"></textarea></div>
-              <div class="fg" style="grid-column:1/-1"><label>Próximos Passos</label><textarea id="fe-passos" placeholder="Ações e próximos passos definidos..."></textarea></div>
-              <div class="fg" style="grid-column:1/-1">
-                <label>Tarefas / Compromissos da reunião</label>
-                <div id="fe-tarefas-list" style="margin-bottom:8px"></div>
-                <div style="display:grid;grid-template-columns:3fr 2fr 1fr auto;gap:8px;align-items:end">
-                  <input type="text" id="fe-tar-titulo" placeholder="Descrição da tarefa...">
-                  <select id="fe-tar-resp" class="user-resp-sel" style="font-size:13px"><option value="">— Responsável —</option></select>
-                  <input type="date" id="fe-tar-data">
-                  <button type="button" class="btn btn-primary btn-sm" onclick="addTarefaInline()">+ Adicionar</button>
+              <!-- Corpo -->
+              <div style="padding:24px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Título / Assunto da reunião *</label>
+                    <input type="text" id="fe-titulo" placeholder="Ex: Reunião com IPDJ sobre candidatura X" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Entidade *</label>
+                    <input type="text" id="fe-entidade" placeholder="Nome da entidade ou organização" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data *</label>
+                    <input type="date" id="fe-data" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Local</label>
+                    <input type="text" id="fe-local" placeholder="Presencial ou Online" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Departamento</label>
+                    <select id="fe-dep" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável FJ</label>
+                    <select id="fe-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fe-resp-email')" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
+                    <input type="hidden" id="fe-resp-email">
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Participantes</label>
+                    <textarea id="fe-part" placeholder="Lista de participantes da reunião..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:70px;resize:vertical"></textarea>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Resumo da reunião *</label>
+                    <textarea id="fe-resumo" placeholder="Principais pontos discutidos na reunião..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:100px;resize:vertical"></textarea>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Próximos Passos</label>
+                    <textarea id="fe-passos" placeholder="Ações e próximos passos definidos..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:70px;resize:vertical"></textarea>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Tarefas / Compromissos da reunião</label>
+                    <div id="fe-tarefas-list" style="margin-bottom:8px"></div>
+                    <div style="display:grid;grid-template-columns:3fr 2fr 1fr auto;gap:8px;align-items:end">
+                      <input type="text" id="fe-tar-titulo" placeholder="Descrição da tarefa..." style="padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                      <select id="fe-tar-resp" class="user-resp-sel" style="font-size:13px;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:#fff;color:var(--text)"><option value="">— Responsável —</option></select>
+                      <input type="date" id="fe-tar-data" style="padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                      <button type="button" class="btn btn-primary btn-sm" onclick="addTarefaInline()">+ Adicionar</button>
+                    </div>
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <div style="background:var(--bg3);border:1.5px dashed var(--border2);border-radius:8px;padding:14px 16px">
+                      <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📎 Anexos</label>
+                      <input type="file" id="fe-file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:13px;font-family:inherit;color:var(--text);width:100%">
+                      <div class="attach-list" id="fe-attachments" style="margin-top:8px"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="fg" style="grid-column:1/-1">
-                <label>Anexos</label>
-                <input type="file" id="fe-file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" style="padding:6px">
-                <div class="attach-list" id="fe-attachments"></div>
+              <!-- Rodapé -->
+              <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg3)">
+                <button class="btn" onclick="closeExtForm()" style="min-width:90px">Cancelar</button>
+                <button class="btn btn-primary" id="save-ext-btn" onclick="saveExt()" style="min-width:110px">Guardar</button>
               </div>
-            </div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeExtForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-ext-btn" onclick="saveExt()">Guardar</button>
             </div>
           </div>
         </div>
@@ -1046,7 +1131,7 @@ tr:hover td{background:var(--bg3)}
           <select class="flt" id="ffe-dep" onchange="renderExtTable()"><option value="">Departamento: todos</option></select>
           <input type="date" class="flt" id="ffe-from" onchange="renderExtTable()" style="font-size:13px;padding:8px">
           <input type="date" class="flt" id="ffe-to" onchange="renderExtTable()" style="font-size:13px;padding:8px">
-          <button class="btn" onclick="loadExtItems()">&#8635;</button>
+          <button class="btn" onclick="resetExtFilters()">&#8635;</button>
           <button class="btn btn-primary" onclick="openExtForm()">+ Nova reunião</button>
         </div>
         <div class="table-wrap">
@@ -1068,23 +1153,51 @@ tr:hover td{background:var(--bg3)}
           <div class="stat"><span class="stat-n" id="t-emcurso" style="color:var(--blue-d)">—</span><span class="stat-l">Em curso</span></div>
           <div class="stat"><span class="stat-n" id="t-atrasadas" style="color:var(--red)">—</span><span class="stat-l">Atrasadas</span></div>
         </div>
-        <div class="overlay" id="frm-tar-ov">
-          <div class="panel">
-            <div class="panel-title" id="frm-tar-title">Nova tarefa</div>
-            <div class="fgrid">
-              <div class="fg" style="grid-column:1/-1"><label>Título da tarefa *</label><input type="text" id="ft-titulo" placeholder="Descreve a tarefa..."></div>
-              <div class="fg" style="grid-column:1/-1"><label>Descrição / Objetivo</label><textarea id="ft-desc" placeholder="Contexto e objetivo da tarefa..."></textarea></div>
-              <div class="fg"><label>Responsável</label>
-                <select id="ft-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select>
+        <div id="frm-tar-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:600;background:rgba(0,0,0,.45);overflow-y:auto" onclick="if(event.target===this)closeRnTarForm()">
+          <div style="max-width:580px;margin:48px auto;padding:0 1rem 2rem">
+            <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+              <!-- Cabeçalho -->
+              <div style="background:var(--fj-blue);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:18px">✅</span>
+                  <span id="frm-tar-title" style="font-size:16px;font-weight:600;color:#fff">Nova tarefa</span>
+                </div>
+                <button onclick="closeRnTarForm()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
               </div>
-              <div class="fg"><label>Data limite</label><input type="date" id="ft-data"></div>
-              <div class="fg"><label>Estado</label><select id="ft-estado"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select></div>
-              <div class="fg"><label>Prioridade</label><select id="ft-prior"><option>Média</option><option>Alta</option><option>Baixa</option></select></div>
-
-            </div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeRnTarForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-tar-btn" onclick="saveTarefa()">Guardar</button>
+              <!-- Corpo -->
+              <div style="padding:24px">
+                <div style="margin-bottom:16px">
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Título da tarefa *</label>
+                  <input type="text" id="ft-titulo" placeholder="Descreve a tarefa..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text)">
+                </div>
+                <div style="margin-bottom:16px">
+                  <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Descrição / Objetivo</label>
+                  <textarea id="ft-desc" placeholder="Contexto e objetivo da tarefa..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:70px;resize:vertical"></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável</label>
+                    <select id="ft-resp" class="user-resp-sel" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data limite</label>
+                    <input type="date" id="ft-data" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Estado</label>
+                    <select id="ft-estado" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Prioridade</label>
+                    <select id="ft-prior" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Média</option><option>Alta</option><option>Baixa</option></select>
+                  </div>
+                </div>
+              </div>
+              <!-- Rodapé -->
+              <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg3)">
+                <button class="btn" onclick="closeRnTarForm()" style="min-width:90px">Cancelar</button>
+                <button class="btn btn-primary" id="save-tar-btn" onclick="saveTarefa()" style="min-width:110px">Guardar</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1215,62 +1328,126 @@ tr:hover td{background:var(--bg3)}
       <div id="pl-page-hierarquia" class="page">
         <div class="page-title">Projetos &amp; Ações</div>
         <!-- Formulário de nova ação -->
-        <div id="frm-acao-ov" class="overlay">
-          <div class="panel">
-            <div class="panel-title" id="frm-acao-title">Nova ação</div>
-            <div class="fgrid">
-              <div class="fg" style="grid-column:span 2"><label>Nome da ação *</label><input id="fa-nome" placeholder="Nome da ação"></div>
-              <div class="fg"><label>Projeto (Factorial) *</label><select id="fa-proj"><option value="">Selecionar...</option></select></div>
-              <div class="fg"><label>Tipo</label><select id="fa-tipo"><option value="Recorrente">Recorrente</option><option value="INOV">INOV</option></select></div>
-              <div class="fg"><label>Departamento</label><select id="fa-dep"><option value="">—</option></select></div>
-              <div class="fg"><label>Estado</label><select id="fa-estado"><option>Ativo</option><option>Concluído</option><option>Pausado</option><option>Cancelado</option></select></div>
-              <div class="fg"><label>Data de início</label><input id="fa-inicio" type="date"></div>
-              <div class="fg"><label>Data de fim</label><input id="fa-fim" type="date"></div>
-              <div class="fg">
-                <label>Responsável</label>
-                <select id="fa-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fa-resp-email')"><option value="">— Selecionar —</option></select>
-                <input id="fa-resp-email" type="hidden">
+        <div id="frm-acao-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:600;background:rgba(0,0,0,.45);overflow-y:auto" onclick="if(event.target===this)closeAcaoForm()">
+          <div style="max-width:680px;margin:48px auto;padding:0 1rem 2rem">
+            <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+              <!-- Cabeçalho -->
+              <div style="background:var(--mod-planeamento);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:18px">⚡</span>
+                  <span id="frm-acao-title" style="font-size:16px;font-weight:600;color:#fff">Nova ação</span>
+                </div>
+                <button onclick="closeAcaoForm()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
               </div>
-              <div class="fg"></div>
-              <div class="fg" style="grid-column:span 2"><label>Notas</label><textarea id="fa-notas"></textarea></div>
-            </div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeAcaoForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-acao-btn" onclick="saveAcao()">Guardar</button>
+              <!-- Corpo -->
+              <div style="padding:24px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Nome da ação *</label>
+                    <input id="fa-nome" placeholder="Nome da ação" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Projeto (Factorial) *</label>
+                    <select id="fa-proj" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">Selecionar...</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Tipo</label>
+                    <select id="fa-tipo" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="Recorrente">Recorrente</option><option value="INOV">INOV</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Departamento</label>
+                    <select id="fa-dep" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">—</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Estado</label>
+                    <select id="fa-estado" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>Ativo</option><option>Concluído</option><option>Pausado</option><option>Cancelado</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data de início</label>
+                    <input id="fa-inicio" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data de fim</label>
+                    <input id="fa-fim" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável</label>
+                    <select id="fa-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fa-resp-email')" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
+                    <input id="fa-resp-email" type="hidden">
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Notas</label>
+                    <textarea id="fa-notas" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:80px;resize:vertical"></textarea>
+                  </div>
+                </div>
+              </div>
+              <!-- Rodapé -->
+              <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg3)">
+                <button class="btn" onclick="closeAcaoForm()" style="min-width:90px">Cancelar</button>
+                <button class="btn btn-primary" id="save-acao-btn" onclick="saveAcao()" style="min-width:110px">Guardar</button>
+              </div>
             </div>
           </div>
         </div>
         <!-- Formulário de novo projeto -->
-        <div id="frm-proj-ov" class="overlay">
-          <div class="panel">
-            <div class="panel-title" id="frm-proj-title">Novo projeto</div>
-            <div class="fgrid">
-              <div class="fg" style="grid-column:span 2"><label>Nome do projeto *</label><input id="fp-nome" placeholder="Nome do projeto"></div>
-              <div class="fg"><label>Código</label><input id="fp-codigo" placeholder="Ex: PROJ-001"></div>
-              <div class="fg"><label>Departamento</label>
-                <select id="fp-dep">
-                  <option value="">Selecionar...</option>
-                </select>
+        <div id="frm-proj-ov" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:600;background:rgba(0,0,0,.45);overflow-y:auto" onclick="if(event.target===this)closeProjetoForm()">
+          <div style="max-width:680px;margin:48px auto;padding:0 1rem 2rem">
+            <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+              <!-- Cabeçalho -->
+              <div style="background:var(--mod-planeamento);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-size:18px">📁</span>
+                  <span id="frm-proj-title" style="font-size:16px;font-weight:600;color:#fff">Novo projeto</span>
+                </div>
+                <button onclick="closeProjetoForm()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
               </div>
-              <div class="fg"><label>Data de início</label><input id="fp-inicio" type="date"></div>
-              <div class="fg"><label>Data de fim</label><input id="fp-fim" type="date"></div>
-              <div class="fg"><label>Ano orçamental</label>
-                <select id="fp-ano"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option></select>
+              <!-- Corpo -->
+              <div style="padding:24px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Nome do projeto *</label>
+                    <input id="fp-nome" placeholder="Nome do projeto" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Código</label>
+                    <input id="fp-codigo" placeholder="Ex: PROJ-001" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Departamento</label>
+                    <select id="fp-dep" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">Selecionar...</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data de início</label>
+                    <input id="fp-inicio" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Data de fim</label>
+                    <input id="fp-fim" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Ano orçamental</label>
+                    <select id="fp-ano" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Estado</label>
+                    <select id="fp-estado" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="active">Ativo</option><option value="Concluído">Concluído</option><option value="Pausado">Pausado</option></select>
+                  </div>
+                  <div>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável</label>
+                    <select id="fp-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fp-resp-email')" style="width:100%;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
+                    <input id="fp-resp-email" type="hidden">
+                  </div>
+                  <div style="grid-column:1/-1">
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Notas</label>
+                    <textarea id="fp-notas" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text);min-height:80px;resize:vertical"></textarea>
+                  </div>
+                </div>
               </div>
-              <div class="fg"><label>Estado</label>
-                <select id="fp-estado"><option value="active">Ativo</option><option value="Concluído">Concluído</option><option value="Pausado">Pausado</option></select>
+              <!-- Rodapé -->
+              <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg3)">
+                <button class="btn" onclick="closeProjetoForm()" style="min-width:90px">Cancelar</button>
+                <button class="btn btn-primary" id="save-proj-btn" onclick="saveProjeto()" style="min-width:110px">Guardar</button>
               </div>
-              <div class="fg">
-                <label>Responsável</label>
-                <select id="fp-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fp-resp-email')"><option value="">— Selecionar —</option></select>
-                <input id="fp-resp-email" type="hidden">
-              </div>
-              <div class="fg"></div>
-              <div class="fg" style="grid-column:span 2"><label>Notas</label><textarea id="fp-notas"></textarea></div>
-            </div>
-            <div class="panel-footer">
-              <button class="btn" onclick="closeProjetoForm()">Cancelar</button>
-              <button class="btn btn-primary" id="save-proj-btn" onclick="saveProjeto()">Guardar</button>
             </div>
           </div>
         </div>
@@ -2880,7 +3057,7 @@ function renderTable(){
 
 function openForm(id){
   editId=id||null;
-  const p=el('frm-ov');p.classList.add('open');p.scrollIntoView({behavior:'smooth',block:'nearest'});
+  const p=el('frm-ov');p.style.display='block';
   el('existing-attachments').innerHTML='';el('f-file').value='';el('hist-dec-panel').innerHTML='';
   if(id){
     const i=items.find(x=>x.id===id);if(!i)return;
@@ -2911,15 +3088,25 @@ function openForm(id){
   }
 }
 function editItem(id){openForm(id);}
-function closeForm(){el('frm-ov').classList.remove('open');editId=null;}
+function closeForm(){el('frm-ov').style.display='none';editId=null;}
 
 async function removeAttach(list,itemId,fileName){
   if(!confirm(`Remover "${fileName}"?`))return;
   try{
     await getSPToken();const digest=await getDigest();
     await fetch(`${SP}/_api/web/lists/getbytitle('${list}')/items(${itemId})/AttachmentFiles/getByFileName('${encodeURIComponent(fileName)}')`,{method:'DELETE',headers:{Authorization:`Bearer ${spToken}`,'X-RequestDigest':digest,'IF-MATCH':'*'}});
-    await loadItems();if(editId)openForm(editId);
-  }catch(e){showNotif('Erro: '+e.message,'error');}
+    showNotif('Anexo removido.','success');
+    // Refrescar dados e re-abrir o formulário correspondente
+    if(list==='FJ_Assuntos'){await loadItems();if(editId)openForm(editId);}
+    else if(list==='FJ_ReunioesExternas'){await loadExtItems();if(editExtId)openExtForm(editExtId);}
+    else if(list==='FJ_TarefasReuniao'){await loadRnTarefas();if(rnEditTarId)openRnTarForm(rnEditTarId);}
+    else if(list==='FJ_Solicitacoes'){gfLoadSolicitacaoAttachments(itemId);}
+    else if(list==='FJ_Tarefas'||list==='FJ_CorreioTarefas'){
+      await loadTarefas();renderSem();renderHier();renderDash();
+      const t=plTarefas.find(x=>x.spId===itemId&&x.lista===list);
+      if(t)openTarFormEdit(t.id);
+    }
+  }catch(e){showNotif('Erro ao remover: '+e.message,'error');}
 }
 
 async function saveItem(){
@@ -2959,6 +3146,13 @@ async function deleteItem(id){
 }
 
 // REUNIÕES EXTERNAS
+function resetExtFilters(){
+  const f=el('ffe-from'),t=el('ffe-to');
+  if(f)f.value='';if(t)t.value='';
+  const dep=el('ffe-dep');if(dep)dep.value='';
+  const q=el('qe');if(q)q.value='';
+  loadExtItems();
+}
 async function loadExtItems(){
   try{
     const d=await spRead(`${SP}/_api/web/lists/getbytitle('FJ_ReunioesExternas')/items?$select=*,AttachmentFiles,Departamento/Title,Responsavel/Title&$expand=AttachmentFiles,Departamento,Responsavel&$orderby=DataReuniao desc&$top=500`);
@@ -3009,7 +3203,7 @@ function openExtForm(id){
     console.error('Modal frm-ext-ov não encontrado!');
     return;
   }
-  modal.style.display='flex';
+  modal.style.display='block';
   el('fe-attachments').innerHTML='';el('fe-file').value='';
   if(id){
     const i=extItems.find(x=>x.id===id);if(!i)return;
@@ -3029,7 +3223,7 @@ function openExtForm(id){
   }
 }
 function editExt(id){openExtForm(id);}
-function closeExtForm(){el('frm-ext-ov').classList.remove('open');editExtId=null;}
+function closeExtForm(){const m=el('frm-ext-ov');m.style.display='none';editExtId=null;}
 async function saveExt(){
   const titulo=el('fe-titulo').value.trim();
   if(!titulo){alert('Por favor indique o título.');return;}
@@ -3117,7 +3311,9 @@ async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
     const listType='SP.Data.FJ_x005f_TarefasReuniaoListItem';
     for(const t of feInlineTarefas){
       const body={__metadata:{type:listType},
-        Title:t.titulo
+        Title:t.titulo,
+        Estado:'Por fazer',
+        Prioridade:'Média'
       };
       if(reuniaoId) body.ReuniaoExternaIdId=parseInt(reuniaoId);
       if(t.resp)body.Responsavel=t.resp;
@@ -3125,9 +3321,12 @@ async function saveInlineTarefas(reuniaoId,reuniaoTitulo){
       if(t.data)body.DataLimite=t.data+'T00:00:00Z';
       await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_TarefasReuniao')/items`,body,'POST');
     }
-  }catch(e){console.warn('saveInlineTarefas error:',e.message);}
-  feInlineTarefas=[];
-  renderInlineTarefas();
+    feInlineTarefas=[];
+    renderInlineTarefas();
+  }catch(e){
+    console.warn('saveInlineTarefas error:',e.message);
+    showNotif('Aviso: algumas tarefas não foram guardadas — '+e.message,'error');
+  }
 }
 
 // TAREFAS
@@ -3190,7 +3389,7 @@ function renderTarefasTable(){
 }
 function openRnTarForm(id){
   rnEditTarId=id||null;
-  el('frm-tar-ov').classList.add('open');
+  el('frm-tar-ov').style.display='block';
   if(id){
     const t=rnTarefas.find(x=>x.id===id);if(!t)return;
     el('frm-tar-title').textContent='Editar tarefa';
@@ -3205,7 +3404,7 @@ function openRnTarForm(id){
   }
 }
 function editTar(id){openRnTarForm(id);}
-function closeRnTarForm(){el('frm-tar-ov').classList.remove('open');rnEditTarId=null;}
+function closeRnTarForm(){el('frm-tar-ov').style.display='none';rnEditTarId=null;}
 async function saveTarefa(){
   const titulo=el('ft-titulo').value.trim();
   if(!titulo){alert('Por favor indique o título.');return;}
@@ -4831,6 +5030,8 @@ function renderHier(){
         ${depB(p.dep)}
         <span style="font-size:11px;background:var(--bg3);border-radius:6px;padding:2px 8px;color:var(--tx2)">${pAcoes.length} ações · ${tarTotal.length} tarefas${pct!==null?' · '+pct+'% conc.':''}</span>
         ${isDir?`<button class="btn btn-sm btn-primary" style="font-size:11px" onclick="event.stopPropagation();openAcaoForm(${p.id})">+ Ação</button>`:''}
+        ${isDir?`<button class="btn btn-sm" style="font-size:11px" onclick="event.stopPropagation();openProjetoForm(${p.id})" title="Editar projeto">✎</button>`:''}
+        ${isDir?`<button class="btn btn-sm btn-danger" style="font-size:11px" onclick="event.stopPropagation();delProjeto(${p.id})" title="Eliminar projeto">✕</button>`:''}
         <svg id="hier-arrow-${p.id}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="transition:transform .2s"><path d="M4 6l4 4 4-4"/></svg>
       </div>
       <div class="hier-acao-wrap" id="hier-plAcoes-${p.id}">
@@ -4867,7 +5068,7 @@ function renderHier(){
                 <td style="font-size:11px;padding:7px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
                 <td style="padding:7px 4px">${estB(t.prioridade)}</td>
                 <td style="padding:7px 4px">${estB(t.estado)}</td>
-                <td style="padding:7px 4px">${isDir?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button>`:''}</td>
+                <td style="padding:7px 4px;white-space:nowrap">${isDir?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button><button class="btn btn-sm btn-danger" onclick="delPlTarefa('${t.id}')" style="margin-left:3px">✕</button>`:''}</td>
               </tr>`).join('')}
               </tbody>
             </table>
@@ -4906,7 +5107,7 @@ function renderHier(){
                 <td style="font-size:11px;padding:6px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
                 <td style="padding:6px 4px">${estB(t.prioridade)}</td>
                 <td style="padding:6px 4px">${estB(t.estado)}</td>
-                <td style="padding:6px 4px">${isDir?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')" title="Editar tarefa" style="font-size:13px;padding:3px 8px">✎</button>`:''}</td>
+                <td style="padding:6px 4px">${isDir?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')" title="Editar tarefa" style="font-size:13px;padding:3px 8px">✎</button><button class="btn btn-sm btn-danger" onclick="delPlTarefa('${t.id}')" style="margin-left:3px;font-size:13px;padding:3px 8px">✕</button>`:''}</td>
               </tr>`).join('')}
             </table>`:'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Sem plTarefas nesta ação.</div>'}
             ${kps.length?`<div style="margin-top:4px;background:#F5F3FF;border-left:4px solid #7C3AED;border-radius:0 6px 6px 0;padding:10px 14px">
@@ -4941,7 +5142,7 @@ function renderHier(){
         <td style="font-size:12px;padding:8px 4px">${fd(t.dataLimite)}</td>
         <td style="padding:8px 4px">${estB(t.prioridade)}</td>
         <td style="padding:8px 4px">${estB(t.estado)}</td>
-        <td style="padding:8px 4px">${plCanSeeAll()?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button>`:''}</td>
+        <td style="padding:8px 4px">${plCanSeeAll()?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')">✎</button><button class="btn btn-sm btn-danger" onclick="delPlTarefa('${t.id}')" style="margin-left:3px">✕</button>`:''}</td>
       </tr>`).join('')}</tbody>
     </table>`;
     c.appendChild(div);
@@ -4972,7 +5173,7 @@ function toggleHierAcao(acaoId){
           <td style="font-size:11px;padding:6px 4px">${t.dataInicio?`${fd(t.dataInicio)} → `:''}${fd(t.dataLimite)}</td>
           <td style="padding:6px 4px">${estB(t.prioridade)}</td>
           <td style="padding:6px 4px">${estB(t.estado)}</td>
-          <td style="padding:6px 4px">${plCanSeeAll()?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')" title="Editar tarefa" style="font-size:13px;padding:3px 8px">✎</button>`:''}</td>
+          <td style="padding:6px 4px">${plCanSeeAll()?`<button class="btn btn-sm" onclick="openTarFormEdit('${t.id}')" title="Editar tarefa" style="font-size:13px;padding:3px 8px">✎</button><button class="btn btn-sm btn-danger" onclick="delPlTarefa('${t.id}')" style="margin-left:3px;font-size:13px;padding:3px 8px">✕</button>`:''}</td>
         </tr>`).join('')}
       </table>`:'<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">Sem plTarefas nesta ação.</div>'}
       ${kps.length?`<div style="margin-top:4px;background:#F5F3FF;border-left:4px solid #7C3AED;border-radius:0 6px 6px 0;padding:10px 14px">
@@ -4988,7 +5189,7 @@ function toggleHierAcao(acaoId){
 let editAcaoId=null;
 function openAcaoForm(projId,acaoId){
   editAcaoId=acaoId||null;
-  el('frm-acao-ov').classList.add('open');
+  el('frm-acao-ov').style.display='block';
   el('fa-proj').innerHTML='<option value="">Selecionar...</option>'+plProjetos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   if(acaoId){
     const a=plAcoes.find(x=>x.id===acaoId);if(!a)return;
@@ -5004,7 +5205,7 @@ function openAcaoForm(projId,acaoId){
     sv2('fa-resp','');sv2('fa-resp-email','');sv2('fa-notas','');
   }
 }
-function closeAcaoForm(){el('frm-acao-ov').classList.remove('open');editAcaoId=null;}
+function closeAcaoForm(){el('frm-acao-ov').style.display='none';editAcaoId=null;}
 async function saveAcao(){
   const nome=gv('fa-nome').trim();if(!nome){alert('Nome obrigatório.');return;}
   const pid=gv('fa-proj');if(!pid){alert('Seleciona o projeto do Factorial.');return;}
@@ -5045,7 +5246,7 @@ function openProjetoForm(projId){
   }
   
   editProjId=projId||null;
-  el('frm-proj-ov').classList.add('open');
+  el('frm-proj-ov').style.display='block';
   if(projId){
     const p=plProjetos.find(x=>x.id===projId);if(!p)return;
     el('frm-proj-title').textContent='Editar projeto';
@@ -5107,7 +5308,7 @@ async function saveProjetoGlobal(){
   }catch(e){showNotif('Erro: '+e.message,'error');}
   btn.textContent='Guardar';btn.disabled=false;
 }
-function closeProjetoForm(){el('frm-proj-ov').classList.remove('open');editProjId=null;}
+function closeProjetoForm(){el('frm-proj-ov').style.display='none';editProjId=null;}
 async function saveProjeto(){
   const nome=gv('fp-nome').trim();if(!nome){alert('Nome do projeto obrigatório.');return;}
   const btn=el('save-proj-btn');btn.textContent='A guardar...';btn.disabled=true;
@@ -5710,9 +5911,24 @@ function openTarFormEdit(compId){
   sv2('ftar-desc',t.titulo);sv2('ftar-origem',t.origem||'Ad-hoc');
   sv2('ftar-resp',t.responsavel||'');sv2('ftar-email',t.responsavelEmail||'');
   sv2('ftar-inicio',t.dataInicio||'');sv2('ftar-data',t.dataLimite||'');sv2('ftar-prior',t.prioridade||'Média');sv2('ftar-estado',t.estado||'todo');sv2('ftar-notas',t.notas||'');
-  el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📎 ${a.name}</a></div>`).join(''):'';
+  el('ftar-existing-attach').innerHTML=t.attachments?.length?t.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📎 ${a.name}</a><button class="attach-remove" onclick="removeAttach('${t.lista}',${t.spId},'${a.name.replace(/'/g,"\\'")}')">✕</button></div>`).join(''):'';
 }
 function closeTarForm(){el('frm-pl-tar-ov').style.display='none';plEditTarId=null;}
+async function delPlTarefa(compId){
+  if(!confirm('Eliminar esta tarefa?'))return;
+  const t=plTarefas.find(x=>x.id===compId);if(!t)return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${t.lista}')/items(${t.spId})`,null,'DELETE');
+    await loadTarefas();renderSem();renderHier();renderDash();showNotif('Tarefa eliminada.','success');
+  }catch(e){showNotif('Erro ao eliminar: '+e.message,'error');}
+}
+async function delProjeto(id){
+  if(!confirm('Eliminar este projeto? As ações e tarefas associadas não serão eliminadas.'))return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Projetos')/items(${id})`,null,'DELETE');
+    await loadProjetos();renderHier();populateDrops();showNotif('Projeto eliminado.','success');
+  }catch(e){showNotif('Erro ao eliminar: '+e.message,'error');}
+}
 
 // Abre o form de nova tarefa pré-preenchido com a ação
 function openTarFormForAcao(acaoId){
@@ -7823,6 +8039,15 @@ async function gfSaveRubrica(id) {
 // ══════════════════════════════════════════════════════════════
 // SOLICITAÇÕES
 // ══════════════════════════════════════════════════════════════
+async function gfDeleteSolicitacao(id){
+  const s=GF_SOLICITACOES.find(x=>x.id===id);
+  if(!s)return;
+  if(!confirm(`Eliminar a solicitação "${s.titulo}"?\nEsta ação não pode ser revertida.`))return;
+  try{
+    await spWrite(`${SP}/_api/web/lists/getbytitle('FJ_Solicitacoes')/items(${id})`,null,'DELETE');
+    await gfLoadAll();gfRender();showNotif('Solicitação eliminada.','success');
+  }catch(e){showNotif('Erro ao eliminar: '+e.message,'error');}
+}
 function gfRenderSolicitacoes() {
   const tab = GF.tab.sol;
   let lista = tab === 'minhas' ? GF_SOLICITACOES.filter(s => s.autorNome === user?.name) : GF_SOLICITACOES;
@@ -7890,6 +8115,7 @@ function gfRenderSolicitacoes() {
                 </td>` : ''}
                 <td style="padding:14px 16px;text-align:center">
                   <button class="btn btn-sm" onclick="GF.solicitacao=${s.id};gfNav('solicitacao-view')">Ver</button>
+                  ${s.estado==='Pendente'||s.estado==='Rascunho'?`<button class="btn btn-sm btn-danger" onclick="gfDeleteSolicitacao(${s.id})" style="margin-left:4px">✕</button>`:''}
                 </td>
               </tr>`;
             }).join('')
@@ -8315,7 +8541,10 @@ function gfLoadSolicitacaoAttachments(solId) {
       const ne  = files.filter(f => f.FileName.startsWith('NE_'));
       const fat = files.filter(f => f.FileName.startsWith('FAT_'));
       const other = files.filter(f => !f.FileName.startsWith('ORC_') && !f.FileName.startsWith('ADJ_') && !f.FileName.startsWith('NE_') && !f.FileName.startsWith('FAT_'));
-      const link = (f, prefix) => `<a href="${SP}${f.ServerRelativeUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--blue-l);color:var(--blue-d);border-radius:4px;font-size:12px;text-decoration:none;margin:2px">📎 ${f.FileName.replace(new RegExp('^'+prefix),'')}</a>`;
+      const link = (f, prefix) => `<div style="display:inline-flex;align-items:center;gap:4px;margin:2px">
+        <a href="${SP}${f.ServerRelativeUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--blue-l);color:var(--blue-d);border-radius:4px 0 0 4px;font-size:12px;text-decoration:none">📎 ${f.FileName.replace(new RegExp('^'+prefix),'')}</a>
+        <button onclick="removeAttach('FJ_Solicitacoes',${solId},'${f.FileName.replace(/'/g,"\\'")}')" style="padding:4px 8px;background:#fee2e2;color:#b91c1c;border:none;border-radius:0 4px 4px 0;cursor:pointer;font-size:11px;font-weight:600" title="Eliminar anexo">✕</button>
+      </div>`;
       if (!files.length) {
         wrap.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Documentos</div><div style="color:var(--text3);font-size:13px">Sem documentos anexados</div>';
         return;
