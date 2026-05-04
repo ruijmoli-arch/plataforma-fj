@@ -1469,20 +1469,37 @@ tr:hover td{background:var(--bg3)}
         <div id="hier-container"></div>
       </div>
 
-      <!-- MODO APRESENTAÇÃO (TV FRIENDLY) -->
-      <div id="pl-pres-mode" style="display:none; position:fixed; inset:0; background:#001529; z-index:2000; color:#fff; font-family:inherit; overflow:hidden; flex-direction:column;">
+      <!-- MODAL SELEÇÃO DE PROJETO PARA APRESENTAÇÃO -->
+      <div id="pres-select-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2100; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:16px; width:100%; max-width:500px; padding:30px; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+          <div style="font-size:20px; font-weight:700; color:var(--fj-blue); margin-bottom:20px; display:flex; align-items:center; gap:10px;">
+            <span>📺</span> Selecionar Projeto para Apresentação
+          </div>
+          <div style="margin-bottom:25px;">
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; margin-bottom:8px;">Escolha o Projeto</label>
+            <select id="pres-proj-selector" style="width:100%; padding:12px; border:1px solid var(--border2); border-radius:8px; font-size:15px; background:#f9fafb;"></select>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:12px;">
+            <button class="btn" onclick="el('pres-select-modal').style.display='none'" style="padding:10px 20px;">Cancelar</button>
+            <button class="btn btn-primary" onclick="startPresFromModal()" style="padding:10px 25px; font-weight:600;">Iniciar Apresentação</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODO APRESENTAÇÃO (TV FRIENDLY - TEMA CLARO) -->
+      <div id="pl-pres-mode" style="display:none; position:fixed; inset:0; background:#f8fafc; z-index:2000; color:var(--text); font-family:inherit; overflow:hidden; flex-direction:column;">
         <!-- Header do Modo Apresentação -->
-        <div style="padding:20px 40px; background:#002140; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
+        <div style="padding:20px 40px; background:#fff; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); box-shadow:0 2px 10px rgba(0,0,0,0.05); flex-shrink:0;">
           <div style="display:flex; align-items:center; gap:20px">
-            <div style="width:48px; height:48px; background:var(--fj-orange); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold;">FJ</div>
+            <div style="width:48px; height:48px; background:var(--fj-blue); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold; color:#fff;">FJ</div>
             <div>
-              <div id="pres-proj-name" style="font-size:24px; font-weight:700; color:#fff;">Nome do Projeto</div>
-              <div id="pres-acao-info" style="font-size:16px; color:rgba(255,255,255,0.6);">Ação 1 de X</div>
+              <div id="pres-proj-name" style="font-size:24px; font-weight:700; color:var(--fj-blue);">Nome do Projeto</div>
+              <div id="pres-acao-info" style="font-size:16px; color:var(--text2);">Ação 1 de X</div>
             </div>
           </div>
           <div style="display:flex; gap:15px; align-items:center;">
-            <button class="btn" onclick="prevPresAcao()" style="padding:12px 24px; font-size:18px; background:rgba(255,255,255,0.1); color:#fff; border:none;">← Anterior</button>
-            <button class="btn" onclick="nextPresAcao()" style="padding:12px 24px; font-size:18px; background:var(--fj-orange); color:#fff; border:none;">Próxima →</button>
+            <button class="btn" onclick="prevPresAcao()" style="padding:12px 24px; font-size:18px; background:var(--bg3); color:var(--text); border:1px solid var(--border2);">← Anterior</button>
+            <button class="btn" onclick="nextPresAcao()" style="padding:12px 24px; font-size:18px; background:var(--fj-orange); color:#fff; border:none; box-shadow:0 4px 12px rgba(255,107,0,0.2);">Próxima →</button>
             <button class="btn btn-danger" onclick="closePresMode()" style="padding:12px 24px; font-size:18px; margin-left:20px;">Sair</button>
           </div>
         </div>
@@ -1490,22 +1507,22 @@ tr:hover td{background:var(--bg3)}
         <!-- Conteúdo Principal -->
         <div style="flex:1; display:flex; overflow:hidden;">
           <!-- Sidebar de Ações -->
-          <div id="pres-sidebar" style="width:350px; background:rgba(0,0,0,0.2); border-right:1px solid rgba(255,255,255,0.1); overflow-y:auto; padding:20px;">
-            <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px;">Ações do Projeto</div>
+          <div id="pres-sidebar" style="width:350px; background:#fff; border-right:1px solid var(--border); overflow-y:auto; padding:20px;">
+            <div style="font-size:12px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px;">Ações do Projeto</div>
             <div id="pres-acao-list"></div>
           </div>
           
           <!-- Área de Tarefas -->
-          <div style="flex:1; padding:40px; overflow-y:auto; background:radial-gradient(circle at top right, rgba(0,48,135,0.2), transparent);">
-            <div id="pres-acao-title" style="font-size:36px; font-weight:800; margin-bottom:10px; color:var(--fj-orange);">Título da Ação</div>
-            <div id="pres-acao-meta" style="font-size:18px; color:rgba(255,255,255,0.7); margin-bottom:40px; display:flex; gap:30px;">
+          <div style="flex:1; padding:40px; overflow-y:auto; background:#f8fafc;">
+            <div id="pres-acao-title" style="font-size:36px; font-weight:800; margin-bottom:10px; color:var(--fj-blue);">Título da Ação</div>
+            <div id="pres-acao-meta" style="font-size:18px; color:var(--text2); margin-bottom:40px; display:flex; gap:30px;">
               <span id="pres-acao-resp">Responsável: —</span>
               <span id="pres-acao-dates">Datas: —</span>
             </div>
             
             <div style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between;">
-              <div style="font-size:20px; font-weight:600; color:rgba(255,255,255,0.9);">Tarefas Ordenadas por Prazo</div>
-              <button class="btn btn-primary" id="pres-add-task-btn" style="padding:8px 20px; font-size:16px;">+ Nova Tarefa</button>
+              <div style="font-size:22px; font-weight:700; color:var(--text);">Tarefas Ordenadas por Prazo</div>
+              <button class="btn btn-primary" id="pres-add-task-btn" style="padding:10px 25px; font-size:16px; font-weight:600;">+ Nova Tarefa</button>
             </div>
             
             <div id="pres-tasks-container"></div>
@@ -5993,28 +6010,34 @@ let presCurrentAcaoIdx = 0;
 let presAcoes = [];
 
 function openPresMode() {
-  const projId = gv('fa-proj') || gv('ft-proj') || gv('ff-g-proj');
+  const selector = el('pres-proj-selector');
+  // Preencher o seletor com projetos ativos
+  const activeProjs = plProjetos.filter(p => p.estado === 'active' || p.estado === 'Ativo');
+  selector.innerHTML = activeProjs.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  
+  // Tentar pré-selecionar o projeto que já está filtrado na UI
+  const currentFilter = gv('fa-proj') || gv('ft-proj') || gv('ff-g-proj');
+  if (currentFilter) selector.value = currentFilter;
+
+  el('pres-select-modal').style.display = 'flex';
+}
+
+function startPresFromModal() {
+  const projId = el('pres-proj-selector').value;
   if (!projId) {
-    // Se não houver projeto selecionado nos filtros, tenta pegar o primeiro projeto visível na hierarquia
-    const firstProj = plProjetos.find(p => p.estado === 'active' || p.estado === 'Ativo');
-    if (!firstProj) {
-      showNotif('Por favor, selecione um projeto primeiro.', 'warn');
-      return;
-    }
-    presCurrentProjId = firstProj.id;
-  } else {
-    presCurrentProjId = parseInt(projId);
+    showNotif('Por favor, selecione um projeto.', 'warn');
+    return;
   }
 
-  const proj = plProjetos.find(p => String(p.id) === String(presCurrentProjId));
-  if (!proj) return;
-
+  presCurrentProjId = parseInt(projId);
   presAcoes = plAcoes.filter(a => String(a.projetoId) === String(presCurrentProjId));
+  
   if (presAcoes.length === 0) {
     showNotif('Este projeto não tem ações definidas.', 'warn');
     return;
   }
 
+  el('pres-select-modal').style.display = 'none';
   presCurrentAcaoIdx = 0;
   el('pl-pres-mode').style.display = 'flex';
   renderPresContent();
@@ -6035,9 +6058,9 @@ function renderPresContent() {
 
   // Sidebar
   el('pres-acao-list').innerHTML = presAcoes.map((a, idx) => `
-    <div onclick="presGoToAcao(${idx})" style="padding:15px; border-radius:10px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; background:${idx === presCurrentAcaoIdx ? 'var(--fj-orange)' : 'rgba(255,255,255,0.05)'}; border:1px solid ${idx === presCurrentAcaoIdx ? 'var(--fj-orange)' : 'rgba(255,255,255,0.1)'};">
-      <div style="font-size:14px; font-weight:600; color:${idx === presCurrentAcaoIdx ? '#fff' : 'rgba(255,255,255,0.9)'};">${a.nome}</div>
-      <div style="font-size:11px; color:${idx === presCurrentAcaoIdx ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)'}; margin-top:4px;">${a.dep || 'Sem dep.'}</div>
+    <div onclick="presGoToAcao(${idx})" style="padding:15px; border-radius:10px; margin-bottom:10px; cursor:pointer; transition:all 0.2s; background:${idx === presCurrentAcaoIdx ? 'var(--fj-orange)' : '#f1f5f9'}; border:1px solid ${idx === presCurrentAcaoIdx ? 'var(--fj-orange)' : 'var(--border)'};">
+      <div style="font-size:15px; font-weight:700; color:${idx === presCurrentAcaoIdx ? '#fff' : 'var(--fj-blue)'};">${a.nome}</div>
+      <div style="font-size:12px; color:${idx === presCurrentAcaoIdx ? 'rgba(255,255,255,0.8)' : 'var(--text2)'}; margin-top:4px;">${a.dep || 'Sem dep.'}</div>
     </div>
   `).join('');
 
@@ -6059,25 +6082,25 @@ function renderPresContent() {
 
   const container = el('pres-tasks-container');
   if (ts.length === 0) {
-    container.innerHTML = '<div style="font-size:20px; color:rgba(255,255,255,0.3); padding:40px; text-align:center; border:2px dashed rgba(255,255,255,0.1); border-radius:20px;">Sem tarefas nesta ação.</div>';
+    container.innerHTML = '<div style="font-size:22px; color:var(--text3); padding:60px; text-align:center; border:2px dashed var(--border); border-radius:20px; background:#fff;">Sem tarefas nesta ação.</div>';
   } else {
     container.innerHTML = ts.map(t => {
       const isOverdue = t.dataLimite && new Date(t.dataLimite) < new Date() && t.estado !== 'Concluída';
       return `
-      <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:15px; padding:20px; margin-bottom:15px; display:flex; align-items:center; gap:20px; transition:transform 0.2s;" onmouseover="this.style.transform='translateX(10px)'" onmouseout="this.style.transform='none'">
-        <input type="checkbox" ${t.estado === 'Concluída' ? 'checked' : ''} onchange="toggleTar('${t.id}',this.checked); setTimeout(renderPresContent, 500);" style="width:24px; height:24px; cursor:pointer; accent-color:var(--fj-orange);">
+      <div style="background:#fff; border:1px solid var(--border); border-radius:15px; padding:25px; margin-bottom:15px; display:flex; align-items:center; gap:25px; transition:all 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.02);" onmouseover="this.style.transform='translateX(10px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.05)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.02)'">
+        <input type="checkbox" ${t.estado === 'Concluída' ? 'checked' : ''} onchange="toggleTar('${t.id}',this.checked); setTimeout(renderPresContent, 500);" style="width:28px; height:28px; cursor:pointer; accent-color:var(--fj-orange);">
         <div style="flex:1;">
-          <div style="font-size:20px; font-weight:500; color:${t.estado === 'Concluída' ? 'rgba(255,255,255,0.4)' : '#fff'}; text-decoration:${t.estado === 'Concluída' ? 'line-through' : 'none'};">${t.titulo}</div>
-          <div style="display:flex; gap:20px; margin-top:8px; font-size:14px; color:rgba(255,255,255,0.5);">
+          <div style="font-size:22px; font-weight:600; color:${t.estado === 'Concluída' ? 'var(--text3)' : 'var(--text)'}; text-decoration:${t.estado === 'Concluída' ? 'line-through' : 'none'};">${t.titulo}</div>
+          <div style="display:flex; gap:25px; margin-top:10px; font-size:15px; color:var(--text2);">
             <span>👤 ${t.responsavel || '—'}</span>
-            <span style="color:${isOverdue ? '#ff4d4f' : 'inherit'}; font-weight:${isOverdue ? '700' : 'normal'};">📅 Prazo: ${fd(t.dataLimite)}</span>
+            <span style="color:${isOverdue ? 'var(--red)' : 'inherit'}; font-weight:${isOverdue ? '700' : 'normal'};">📅 Prazo: ${fd(t.dataLimite)}</span>
             <span>${estB(t.prioridade)}</span>
             <span>${estB(t.estado)}</span>
           </div>
         </div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn" onclick="openTarFormEdit('${t.id}')" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:8px 15px;">✎ Editar</button>
-          <button class="btn btn-danger" onclick="delPlTarefa('${t.id}')" style="padding:8px 15px;">✕</button>
+        <div style="display:flex; gap:12px;">
+          <button class="btn" onclick="openTarFormEdit('${t.id}')" style="background:var(--bg3); color:var(--text); border:1px solid var(--border2); padding:10px 20px; font-size:15px;">✎ Editar</button>
+          <button class="btn btn-danger" onclick="delPlTarefa('${t.id}')" style="padding:10px 20px; font-size:15px;">✕</button>
         </div>
       </div>
     `}).join('');
