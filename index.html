@@ -1083,11 +1083,11 @@ tr:hover td{background:var(--bg3)}
                     <input type="text" id="fe-local" placeholder="Presencial ou Online" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
                   </div>
                   <div>
-                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Departamento</label>
-                    <select id="fe-dep" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"></select>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Departamento *</label>
+                    <select id="fe-dep" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
                   </div>
                   <div>
-                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável FJ</label>
+                    <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Responsável FJ *</label>
                     <select id="fe-resp" class="user-resp-sel" onchange="onUserSelChange(this,'fe-resp-email')" style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;background:#fff;color:var(--text)"><option value="">— Selecionar —</option></select>
                     <input type="hidden" id="fe-resp-email">
                   </div>
@@ -3398,8 +3398,12 @@ function closeExtForm() {
 async function saveExt() {
   const titulo   = el('fe-titulo').value.trim();
   const dataVal  = el('fe-data').value;
+  const depVal   = el('fe-dep').value.trim();
+  const respVal  = el('fe-resp').value.trim();
   if (!titulo)  { showNotif('Preenche o título da reunião.', 'error'); return; }
   if (!dataVal) { showNotif('Preenche a data.', 'error'); return; }
+  if (!depVal)  { showNotif('Seleciona o departamento.', 'error'); return; }
+  if (!respVal) { showNotif('Seleciona o responsável FJ.', 'error'); return; }
 
   const btn = el('save-ext-btn');
   btn.disabled = true; btn.textContent = 'A guardar...';
@@ -3412,14 +3416,14 @@ async function saveExt() {
     const body = {
       __metadata:     { type: listType },
       Title:          titulo,
-      Entidade:       el('fe-entidade').value.trim(),
+      Entidade:       el('fe-entidade').value.trim() || null,
       DataReuniao:    dataVal + 'T00:00:00Z',
-      Local:          el('fe-local').value.trim(),
-      Departamento:   el('fe-dep').value,
-      Responsavel:    el('fe-resp').value,
-      Participantes:  el('fe-part').value.trim(),
-      Resumo:         el('fe-resumo').value.trim(),
-      ProximosPassos: el('fe-passos').value.trim()
+      Local:          el('fe-local').value.trim() || null,
+      Departamento:   depVal,
+      Responsavel:    respVal,
+      Participantes:  el('fe-part').value.trim() || null,
+      Resumo:         el('fe-resumo').value.trim() || null,
+      ProximosPassos: el('fe-passos').value.trim() || null
     };
 
     let itemId = editExtId;
@@ -3448,11 +3452,11 @@ async function saveExt() {
           __metadata:        { type: tarType },
           Title:             t.titulo,
           ReunioExternaIdId: itemId,
-          Responsavel:       t.responsavel,
-          Estado:            t.estado,
-          Notas:             t.notas
+          Estado:            t.estado || 'Por fazer'
         };
-        if (t.dataLimite) tarBody.DataLimite = t.dataLimite + 'T00:00:00Z';
+        if (t.responsavel) tarBody.Responsavel = t.responsavel;
+        if (t.dataLimite)  tarBody.DataLimite  = t.dataLimite + 'T00:00:00Z';
+        if (t.notas)       tarBody.Notas       = t.notas;
         await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`, tarBody, 'POST');
       }
     }
@@ -3622,12 +3626,14 @@ async function extSaveAddTarefa() {
       __metadata:        { type: tarType },
       Title:             titulo,
       ReunioExternaIdId: _extDetailReuniaoId,
-      Responsavel:       el('ext-add-tar-resp')?.value || '',
-      Estado:            el('ext-add-tar-estado')?.value || 'Por fazer',
-      Notas:             el('ext-add-tar-notas')?.value.trim() || ''
+      Estado:            el('ext-add-tar-estado')?.value || 'Por fazer'
     };
-    const dataVal = el('ext-add-tar-data')?.value;
-    if (dataVal) body.DataLimite = dataVal + 'T00:00:00Z';
+    const respVal = el('ext-add-tar-resp')?.value || '';
+    const dataVal2 = el('ext-add-tar-data')?.value;
+    const notasVal = el('ext-add-tar-notas')?.value.trim() || '';
+    if (respVal)  body.Responsavel = respVal;
+    if (dataVal2) body.DataLimite  = dataVal2 + 'T00:00:00Z';
+    if (notasVal) body.Notas       = notasVal;
     await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`, body, 'POST');
     showNotif('Tarefa criada!', 'success');
     extCloseAddTarModal();
@@ -3665,12 +3671,14 @@ async function extSaveTarefaEdit() {
     const body = {
       __metadata:  { type: tarType },
       Title:       titulo,
-      Responsavel: el('ext-edit-tar-resp')?.value || '',
-      Estado:      el('ext-edit-tar-estado')?.value || 'Por fazer',
-      Notas:       el('ext-edit-tar-notas')?.value.trim() || ''
+      Estado:      el('ext-edit-tar-estado')?.value || 'Por fazer'
     };
-    const dataVal = el('ext-edit-tar-data')?.value;
-    if (dataVal) body.DataLimite = dataVal + 'T00:00:00Z';
+    const resp2   = el('ext-edit-tar-resp')?.value || '';
+    const dataVal3 = el('ext-edit-tar-data')?.value;
+    const notas2  = el('ext-edit-tar-notas')?.value.trim() || '';
+    if (resp2)   body.Responsavel = resp2;
+    if (dataVal3) body.DataLimite = dataVal3 + 'T00:00:00Z';
+    if (notas2)  body.Notas       = notas2;
     await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${id})`, body, 'MERGE');
     showNotif('Tarefa atualizada.', 'success');
     extCloseTarModal();
