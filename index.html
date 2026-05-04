@@ -379,6 +379,8 @@ tr:hover td{background:var(--bg3)}
 .attach-item{display:flex;align-items:center;gap:6px;background:var(--bl);border:0.5px solid var(--bd2);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--bld)}
 .attach-item a{color:var(--bld);text-decoration:none;font-weight:500}
 .attach-rm{background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:0 2px}
+.det-lbl{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.det-val{font-size:13px;color:var(--text)}
 
 /* GANTT */
 .gantt-wrap{overflow-x:auto;background:var(--bg2);border:0.5px solid var(--bd);border-radius:var(--rl)}
@@ -1109,13 +1111,14 @@ tr:hover td{background:var(--bg3)}
                       <select id="fe-tar-resp" class="user-resp-sel" style="font-size:13px;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:#fff;color:var(--text)"><option value="">— Responsável —</option></select>
                       <input type="date" id="fe-tar-data" style="padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)">
                       <select id="fe-tar-estado" style="font-size:13px;padding:9px 10px;border:1px solid var(--border2);border-radius:8px;background:#fff;color:var(--text)"><option>Por fazer</option><option>Em curso</option></select>
-                      <button type="button" class="btn btn-primary btn-sm" onclick="addTarefaInline()">+ Adicionar</button>
+                      <button type="button" class="btn btn-primary btn-sm" onclick="extAddTarefaTemp()">+ Adicionar</button>
                     </div>
                   </div>
                   <div style="grid-column:1/-1">
                     <div style="background:var(--bg3);border:1.5px dashed var(--border2);border-radius:8px;padding:14px 16px">
                       <label style="display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📎 Anexos</label>
-                      <input type="file" id="fe-file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:13px;font-family:inherit;color:var(--text);width:100%">
+                      <input type="file" id="fe-file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:13px;font-family:inherit;color:var(--text);width:100%" onchange="extPreviewFiles()">
+                      <div class="attach-list" id="fe-attach-preview" style="margin-top:8px"></div>
                       <div class="attach-list" id="fe-attachments" style="margin-top:8px"></div>
                     </div>
                   </div>
@@ -3210,431 +3213,543 @@ async function deleteItem(id){
   }catch(e){showNotif('Erro: '+e.message,'error');}
 }
 
-// ═══ REUNIÕES EXTERNAS — reescrito seguindo padrão Correio ═══
+// ═══ REUNIÕES EXTERNAS ═══ (padrão idêntico ao Correio)
 const EXT_LIST     = 'FJ_ReunioesExternas';
 const EXT_TAR_LIST = 'FJ_TarefasReuniao';
 
-let extItems    = [];
-let extTarefas  = [];
+let extItems       = [];
+let extTarefas     = [];
+let _extTarefasTemp = [];
+let _extSelectedFiles = [];
 
-// ── Reset do filtro de datas ─────────────────────
-function resetExtFilters(){
-  ['ffe-from','ffe-to'].forEach(id=>{const f=el(id);if(f)f.value='';});
-  const dep=el('ffe-dep');if(dep)dep.value='';
-  const q=el('qe');if(q)q.value='';
-  loadExtItems();
-}
-
-// ── Carregar reuniões ────────────────────────────
-async function loadExtItems(){
-  try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items?$select=*,AttachmentFiles,Departamento/Title,Responsavel/Title&$expand=AttachmentFiles,Departamento,Responsavel&$orderby=DataReuniao desc&$top=500`);
-    extItems=(d.d?.results||[]).map(r=>({
-      id:r.Id, titulo:r.Title||'', entidade:r.Entidade||'',
-      data:r.DataReuniao?r.DataReuniao.split('T')[0]:'',
-      local:r.Local||'', participantes:r.Participantes||'',
-      resumo:r.Resumo||'', proximosPassos:r.ProximosPassos||'',
-      departamento:normalizeDep(r.Departamento?.Title||r.Departamento||''),
-      responsavel:r.Responsavel?.Title||'',
-      attachments:(r.AttachmentFiles?.results||[]).map(a=>({name:a.FileName,url:a.ServerRelativeUrl}))
-    }));
-    renderExtTable();
-  }catch(e){console.warn('loadExtItems:',e);showNotif('Erro ao carregar reuniões: '+e.message,'error');}
-}
-
-// ── Carregar tarefas ─────────────────────────────
-async function extLoadTarefas(){
-  try{
-    const d=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items?$select=*,ReuniaoExternaId/Id,ReuniaoExternaId/Title&$expand=ReuniaoExternaId&$orderby=DataLimite asc&$top=500`);
-    extTarefas=(d.d?.results||[]).map(r=>({
-      id:r.Id, titulo:r.Title||'',
-      reuniaoId:r.ReuniaoExternaId?.Id||null,
-      reuniaoTitulo:r.ReuniaoExternaId?.Title||'',
-      responsavel:r.Responsavel||'',
-      dataLimite:r.DataLimite?r.DataLimite.split('T')[0]:'',
-      estado:r.Estado||'Por fazer',
-      notas:r.Notas||''
-    }));
-    renderExtTarefasTable();
+// ── Carregar dados ───────────────────────────────
+async function extLoadAll() {
+  try {
+    await extLoadReunoes();
+    await extLoadTarefas();
     extRenderStats();
-  }catch(e){console.warn('extLoadTarefas:',e);}
+  } catch(e) { console.warn('extLoadAll:', e); }
 }
 
-async function extLoadAll(){
-  await loadExtItems();
-  await extLoadTarefas();
+async function extLoadReunoes() {
+  const d = await spRead(
+    `${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items` +
+    `?$select=*,AttachmentFiles&$expand=AttachmentFiles&$orderby=DataReuniao desc&$top=500`
+  );
+  extItems = (d.d?.results || []).map(r => ({
+    id:             r.Id,
+    titulo:         r.Title || '',
+    entidade:       r.Entidade || '',
+    data:           r.DataReuniao ? r.DataReuniao.split('T')[0] : '',
+    local:          r.Local || '',
+    departamento:   normalizeDep(r.Departamento || ''),
+    responsavel:    r.Responsavel || '',
+    participantes:  r.Participantes || '',
+    resumo:         r.Resumo || '',
+    proximosPassos: r.ProximosPassos || '',
+    attachments:    (r.AttachmentFiles?.results || []).map(a => ({ name: a.FileName, url: a.ServerRelativeUrl }))
+  }));
+  renderExtTable();
+}
+
+async function extLoadTarefas() {
+  const d = await spRead(
+    `${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items` +
+    `?$select=*,ReuniaoExternaId/Id,ReuniaoExternaId/Title` +
+    `&$expand=ReuniaoExternaId&$orderby=DataLimite asc&$top=500`
+  );
+  extTarefas = (d.d?.results || []).map(r => ({
+    id:            r.Id,
+    titulo:        r.Title || '',
+    reuniaoId:     r.ReuniaoExternaId?.Id || null,
+    reuniaoTitulo: r.ReuniaoExternaId?.Title || '',
+    responsavel:   r.Responsavel || '',
+    dataLimite:    r.DataLimite ? r.DataLimite.split('T')[0] : '',
+    estado:        r.Estado || 'Por fazer',
+    notas:         r.Notas || ''
+  }));
+  renderExtTarefasTable();
 }
 
 // ── Stats ────────────────────────────────────────
-function extRenderStats(){
-  const hoje=today();
-  const pend=extTarefas.filter(t=>t.estado!=='Concluída'&&t.estado!=='Cancelada');
-  if(el('ext-s-total'))   el('ext-s-total').textContent=extItems.length;
-  if(el('ext-s-tarefas')) el('ext-s-tarefas').textContent=pend.length;
-  if(el('t-total'))       el('t-total').textContent=extTarefas.length;
-  if(el('t-pfazer'))      el('t-pfazer').textContent=extTarefas.filter(t=>t.estado==='Por fazer').length;
-  if(el('t-emcurso'))     el('t-emcurso').textContent=extTarefas.filter(t=>t.estado==='Em curso').length;
-  if(el('t-atrasadas'))   el('t-atrasadas').textContent=extTarefas.filter(t=>t.dataLimite&&t.dataLimite<hoje&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
+function extRenderStats() {
+  const hoje   = today();
+  const pend   = extTarefas.filter(t => t.estado !== 'Concluída' && t.estado !== 'Cancelada');
+  const atras  = pend.filter(t => t.dataLimite && t.dataLimite < hoje);
+  sv('ext-s-total',    extItems.length);
+  sv('ext-s-tarefas',  pend.length);
+  sv('t-total',        extTarefas.length);
+  sv('t-pfazer',       extTarefas.filter(t => t.estado === 'Por fazer').length);
+  sv('t-emcurso',      extTarefas.filter(t => t.estado === 'Em curso').length);
+  sv('t-atrasadas',    atras.length);
 }
 
 // ── Tabela de reuniões ───────────────────────────
-function renderExtTable(){
-  const q=(el('qe')||{value:''}).value.toLowerCase();
-  const dep=gv('ffe-dep'), ff=gv('ffe-from'), ft=gv('ffe-to');
-  let list=extItems.filter(i=>{
-    if(!userCanView(i.departamento))return false;
-    if(q&&!(i.titulo.toLowerCase().includes(q)||i.entidade.toLowerCase().includes(q)))return false;
-    if(dep&&i.departamento!==dep)return false;
-    if(ff&&i.data&&i.data<ff)return false;
-    if(ft&&i.data&&i.data>ft)return false;
+function renderExtTable() {
+  const tbody = document.getElementById('tbody-ext');
+  if (!tbody) return;
+  const q    = (document.getElementById('qe')?.value || '').toLowerCase();
+  const dep  = document.getElementById('ffe-dep')?.value  || '';
+  const from = document.getElementById('ffe-from')?.value || '';
+  const to   = document.getElementById('ffe-to')?.value   || '';
+
+  const list = extItems.filter(r => {
+    if (!userCanView(r.departamento)) return false;
+    if (q && !r.titulo.toLowerCase().includes(q) && !r.entidade.toLowerCase().includes(q)) return false;
+    if (dep  && r.departamento !== dep) return false;
+    if (from && r.data < from) return false;
+    if (to   && r.data > to)   return false;
     return true;
   });
-  const tb=el('tbody-ext');if(!tb)return;
-  if(!list.length){tb.innerHTML=`<tr><td colspan="7"><div class="empty">Nenhuma reunião.<br>Clique em "+ Nova reunião".</div></td></tr>`;el('tcount-ext').textContent='';return;}
-  tb.innerHTML=list.map(i=>{
-    const nTar=extTarefas.filter(t=>t.reuniaoId===i.id).length;
-    const pend=extTarefas.filter(t=>t.reuniaoId===i.id&&t.estado!=='Concluída'&&t.estado!=='Cancelada').length;
-    return`<tr>
-      <td>${fd(i.data)}</td>
-      <td style="font-weight:500" title="${i.titulo}">${i.titulo}${i.attachments?.length?` <span class="badge" style="background:var(--blue-l);color:var(--blue-d);font-size:10px">📎 ${i.attachments.length}</span>`:''}</td>
-      <td>${i.entidade||'—'}</td>
-      <td>${i.departamento?depBadgeAcao(i.departamento):'—'}</td>
-      <td>${i.responsavel||'—'}</td>
-      <td>${nTar?`<span class="badge" style="background:${pend?'var(--amber-bg)':'var(--green-bg)'};color:${pend?'var(--amber)':'var(--green)'}">📋 ${pend} pend. / ${nTar}</span>`:'—'}</td>
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Nenhuma reunião encontrada. Clique em "+ Nova reunião".</div></td></tr>`;
+    sv('tcount-ext', '');
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => {
+    const tarefasDeste = extTarefas.filter(t => t.reuniaoId === r.id && t.estado !== 'Concluída' && t.estado !== 'Cancelada');
+    const tarBadge = tarefasDeste.length
+      ? `<span class="badge" style="background:var(--amber-bg);color:var(--amber);margin-left:4px">📋 ${tarefasDeste.length}</span>`
+      : '';
+    const anexo = r.attachments.length
+      ? `<span class="badge" style="background:var(--blue-l);color:var(--blue-d)">📎 ${r.attachments.length}</span>`
+      : '';
+    return `<tr>
+      <td>${fd(r.data)}</td>
+      <td style="font-weight:500">${r.titulo}${tarBadge}</td>
+      <td>${r.entidade || '—'}</td>
+      <td>${r.departamento ? depBadgeAcao(r.departamento) : '—'}</td>
+      <td>${r.responsavel || '—'}</td>
+      <td>${anexo || '—'}</td>
       <td><div class="actions">
-        <button class="btn btn-sm" onclick="extOpenDetail(${i.id})">Ver</button>
-        <button class="btn btn-sm" onclick="openExtForm(${i.id})">Editar</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteExt(${i.id})">✕</button>
+        <button class="btn btn-sm" onclick="extOpenDetail(${r.id})">👁 Ver</button>
+        <button class="btn btn-sm" onclick="openExtForm(${r.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="extDeleteReuniao(${r.id})">✕</button>
       </div></td>
     </tr>`;
   }).join('');
-  el('tcount-ext').textContent=`${list.length} reunião${list.length!==1?'es':''}`;
+  sv('tcount-ext', `${list.length} reunião${list.length !== 1 ? 'ões' : ''}`);
 }
 
-// ── Tabela de tarefas ────────────────────────────
-function renderExtTarefasTable(){
-  const q=(el('qt')||{value:''}).value.toLowerCase();
-  const fe=gv('fft-est'), fp=gv('fft-prior');
-  const hoje=today();
-  let list=extTarefas.filter(i=>{
-    if(q&&!i.titulo.toLowerCase().includes(q)&&!i.reuniaoTitulo.toLowerCase().includes(q))return false;
-    if(fe&&i.estado!==fe)return false;
-    return true;
-  });
-  const tb=el('tbody-tar');if(!tb)return;
-  if(!list.length){tb.innerHTML=`<tr><td colspan="6"><div class="empty">Sem tarefas de reuniões externas.</div></td></tr>`;if(el('tcount-tar'))el('tcount-tar').textContent='';return;}
-  const EM2={'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado'};
-  tb.innerHTML=list.map(i=>{
-    const atrasada=i.dataLimite&&i.dataLimite<hoje&&i.estado!=='Concluída'&&i.estado!=='Cancelada';
-    return`<tr style="${atrasada?'background:#fff8f8':''}">
-      <td style="font-weight:500">${i.titulo}</td>
-      <td style="font-size:12px;color:var(--text2)">${i.reuniaoTitulo||'—'}</td>
-      <td>${i.responsavel||'—'}</td>
-      <td style="${atrasada?'color:var(--red);font-weight:600':''}">${fd(i.dataLimite)}${atrasada?' ⚠️':''}</td>
-      <td><span class="badge ${EM2[i.estado]||'b-na'}">${i.estado}</span></td>
-      <td><div class="actions">
-        <button class="btn btn-sm" onclick="extOpenTarEdit(${i.id})">Editar</button>
-        ${i.estado!=='Concluída'?`<button class="btn btn-sm btn-green" onclick="extConcluirTarefa(${i.id})">✓</button>`:''}
-        <button class="btn btn-sm btn-danger" onclick="extDeleteTarefa(${i.id})">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-  if(el('tcount-tar'))el('tcount-tar').textContent=`${list.length} tarefa${list.length!==1?'s':''}`;
+function resetExtFilters() {
+  ['ffe-from','ffe-to'].forEach(id => { const f = el(id); if(f) f.value = ''; });
+  const dep = el('ffe-dep'); if(dep) dep.value = '';
+  const q   = el('qe');     if(q)   q.value   = '';
+  extLoadReunoes();
 }
 
 // ── Formulário de reunião ────────────────────────
-let feInlineTarefas=[];
+function openExtForm(id) {
+  editExtId = id || null;
+  _extTarefasTemp = [];
+  _extRenderTarefasTemp();
+  _extSelectedFiles = [];
+  _extRenderFilesPreview();
 
-function openExtForm(id){
-  editExtId=id||null;
-  feInlineTarefas=[];renderInlineTarefas();
-  const modal=el('frm-ext-ov');
-  if(!modal)return;
-  modal.style.display='block';
-  el('fe-attachments').innerHTML='';el('fe-file').value='';
-  if(id){
-    const i=extItems.find(x=>x.id===id);if(!i)return;
-    el('frm-ext-title').textContent='Editar reunião externa';
-    sv2('fe-titulo',i.titulo);sv2('fe-entidade',i.entidade);sv2('fe-data',i.data);
-    sv2('fe-local',i.local||'');sv2('fe-dep',i.departamento||'');sv2('fe-resp',i.responsavel||'');
-    sv2('fe-part',i.participantes||'');sv2('fe-resumo',i.resumo||'');sv2('fe-passos',i.proximosPassos||'');
-    if(i.attachments?.length){
-      el('fe-attachments').innerHTML=i.attachments.map(a=>`
-        <div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📎 ${a.name}</a>
-        <button class="attach-remove" onclick="removeAttach('${EXT_LIST}',${id},'${a.name.replace(/'/g,"\\'")}')">✕</button></div>`).join('');
-    }
-  }else{
-    el('frm-ext-title').textContent='Nova reunião externa';
-    ['fe-titulo','fe-entidade','fe-local','fe-part','fe-resumo','fe-passos'].forEach(x=>sv2(x,''));
-    sv2('fe-data',today());sv2('fe-dep','');sv2('fe-resp','');
+  const modal = el('frm-ext-ov');
+  if (!modal) return;
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+
+  if (id) {
+    const r = extItems.find(x => x.id === id);
+    if (!r) return;
+    el('frm-ext-title').textContent = 'Editar reunião externa';
+    sv2('fe-titulo',     r.titulo);
+    sv2('fe-entidade',   r.entidade);
+    sv2('fe-data',       r.data);
+    sv2('fe-local',      r.local);
+    sv2('fe-dep',        r.departamento);
+    sv2('fe-resp',       r.responsavel);
+    sv2('fe-part',       r.participantes);
+    sv2('fe-resumo',     r.resumo);
+    sv2('fe-passos',     r.proximosPassos);
+    // Mostrar anexos existentes com botão de remover
+    el('fe-attachments').innerHTML = r.attachments.length
+      ? r.attachments.map(a => `
+          <div class="attach-item">
+            <a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📎 ${a.name}</a>
+            <button class="attach-remove" onclick="removeAttach('${EXT_LIST}',${id},'${a.name.replace(/'/g,"\'")}')">✕</button>
+          </div>`).join('')
+      : '';
+  } else {
+    el('frm-ext-title').textContent = 'Nova reunião externa';
+    ['fe-titulo','fe-entidade','fe-local','fe-part','fe-resumo','fe-passos'].forEach(x => sv2(x,''));
+    sv2('fe-data', today());
+    sv2('fe-dep', ''); sv2('fe-resp', '');
+    el('fe-attachments').innerHTML = '';
   }
 }
-function editExt(id){openExtForm(id);}
-function closeExtForm(){const m=el('frm-ext-ov');if(m)m.style.display='none';editExtId=null;}
+
+function editExt(id) { openExtForm(id); }
+
+function closeExtForm() {
+  const m = el('frm-ext-ov');
+  if (m) m.style.display = 'none';
+  document.body.style.overflow = '';
+  editExtId = null;
+}
 
 // ── Guardar reunião ──────────────────────────────
-async function saveExt(){
-  const titulo=el('fe-titulo').value.trim();
-  if(!titulo){alert('Por favor indique o título.');return;}
-  const btn=el('save-ext-btn');btn.textContent='A guardar...';btn.disabled=true;
-  try{
-    // Tipo dinâmico — mesma abordagem do Correio
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')?$select=ListItemEntityTypeFullName`);
-    const listType=meta.d.ListItemEntityTypeFullName;
+async function saveExt() {
+  const titulo   = el('fe-titulo').value.trim();
+  const dataVal  = el('fe-data').value;
+  if (!titulo)  { showNotif('Preenche o título da reunião.', 'error'); return; }
+  if (!dataVal) { showNotif('Preenche a data.', 'error'); return; }
 
-    const body={__metadata:{type:listType},
-      Title:titulo,
-      Entidade:gv('fe-entidade'),
-      Local:gv('fe-local'),
-      Participantes:gv2t('fe-part'),
-      Resumo:gv2t('fe-resumo'),
-      ProximosPassos:gv2t('fe-passos')
+  const btn = el('save-ext-btn');
+  btn.disabled = true; btn.textContent = 'A guardar...';
+
+  try {
+    // 1) tipo OData dinâmico — exactamente como Correio
+    const meta = await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')?$select=ListItemEntityTypeFullName`);
+    const listType = meta.d.ListItemEntityTypeFullName;
+
+    const body = {
+      __metadata:     { type: listType },
+      Title:          titulo,
+      Entidade:       el('fe-entidade').value.trim(),
+      DataReuniao:    dataVal + 'T00:00:00Z',
+      Local:          el('fe-local').value.trim(),
+      Departamento:   el('fe-dep').value,
+      Responsavel:    el('fe-resp').value,
+      Participantes:  el('fe-part').value.trim(),
+      Resumo:         el('fe-resumo').value.trim(),
+      ProximosPassos: el('fe-passos').value.trim()
     };
-    if(gv('fe-data'))body.DataReuniao=gv('fe-data')+'T00:00:00Z';
-    // Departamento lookup
-    const depVal=gv('fe-dep');
-    if(depVal&&plDepartamentos?.length){
-      const depItem=plDepartamentos.find(d=>d.Title===depVal||d.nome===depVal);
-      if(depItem)body.DepartamentoId=depItem.id||depItem.ID;
-    }
-    // Responsável — person lookup (opcional, falha silenciosamente)
-    const respEmail=gv('fe-resp-email')||'';
-    if(respEmail){
-      try{const uid=await getSpUID(respEmail);if(uid)body.ResponsavelId=uid;}
-      catch(e){console.warn('Responsavel lookup:',e);}
+
+    let itemId = editExtId;
+    if (editExtId) {
+      await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items(${editExtId})`, body, 'MERGE');
+    } else {
+      const res    = await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items`, body, 'POST');
+      const resData = await res.json();
+      itemId = resData.d?.Id;
     }
 
-    let itemId=editExtId;
-    if(editExtId){
-      await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items(${editExtId})`,body,'MERGE','*');
-    }else{
-      const r=await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items`,body,'POST');
-      const d=await r.json();itemId=d.d.Id;
+    // 2) Anexos novos
+    if (itemId && _extSelectedFiles.length) {
+      for (const f of _extSelectedFiles) {
+        try { await uploadAttachment(EXT_LIST, itemId, f); }
+        catch(e) { console.warn('Attach error', e); }
+      }
     }
-    // Anexos
-    const files=el('fe-file').files;
-    for(const f of files)try{await uploadAttachment(EXT_LIST,itemId,f);}catch(e){console.warn('Attach:',e);}
-    // Tarefas inline
-    if(feInlineTarefas.length)await extSaveInlineTarefas(itemId,titulo);
 
-    const nTarefas=feInlineTarefas.length;
-    feInlineTarefas=[];
+    // 3) Criar tarefas temporárias — exactamente como Correio
+    if (itemId && _extTarefasTemp.length) {
+      const tarMeta = await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+      const tarType = tarMeta.d.ListItemEntityTypeFullName;
+      for (const t of _extTarefasTemp) {
+        const tarBody = {
+          __metadata:        { type: tarType },
+          Title:             t.titulo,
+          ReuniaoExternaIdId: itemId,
+          Responsavel:       t.responsavel,
+          Estado:            t.estado,
+          Notas:             t.notas
+        };
+        if (t.dataLimite) tarBody.DataLimite = t.dataLimite + 'T00:00:00Z';
+        await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`, tarBody, 'POST');
+      }
+    }
+
+    showNotif(
+      `Reunião guardada!${_extTarefasTemp.length ? ` e ${_extTarefasTemp.length} tarefa(s) criada(s)` : ''}`,
+      'success'
+    );
     closeExtForm();
     await extLoadAll();
-    showNotif('Reunião guardada!'+(nTarefas?` e ${nTarefas} tarefa(s) criada(s)`:''),'success');
-  }catch(e){showNotif('Erro: '+e.message,'error');}
-  btn.textContent='Guardar';btn.disabled=false;
+  } catch(e) {
+    showNotif('Erro ao guardar: ' + e.message, 'error');
+    console.error('saveExt error:', e);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
 }
 
 // ── Eliminar reunião ─────────────────────────────
-async function deleteExt(id){
-  if(!confirm('Eliminar esta reunião?'))return;
-  try{
-    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items(${id})`,null,'DELETE');
-    await extLoadAll();showNotif('Eliminado.','success');
-  }catch(e){showNotif('Erro: '+e.message,'error');}
+async function extDeleteReuniao(id) {
+  if (!confirm('Eliminar esta reunião?')) return;
+  try {
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_LIST}')/items(${id})`, null, 'DELETE');
+    await extLoadAll();
+    showNotif('Eliminado.', 'success');
+  } catch(e) { showNotif('Erro: ' + e.message, 'error'); }
 }
 
-// ── Tarefas inline no form ───────────────────────
-function addTarefaInline(){
-  const titulo=el('fe-tar-titulo')?.value.trim();
-  if(!titulo)return;
-  const resp=el('fe-tar-resp')?.value||'';
-  const data=el('fe-tar-data')?.value||'';
-  const estado=el('fe-tar-estado')?.value||'Por fazer';
-  feInlineTarefas.push({titulo,resp,data,estado,_uid:Date.now()});
-  el('fe-tar-titulo').value='';
-  el('fe-tar-data').value='';
-  renderInlineTarefas();
+// ── Ficheiros selecionados no form ───────────────
+function extPreviewFiles() {
+  const input = el('fe-file');
+  if (!input) return;
+  const existing = new Set(_extSelectedFiles.map(f => f.name));
+  Array.from(input.files || []).forEach(f => {
+    if (!existing.has(f.name)) { _extSelectedFiles.push(f); existing.add(f.name); }
+  });
+  input.value = '';
+  _extRenderFilesPreview();
 }
-function removeInlineTarefa(uid){
-  feInlineTarefas=feInlineTarefas.filter(t=>t._uid!==uid);
-  renderInlineTarefas();
+function _extRenderFilesPreview() {
+  const preview = el('fe-attach-preview');
+  if (!preview) return;
+  if (!_extSelectedFiles.length) { preview.innerHTML = ''; return; }
+  preview.innerHTML = _extSelectedFiles.map((f, i) => `
+    <div class="attach-item">
+      <span>📎 ${f.name}</span>
+      <span style="color:var(--text3);font-size:11px">${(f.size/1024).toFixed(0)} KB</span>
+      <button class="attach-remove" onclick="extRemoveFile(${i})">✕</button>
+    </div>`).join('');
 }
-function renderInlineTarefas(){
-  const list=el('fe-tarefas-list');if(!list)return;
-  if(!feInlineTarefas.length){list.innerHTML='';return;}
-  list.innerHTML=feInlineTarefas.map(t=>`
-    <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 10px;margin-bottom:4px">
-      <span style="font-size:16px">📋</span>
+function extRemoveFile(i) { _extSelectedFiles.splice(i, 1); _extRenderFilesPreview(); }
+
+// ── Tarefas temporárias no form ──────────────────
+function extAddTarefaTemp() {
+  const titulo = el('fe-tar-titulo')?.value.trim();
+  if (!titulo) { showNotif('Preenche a descrição da tarefa.', 'error'); return; }
+  _extTarefasTemp.push({
+    _uid:       Date.now() + Math.random(),
+    titulo,
+    responsavel: el('fe-tar-resp')?.value || '',
+    dataLimite:  el('fe-tar-data')?.value || '',
+    estado:      el('fe-tar-estado')?.value || 'Por fazer',
+    notas:       ''
+  });
+  el('fe-tar-titulo').value = '';
+  el('fe-tar-data').value   = '';
+  if(el('fe-tar-resp')) el('fe-tar-resp').value = '';
+  _extRenderTarefasTemp();
+}
+function extRemoveTarefaTemp(uid) {
+  _extTarefasTemp = _extTarefasTemp.filter(t => t._uid !== uid);
+  _extRenderTarefasTemp();
+}
+function _extRenderTarefasTemp() {
+  const wrap = el('fe-tarefas-list');
+  if (!wrap) return;
+  if (!_extTarefasTemp.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = _extTarefasTemp.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:6px">
+      <span style="font-size:18px">📋</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:500">${t.titulo}</div>
-        <div style="font-size:11px;color:var(--text2)">${t.resp||'Sem responsável'} · ${t.data?fd(t.data):'Sem data'} · ${t.estado}</div>
+        <div style="font-size:11px;color:var(--text3)">${t.responsavel || 'Sem responsável'} · ${t.dataLimite ? fd(t.dataLimite) : 'Sem data'} · ${t.estado}</div>
       </div>
-      <button class="btn btn-sm btn-danger" onclick="removeInlineTarefa(${t._uid})">✕</button>
+      <button class="btn btn-sm btn-danger" onclick="extRemoveTarefaTemp(${t._uid})">✕</button>
     </div>`).join('');
 }
 
-async function extSaveInlineTarefas(reuniaoId,reuniaoTitulo){
-  if(!feInlineTarefas.length)return;
-  try{
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
-    const tarType=meta.d.ListItemEntityTypeFullName;
-    for(const t of feInlineTarefas){
-      const body={__metadata:{type:tarType},Title:t.titulo,Estado:t.estado||'Por fazer'};
-      if(reuniaoId)body.ReuniaoExternaIdId=parseInt(reuniaoId);
-      if(t.resp)body.Responsavel=t.resp;
-      if(t.data)body.DataLimite=t.data+'T00:00:00Z';
-      await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`,body,'POST');
-    }
-    feInlineTarefas=[];renderInlineTarefas();
-  }catch(e){
-    showNotif('Aviso: algumas tarefas não foram guardadas — '+e.message,'error');
-    console.warn('extSaveInlineTarefas:',e);
-  }
-}
+// mantém addTarefaInline como alias
+function addTarefaInline() { extAddTarefaTemp(); }
+function renderInlineTarefas() { _extRenderTarefasTemp(); }
 
-// ── Detalhe de reunião (modal) ───────────────────
-function extOpenDetail(id){
-  const r=extItems.find(x=>x.id===id);if(!r)return;
-  const modal=el('ext-detail-modal');
-  const body=el('ext-detail-body');
-  const title=el('ext-detail-title');
-  if(!modal||!body||!title)return;
-  title.textContent=r.titulo;
+// ── Detalhe de reunião ───────────────────────────
+function extOpenDetail(id) {
+  const r = extItems.find(x => x.id === id);
+  if (!r) return;
+  const modal = el('ext-detail-modal');
+  const body  = el('ext-detail-body');
+  const title = el('ext-detail-title');
+  if (!modal || !body || !title) return;
+  title.textContent = r.titulo;
 
-  const tarefas=extTarefas.filter(t=>t.reuniaoId===id);
-  const EM={'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado'};
-  const eBadge=e=>`<span class="badge ${EM[e]||'b-na'}">${e}</span>`;
+  const tarefas = extTarefas.filter(t => t.reuniaoId === id);
+  const EM = { 'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado' };
+  const eBadge = e => `<span class="badge ${EM[e] || 'b-na'}">${e}</span>`;
 
-  body.innerHTML=`
+  body.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Data</div><div style="font-size:13px">${fd(r.data)}</div></div>
-      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Entidade</div><div style="font-size:13px">${r.entidade||'—'}</div></div>
-      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Local</div><div style="font-size:13px">${r.local||'—'}</div></div>
-      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Departamento</div><div style="font-size:13px">${r.departamento||'—'}</div></div>
-      <div><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Responsável FJ</div><div style="font-size:13px">${r.responsavel||'—'}</div></div>
+      <div><div class="det-lbl">Data</div><div class="det-val">${fd(r.data)}</div></div>
+      <div><div class="det-lbl">Entidade</div><div class="det-val">${r.entidade || '—'}</div></div>
+      <div><div class="det-lbl">Local</div><div class="det-val">${r.local || '—'}</div></div>
+      <div><div class="det-lbl">Departamento</div><div class="det-val">${r.departamento || '—'}</div></div>
+      <div><div class="det-lbl">Responsável FJ</div><div class="det-val">${r.responsavel || '—'}</div></div>
     </div>
-    ${r.participantes?`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Participantes</div><div style="font-size:13px;line-height:1.6">${r.participantes.replace(/\n/g,'<br>')}</div></div>`:''}
-    ${r.resumo?`<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Resumo</div><div style="font-size:13px;line-height:1.6">${r.resumo.replace(/\n/g,'<br>')}</div></div>`:''}
-    ${r.proximosPassos?`<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--blue-d);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Próximos Passos</div><div style="font-size:13px;line-height:1.6;color:var(--blue-d)">${r.proximosPassos.replace(/\n/g,'<br>')}</div></div>`:''}
-    ${r.attachments?.length?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📎 Anexos</div><div class="attach-list">${r.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📄 ${a.name}</a><button class="attach-remove" onclick="removeAttach('${EXT_LIST}',${r.id},'${a.name.replace(/'/g,"\\'")}');extOpenDetail(${r.id})">✕</button></div>`).join('')}</div></div>`:''}
+    ${r.participantes ? `<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:12px"><div class="det-lbl" style="margin-bottom:6px">Participantes</div><div style="font-size:13px;line-height:1.6">${r.participantes.replace(/\n/g,'<br>')}</div></div>` : ''}
+    ${r.resumo ? `<div style="background:var(--bg3);border-radius:var(--r);padding:12px;margin-bottom:12px"><div class="det-lbl" style="margin-bottom:6px">Resumo</div><div style="font-size:13px;line-height:1.6">${r.resumo.replace(/\n/g,'<br>')}</div></div>` : ''}
+    ${r.proximosPassos ? `<div style="background:var(--blue-l);border-radius:var(--r);padding:12px;margin-bottom:12px"><div class="det-lbl" style="margin-bottom:6px;color:var(--blue-d)">Próximos Passos</div><div style="font-size:13px;line-height:1.6;color:var(--blue-d)">${r.proximosPassos.replace(/\n/g,'<br>')}</div></div>` : ''}
+    ${r.attachments.length ? `<div style="margin-bottom:12px"><div class="det-lbl" style="margin-bottom:6px">📎 Anexos</div><div class="attach-list">${r.attachments.map(a=>`<div class="attach-item"><a href="https://fjuventude.sharepoint.com${a.url}" target="_blank">📄 ${a.name}</a><button class="attach-remove" onclick="removeAttach('${EXT_LIST}',${r.id},'${a.name.replace(/'/g,"\'")}');extOpenDetail(${r.id})">✕</button></div>`).join('')}</div></div>` : ''}
     <div style="border-top:0.5px solid var(--border);padding-top:16px;margin-top:4px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:600">📋 Tarefas associadas ${tarefas.length?`<span style="background:var(--bg3);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:400;color:var(--text2)">${tarefas.length}</span>`:''}</div>
+        <div style="font-size:13px;font-weight:600">📋 Tarefas associadas ${tarefas.length ? `<span style="background:var(--bg3);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:400;color:var(--text2)">${tarefas.length}</span>` : ''}</div>
         <button class="btn btn-sm btn-primary" onclick="extOpenAddTarefaModal(${id})">+ Nova tarefa</button>
       </div>
-      ${!tarefas.length?'<div style="color:var(--text3);font-size:13px">Sem tarefas associadas a esta reunião.</div>':
-        tarefas.map(t=>`
+      ${!tarefas.length ? '<div style="color:var(--text3);font-size:13px">Sem tarefas associadas a esta reunião.</div>' :
+        tarefas.map(t => `
           <div style="display:flex;align-items:center;gap:10px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:6px">
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:500;margin-bottom:3px">${t.titulo}</div>
               <div style="font-size:11px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                <span>${t.responsavel||'Sem responsável'}</span>
-                ${t.dataLimite?`<span>· ${fd(t.dataLimite)}</span>`:''}
+                <span>${t.responsavel || 'Sem responsável'}</span>
+                ${t.dataLimite ? `<span>· ${fd(t.dataLimite)}</span>` : ''}
                 <span>· ${eBadge(t.estado)}</span>
               </div>
-              ${t.notas?`<div style="font-size:11px;color:var(--text2);margin-top:4px;font-style:italic">${t.notas}</div>`:''}
+              ${t.notas ? `<div style="font-size:11px;color:var(--text2);margin-top:4px;font-style:italic">${t.notas}</div>` : ''}
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0">
               <button class="btn btn-sm" onclick="extOpenTarEdit(${t.id},${id})">Editar</button>
-              ${t.estado!=='Concluída'?`<button class="btn btn-sm btn-green" onclick="extConcluirTarefa(${t.id},${id})">✓</button>`:''}
+              ${t.estado !== 'Concluída' ? `<button class="btn btn-sm btn-green" onclick="extConcluirTarefa(${t.id},${id})">✓</button>` : ''}
               <button class="btn btn-sm btn-danger" onclick="extDeleteTarefa(${t.id},${id})">✕</button>
             </div>
           </div>`).join('')}
     </div>`;
-  modal.style.display='block';
+  modal.style.display = 'block';
 }
-function extCloseDetail(){const m=el('ext-detail-modal');if(m)m.style.display='none';}
+function extCloseDetail() { const m = el('ext-detail-modal'); if(m) m.style.display = 'none'; }
 
-// ── Modal para adicionar tarefa à reunião ────────
-let _extDetailReuniaoId=null;
-function extOpenAddTarefaModal(reuniaoId){
-  _extDetailReuniaoId=reuniaoId;
-  ['ext-add-tar-titulo','ext-add-tar-data','ext-add-tar-notas'].forEach(x=>{const e=el(x);if(e)e.value='';});
-  sv2('ext-add-tar-estado','Por fazer');
-  const m=el('ext-add-tar-modal');if(m)m.style.display='block';
+// ── Modal adicionar tarefa ───────────────────────
+let _extDetailReuniaoId = null;
+function extOpenAddTarefaModal(reuniaoId) {
+  _extDetailReuniaoId = reuniaoId;
+  ['ext-add-tar-titulo','ext-add-tar-data','ext-add-tar-notas'].forEach(x => { const e = el(x); if(e) e.value = ''; });
+  sv2('ext-add-tar-estado', 'Por fazer');
+  sv2('ext-add-tar-resp', '');
+  el('ext-add-tar-modal').style.display = 'block';
 }
-function extCloseAddTarModal(){const m=el('ext-add-tar-modal');if(m)m.style.display='none';}
-async function extSaveAddTarefa(){
-  const titulo=el('ext-add-tar-titulo')?.value.trim();
-  if(!titulo){showNotif('Indica a descrição da tarefa.','error');return;}
-  const btn=el('ext-add-tar-save-btn');if(btn){btn.disabled=true;btn.textContent='A guardar...';}
-  try{
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
-    const tarType=meta.d.ListItemEntityTypeFullName;
-    const respSel=el('ext-add-tar-resp');
-    const resp=respSel?.value||'';
-    const data=el('ext-add-tar-data')?.value||'';
-    const body={__metadata:{type:tarType},Title:titulo,Estado:gv('ext-add-tar-estado')||'Por fazer'};
-    if(_extDetailReuniaoId)body.ReuniaoExternaIdId=parseInt(_extDetailReuniaoId);
-    if(resp)body.Responsavel=resp;
-    if(data)body.DataLimite=data+'T00:00:00Z';
-    const notas=el('ext-add-tar-notas')?.value.trim();
-    if(notas)body.Notas=notas;
-    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`,body,'POST');
-    showNotif('Tarefa criada!','success');
+function extCloseAddTarModal() { el('ext-add-tar-modal').style.display = 'none'; }
+
+async function extSaveAddTarefa() {
+  const titulo = el('ext-add-tar-titulo')?.value.trim();
+  if (!titulo) { showNotif('Indica a descrição da tarefa.', 'error'); return; }
+  const btn = el('ext-add-tar-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'A guardar...'; }
+  try {
+    const meta    = await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType = meta.d.ListItemEntityTypeFullName;
+    const body = {
+      __metadata:        { type: tarType },
+      Title:             titulo,
+      ReuniaoExternaIdId: _extDetailReuniaoId,
+      Responsavel:       el('ext-add-tar-resp')?.value || '',
+      Estado:            el('ext-add-tar-estado')?.value || 'Por fazer',
+      Notas:             el('ext-add-tar-notas')?.value.trim() || ''
+    };
+    const dataVal = el('ext-add-tar-data')?.value;
+    if (dataVal) body.DataLimite = dataVal + 'T00:00:00Z';
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`, body, 'POST');
+    showNotif('Tarefa criada!', 'success');
     extCloseAddTarModal();
     await extLoadAll();
     extOpenDetail(_extDetailReuniaoId);
-  }catch(e){showNotif('Erro: '+e.message,'error');}
-  if(btn){btn.disabled=false;btn.textContent='Guardar';}
+  } catch(e) { showNotif('Erro: ' + e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
 }
 
 // ── Editar tarefa ────────────────────────────────
-let _extEditTarParentId=null;
-function extOpenTarEdit(tarId,reuniaoId){
-  const t=extTarefas.find(x=>x.id===tarId);if(!t)return;
-  _extEditTarParentId=reuniaoId||t.reuniaoId;
-  el('ext-edit-tar-id').value=tarId;
-  el('ext-edit-tar-titulo').value=t.titulo;
-  el('ext-edit-tar-data').value=t.dataLimite||'';
-  el('ext-edit-tar-notas').value=t.notas||'';
-  sv2('ext-edit-tar-estado',t.estado||'Por fazer');
-  sv2('ext-edit-tar-resp',t.responsavel||'');
-  el('ext-tar-modal').style.display='block';
+let _extEditTarParentId = null;
+function extOpenTarEdit(tarId, reuniaoId) {
+  const t = extTarefas.find(x => x.id === tarId);
+  if (!t) return;
+  _extEditTarParentId = reuniaoId || t.reuniaoId;
+  el('ext-edit-tar-id').value    = tarId;
+  el('ext-edit-tar-titulo').value = t.titulo;
+  el('ext-edit-tar-data').value   = t.dataLimite || '';
+  el('ext-edit-tar-notas').value  = t.notas || '';
+  sv2('ext-edit-tar-estado',  t.estado || 'Por fazer');
+  sv2('ext-edit-tar-resp',    t.responsavel || '');
+  el('ext-tar-modal').style.display = 'block';
 }
-function extCloseTarModal(){el('ext-tar-modal').style.display='none';}
-async function extSaveTarefaEdit(){
-  const id=parseInt(el('ext-edit-tar-id').value);
-  const titulo=el('ext-edit-tar-titulo').value.trim();
-  if(!titulo){showNotif('Indica a descrição.','error');return;}
-  const btn=el('ext-tar-save-btn');if(btn){btn.disabled=true;btn.textContent='A guardar...';}
-  try{
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
-    const tarType=meta.d.ListItemEntityTypeFullName;
-    const resp=el('ext-edit-tar-resp')?.value||'';
-    const dataVal=el('ext-edit-tar-data')?.value||null;
-    const body={__metadata:{type:tarType},Title:titulo,Estado:gv('ext-edit-tar-estado')||'Por fazer',Notas:el('ext-edit-tar-notas')?.value.trim()||''};
-    if(resp)body.Responsavel=resp;
-    if(dataVal)body.DataLimite=dataVal+'T00:00:00Z';
-    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${id})`,body,'MERGE','*');
-    showNotif('Tarefa atualizada.','success');
+function extCloseTarModal() { el('ext-tar-modal').style.display = 'none'; }
+
+async function extSaveTarefaEdit() {
+  const id    = parseInt(el('ext-edit-tar-id').value);
+  const titulo = el('ext-edit-tar-titulo').value.trim();
+  if (!titulo) { showNotif('Indica a descrição.', 'error'); return; }
+  const btn = el('ext-tar-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'A guardar...'; }
+  try {
+    const meta    = await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    const tarType = meta.d.ListItemEntityTypeFullName;
+    const body = {
+      __metadata:  { type: tarType },
+      Title:       titulo,
+      Responsavel: el('ext-edit-tar-resp')?.value || '',
+      Estado:      el('ext-edit-tar-estado')?.value || 'Por fazer',
+      Notas:       el('ext-edit-tar-notas')?.value.trim() || ''
+    };
+    const dataVal = el('ext-edit-tar-data')?.value;
+    if (dataVal) body.DataLimite = dataVal + 'T00:00:00Z';
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${id})`, body, 'MERGE');
+    showNotif('Tarefa atualizada.', 'success');
     extCloseTarModal();
     await extLoadAll();
-    if(_extEditTarParentId)extOpenDetail(_extEditTarParentId);
-  }catch(e){showNotif('Erro: '+e.message,'error');}
-  if(btn){btn.disabled=false;btn.textContent='Guardar';}
+    if (_extEditTarParentId) extOpenDetail(_extEditTarParentId);
+  } catch(e) { showNotif('Erro: ' + e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
 }
 
 // ── Concluir tarefa ──────────────────────────────
-async function extConcluirTarefa(tarId,reuniaoId){
-  try{
-    const meta=await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
-    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${tarId})`,{__metadata:{type:meta.d.ListItemEntityTypeFullName},Estado:'Concluída'},'MERGE','*');
-    showNotif('Tarefa concluída! ✓','success');
+async function extConcluirTarefa(tarId, reuniaoId) {
+  try {
+    const meta = await spRead(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')?$select=ListItemEntityTypeFullName`);
+    await spWrite(
+      `${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${tarId})`,
+      { __metadata: { type: meta.d.ListItemEntityTypeFullName }, Estado: 'Concluída' },
+      'MERGE'
+    );
+    showNotif('Tarefa concluída! ✓', 'success');
     await extLoadAll();
-    if(reuniaoId)extOpenDetail(reuniaoId);
-  }catch(e){showNotif('Erro: '+e.message,'error');}
+    if (reuniaoId) extOpenDetail(reuniaoId);
+  } catch(e) { showNotif('Erro: ' + e.message, 'error'); }
 }
 
 // ── Eliminar tarefa ──────────────────────────────
-async function extDeleteTarefa(tarId,reuniaoId){
-  if(!confirm('Eliminar esta tarefa?'))return;
-  try{
-    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${tarId})`,null,'DELETE');
-    showNotif('Eliminado.','success');
+async function extDeleteTarefa(tarId, reuniaoId) {
+  if (!confirm('Eliminar esta tarefa?')) return;
+  try {
+    await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${tarId})`, null, 'DELETE');
+    showNotif('Eliminado.', 'success');
     await extLoadAll();
-    if(reuniaoId)extOpenDetail(reuniaoId);
+    if (reuniaoId) extOpenDetail(reuniaoId);
     else renderExtTarefasTable();
-  }catch(e){showNotif('Erro: '+e.message,'error');}
+  } catch(e) { showNotif('Erro: ' + e.message, 'error'); }
 }
 
-// ── Alias para compatibilidade ───────────────────
-async function loadRnTarefas(){await extLoadTarefas();}
-function renderTarefasTable(){renderExtTarefasTable();}
-function renderTarefasStats(){extRenderStats();}
+// ── Tabela de tarefas ────────────────────────────
+function renderExtTarefasTable() {
+  const tbody = el('tbody-tar');
+  if (!tbody) return;
+  const q  = (el('qt')?.value  || '').toLowerCase();
+  const fe = el('fft-est')?.value || '';
+  const hoje = today();
 
+  const list = extTarefas.filter(t => {
+    if (q && !t.titulo.toLowerCase().includes(q) && !t.reuniaoTitulo.toLowerCase().includes(q)) return false;
+    if (fe && t.estado !== fe) return false;
+    return true;
+  });
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Sem tarefas de reuniões externas.</div></td></tr>`;
+    sv('tcount-tar', '');
+    return;
+  }
+
+  const EM = { 'Por fazer':'b-pfazer','Em curso':'b-emcurso','Concluída':'b-concluido','Cancelada':'b-cancelado' };
+  tbody.innerHTML = list.map(t => {
+    const atrasada = t.dataLimite && t.dataLimite < hoje && t.estado !== 'Concluída' && t.estado !== 'Cancelada';
+    return `<tr style="${atrasada ? 'background:#fff8f8' : ''}">
+      <td style="font-weight:500">${t.titulo}</td>
+      <td style="font-size:12px;color:var(--text2)">${t.reuniaoTitulo || '—'}</td>
+      <td>${t.responsavel || '—'}</td>
+      <td style="${atrasada ? 'color:var(--red);font-weight:600' : ''}">${fd(t.dataLimite)}${atrasada ? ' ⚠️' : ''}</td>
+      <td><span class="badge ${EM[t.estado] || 'b-na'}">${t.estado}</span></td>
+      <td><div class="actions">
+        <button class="btn btn-sm" onclick="extOpenTarEdit(${t.id})">Editar</button>
+        ${t.estado !== 'Concluída' ? `<button class="btn btn-sm btn-green" onclick="extConcluirTarefa(${t.id})">✓</button>` : ''}
+        <button class="btn btn-sm btn-danger" onclick="extDeleteTarefa(${t.id})">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  sv('tcount-tar', `${list.length} tarefa${list.length !== 1 ? 's' : ''}`);
+}
+
+// ── Aliases para retrocompatibilidade ───────────
+async function loadExtItems() { await extLoadReunoes(); }
+async function loadRnTarefas() { await extLoadTarefas(); }
+function renderTarefasTable() { renderExtTarefasTable(); }
+function renderTarefasStats() { extRenderStats(); }
+function deleteExt(id) { extDeleteReuniao(id); }
 
 // PREP MODE & SAVED SESSIONS
 let prepItems=[];
