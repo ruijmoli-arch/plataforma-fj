@@ -2218,7 +2218,6 @@ tr:hover td{background:var(--bg3)}
           <div class="fg"><label>Responsável</label><select id="ext-add-tar-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select></div>
           <div class="fg"><label>Data limite</label><input type="date" id="ext-add-tar-data"></div>
           <div class="fg"><label>Estado</label><select id="ext-add-tar-estado"><option>Por fazer</option><option>Em curso</option></select></div>
-          <div class="fg" style="grid-column:1/-1"><label>Notas</label><textarea id="ext-add-tar-notas" style="min-height:60px" placeholder="Contexto ou instruções..."></textarea></div>
         </div>
         <div class="panel-footer">
           <button class="btn" onclick="extCloseAddTarModal()">Cancelar</button>
@@ -2244,7 +2243,6 @@ tr:hover td{background:var(--bg3)}
           <div class="fg"><label>Responsável</label><select id="ext-edit-tar-resp" class="user-resp-sel" style="width:100%"><option value="">— Selecionar —</option></select></div>
           <div class="fg"><label>Data limite</label><input type="date" id="ext-edit-tar-data"></div>
           <div class="fg"><label>Estado</label><select id="ext-edit-tar-estado"><option>Por fazer</option><option>Em curso</option><option>Concluída</option><option>Cancelada</option></select></div>
-          <div class="fg" style="grid-column:1/-1"><label>Notas</label><textarea id="ext-edit-tar-notas" style="min-height:60px"></textarea></div>
         </div>
         <div class="panel-footer">
           <button class="btn" onclick="extCloseTarModal()">Cancelar</button>
@@ -3267,8 +3265,7 @@ async function extLoadTarefas() {
     reuniaoTitulo: r.ReunioExternaId?.Title || '',
     responsavel:   r.Responsavel || '',
     dataLimite:    r.DataLimite ? r.DataLimite.split('T')[0] : '',
-    estado:        r.Estado || 'Por fazer',
-    notas:         r.Notas || ''
+    estado:        r.Estado || 'Por fazer'
   }));
   renderExtTarefasTable();
 }
@@ -3457,7 +3454,6 @@ async function saveExt() {
         };
         if (t.responsavel) tarBody.Responsavel = t.responsavel;
         if (t.dataLimite)  tarBody.DataLimite  = t.dataLimite + 'T00:00:00Z';
-        if (t.notas)       tarBody.Notas       = t.notas;
         await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`, tarBody, 'POST');
       }
     }
@@ -3626,15 +3622,13 @@ async function extSaveAddTarefa() {
     const body = {
       __metadata:        { type: tarType },
       Title:             titulo,
-      ReunioExternaIdId: _extDetailReuniaoId,
+      ReunioExternaIdId: parseInt(_extDetailReuniaoId),
       Estado:            el('ext-add-tar-estado')?.value || 'Por fazer'
     };
-    const respVal = el('ext-add-tar-resp')?.value || '';
+    const respVal2 = el('ext-add-tar-resp')?.value?.trim() || '';
     const dataVal2 = el('ext-add-tar-data')?.value;
-    const notasVal = el('ext-add-tar-notas')?.value.trim() || '';
-    if (respVal)  body.Responsavel = respVal;
+    if (respVal2) body.Responsavel = respVal2;
     if (dataVal2) body.DataLimite  = dataVal2 + 'T00:00:00Z';
-    if (notasVal) body.Notas       = notasVal;
     await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items`, body, 'POST');
     showNotif('Tarefa criada!', 'success');
     extCloseAddTarModal();
@@ -3674,12 +3668,10 @@ async function extSaveTarefaEdit() {
       Title:       titulo,
       Estado:      el('ext-edit-tar-estado')?.value || 'Por fazer'
     };
-    const resp2   = el('ext-edit-tar-resp')?.value || '';
+    const resp3   = el('ext-edit-tar-resp')?.value?.trim() || '';
     const dataVal3 = el('ext-edit-tar-data')?.value;
-    const notas2  = el('ext-edit-tar-notas')?.value.trim() || '';
-    if (resp2)   body.Responsavel = resp2;
-    if (dataVal3) body.DataLimite = dataVal3 + 'T00:00:00Z';
-    if (notas2)  body.Notas       = notas2;
+    if (resp3)    body.Responsavel = resp3;
+    if (dataVal3) body.DataLimite  = dataVal3 + 'T00:00:00Z';
     await spWrite(`${SP}/_api/web/lists/getbytitle('${EXT_TAR_LIST}')/items(${id})`, body, 'MERGE');
     showNotif('Tarefa atualizada.', 'success');
     extCloseTarModal();
