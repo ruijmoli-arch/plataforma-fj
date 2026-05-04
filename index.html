@@ -4046,62 +4046,115 @@ async function gerarDocumentoPDF() {
     // ── PÁGINAS DE ANEXO ─────────────────────────────────────────────
     let pdfBytes = null;
     if (comAnexos) {
-      const anexosPDF = [];
+      // Recolher todos os anexos PDF de todos os assuntos selecionados
+      const allAnexos = [];
       for (const it of selecionados) {
-        for (let ai = 0; ai < (it.attachments || []).length; ai++) {
-          const a = it.attachments[ai];
-          if (!a.name.toLowerCase().endsWith('.pdf')) continue;
-          try {
-            const progMsg = el('gd-progress-msg');
-            if (progMsg) progMsg.textContent = `A obter anexo: ${a.name}`;
-            const resp = await fetch(`https://fjuventude.sharepoint.com${a.url}`, {
-              headers: { Authorization: `Bearer ${spToken}` }
-            });
-            if (!resp.ok) continue;
-            const bytes = await resp.arrayBuffer();
-            anexosPDF.push({ titulo: it.titulo, name: a.name, num: ai + 1, total: it.attachments.filter(x => x.name.toLowerCase().endsWith('.pdf')).length, bytes });
-          } catch(e) { console.warn('Erro ao obter anexo:', a.name, e); }
+        for (const a of (it.attachments || [])) {
+          if (a.name.toLowerCase().endsWith('.pdf')) {
+            allAnexos.push({ titulo: it.titulo, name: a.name, url: a.url });
+          }
         }
       }
 
-      if (anexosPDF.length && window.PDFLib) {
-        const { PDFDocument, rgb, degrees } = PDFLib;
-        const mainBytes = doc.output('arraybuffer');
-        const merged = await PDFDocument.create();
+      if (allAnexos.length > 0 && window.PDFLib) {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
-        // copiar páginas do documento principal
-        const mainPdf = await PDFDocument.load(mainBytes);
-        const mainPages = await merged.copyPages(mainPdf, mainPdf.getPageIndices());
-        mainPages.forEach(p => merged.addPage(p));
+        // Garantir token fresco
+        await getSPToken();
 
-        // para cada anexo: página de marca de água + páginas do PDF
-        for (const anx of anexosPDF) {
-          // página de marca de água
-          const wPage = merged.addPage([595, 842]);
-          const { width, height } = wPage.getSize();
-          const font = await merged.embedFont(PDFLib.StandardFonts.HelveticaBold);
-          const fontN = await merged.embedFont(PDFLib.StandardFonts.Helvetica);
-
-          wPage.drawRectangle({ x: 0, y: height - 80, width, height: 80, color: rgb(0.107, 0.62, 0.459) });
-          wPage.drawText('ANEXO', { x: 40, y: height - 35, size: 20, font, color: rgb(1,1,1) });
-          wPage.drawText(`Assunto: ${anx.titulo}`, { x: 40, y: height - 56, size: 11, font: fontN, color: rgb(0.9, 1, 0.95) });
-          wPage.drawText(`Ficheiro: ${anx.name} (${anx.num} de ${anx.total})`, { x: 40, y: height - 70, size: 10, font: fontN, color: rgb(0.8, 0.95, 0.88) });
-
-          // marca de água diagonal em cada página do anexo
-          const anxPdf = await PDFDocument.load(anx.bytes);
-          const anxPages = await merged.copyPages(anxPdf, anxPdf.getPageIndices());
-          anxPages.forEach(p => {
-            merged.addPage(p);
-            const { width: pw, height: ph } = p.getSize();
-            p.drawText(`ANEXO · ${anx.titulo} · ${anx.num}/${anx.total}`, {
-              x: pw / 2 - 150, y: ph / 2 - 10,
-              size: 18, font, color: rgb(0.8, 0.8, 0.8),
-              opacity: 0.25, rotate: degrees(45)
+        // Fetch de cada PDF via endpoint correcto do SharePoint
+        const fetchedPDFs = [];
+        for (let fi = 0; fi < allAnexos.length; fi++) {
+          const anx = allAnexos[fi];
+          btn.textContent = `📄 A obter ${fi + 1}/${allAnexos.length}...`;
+          try {
+            // Endpoint correcto: /_api/web/GetFileByServerRelativeUrl('{url}')/$value
+            const encodedUrl = encodeURIComponent(anx.url);
+            const endpoint = `${SP}/_api/web/GetFileByServerRelativeUrl('${anx.url}')/$value`;
+            const resp = await fetch(endpoint, {
+              headers: { Authorization: `Bearer ${spToken}`, Accept: 'application/octet-stream' }
             });
-          });
+            if (!resp.ok) { console.warn(`Anexo ${anx.name}: HTTP ${resp.status}`); continue; }
+            const bytes = await resp.arrayBuffer();
+            fetchedPDFs.push({ ...anx, bytes });
+          } catch(e) { console.warn(`Erro ao obter ${anx.name}:`, e.message); }
         }
 
-        pdfBytes = await merged.save();
+        if (fetchedPDFs.length > 0) {
+          btn.textContent = '📄 A juntar PDFs...';
+          // Merge: documento principal + página separadora + páginas de cada anexo
+          const mainBytes = doc.output('arraybuffer');
+          const merged = await PDFDocument.create();
+          const helveticaBold = await merged.embedFont(StandardFonts.HelveticaBold);
+          const helvetica     = await merged.embedFont(StandardFonts.Helvetica);
+
+          // Copiar páginas do documento principal
+          const mainPdf   = await PDFDocument.load(mainBytes);
+          const mainPages = await merged.copyPages(mainPdf, mainPdf.getPageIndices());
+          mainPages.forEach(p => merged.addPage(p));
+
+          // Agrupar por assunto para numeração correcta
+          const byTitulo = {};
+          fetchedPDFs.forEach(a => {
+            if (!byTitulo[a.titulo]) byTitulo[a.titulo] = [];
+            byTitulo[a.titulo].push(a);
+          });
+
+          let globalAnexo = 0;
+          for (const [titulo, anexosDoAssunto] of Object.entries(byTitulo)) {
+            for (let ai = 0; ai < anexosDoAssunto.length; ai++) {
+              const anx = anexosDoAssunto[ai];
+              globalAnexo++;
+
+              // Página separadora (marca de água / capa do anexo)
+              const sepPage = merged.addPage([595, 842]);
+              const { width: sw, height: sh } = sepPage.getSize();
+
+              // Fundo verde no topo
+              sepPage.drawRectangle({ x: 0, y: sh - 100, width: sw, height: 100, color: rgb(0.114, 0.620, 0.459) });
+              // Texto ANEXO
+              sepPage.drawText('ANEXO', { x: 40, y: sh - 45, size: 28, font: helveticaBold, color: rgb(1,1,1) });
+              // Número global
+              sepPage.drawText(`${globalAnexo} / ${fetchedPDFs.length}`, { x: sw - 80, y: sh - 45, size: 20, font: helveticaBold, color: rgb(1,1,1) });
+              // Linha separadora
+              sepPage.drawLine({ start: { x: 40, y: sh - 55 }, end: { x: sw - 40, y: sh - 55 }, thickness: 0.5, color: rgb(1,1,1,0.4) });
+              // Assunto
+              sepPage.drawText('ASSUNTO:', { x: 40, y: sh - 70, size: 9, font: helveticaBold, color: rgb(0.85, 1, 0.94) });
+              const tituloTrunc = titulo.length > 70 ? titulo.slice(0,70) + '...' : titulo;
+              sepPage.drawText(tituloTrunc, { x: 100, y: sh - 70, size: 9, font: helvetica, color: rgb(1,1,1) });
+              // Ficheiro
+              sepPage.drawText('FICHEIRO:', { x: 40, y: sh - 83, size: 9, font: helveticaBold, color: rgb(0.85, 1, 0.94) });
+              sepPage.drawText(anx.name, { x: 100, y: sh - 83, size: 9, font: helvetica, color: rgb(1,1,1) });
+
+              // Aviso central na página
+              sepPage.drawText('[ conteúdo do anexo nas páginas seguintes ]', {
+                x: sw / 2 - 150, y: sh / 2, size: 11, font: helvetica, color: rgb(0.5, 0.5, 0.5)
+              });
+
+              // Copiar páginas do anexo com marca de água discreta no rodapé
+              try {
+                const anxPdf   = await PDFDocument.load(anx.bytes, { ignoreEncryption: true });
+                const anxPages = await merged.copyPages(anxPdf, anxPdf.getPageIndices());
+                anxPages.forEach((p, pi) => {
+                  merged.addPage(p);
+                  const { width: pw, height: ph } = p.getSize();
+                  // Rodapé discreto
+                  p.drawRectangle({ x: 0, y: 0, width: pw, height: 18, color: rgb(0.95, 0.99, 0.97) });
+                  p.drawLine({ start: { x: 0, y: 18 }, end: { x: pw, y: 18 }, thickness: 0.3, color: rgb(0.114, 0.620, 0.459) });
+                  p.drawText(
+                    `ANEXO ${globalAnexo}/${fetchedPDFs.length} · ${titulo.slice(0,50)} · ${anx.name} · pág. ${pi + 1}`,
+                    { x: 12, y: 5, size: 7, font: helvetica, color: rgb(0.3, 0.5, 0.4) }
+                  );
+                });
+              } catch(e) { console.warn('Erro ao copiar páginas do anexo:', anx.name, e.message); }
+            }
+          }
+
+          pdfBytes = await merged.save();
+        } else if (allAnexos.length > 0) {
+          // Havia anexos PDF mas nenhum foi obtido — guardar só o doc principal
+          showNotif('Anexos não puderam ser obtidos do SharePoint. O documento principal foi gerado.', 'error');
+        }
       }
     }
 
