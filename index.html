@@ -2409,6 +2409,8 @@ const GRAPH_SCOPES=['User.Read','GroupMember.Read.All'];
 // Usa FJ_Departamentos como fonte de verdade; fallback estático se ainda não carregou
 function normalizeDep(dep) {
   if (!dep) return '';
+  if (typeof dep !== 'string') dep = dep.Title || dep.Label || String(dep) || '';
+  if (!dep) return '';
   const key = dep.toLowerCase().trim();
   // Lookup dinâmico — usa exatamente os Titles da lista FJ_Departamentos
   if (plDepartamentos && plDepartamentos.length) {
@@ -3242,8 +3244,8 @@ async function extLoadReunoes() {
     entidade:       r.Entidade || '',
     data:           r.DataReuniao ? r.DataReuniao.split('T')[0] : '',
     local:          r.Local || '',
-    departamento:   normalizeDep(r.Departamento || ''),
-    responsavel:    r.Responsavel || '',
+    departamento:   normalizeDep(r.Departamento?.Title || r.Departamento?.Label || (typeof r.Departamento === 'string' ? r.Departamento : '') || ''),
+    responsavel:    r.Responsavel?.Title || r.Responsavel?.Label || (typeof r.Responsavel === 'string' ? r.Responsavel : '') || '',
     participantes:  r.Participantes || '',
     resumo:         r.Resumo || '',
     proximosPassos: r.ProximosPassos || '',
